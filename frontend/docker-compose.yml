@@ -1,0 +1,69 @@
+name: salesianos
+
+services:
+  # ── PostgreSQL database service ─────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: salesianos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-salesianos}
+      POSTGRES_USER: ${DB_USER:-salesianos}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-salesianos}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-salesianos} -d ${DB_NAME:-salesianos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - salesianos-pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_EXTERNAL_PORT:-5433}:5432"
+    networks:
+      - salesianos-network
+
+  # ── Next.js fullstack app (frontend + API in one process) ──────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:6666}
+        NEXT_PUBLIC_COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    container_name: salesianos-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${FRONTEND_PORT:-4000}:${PORT:-7000}"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=${PORT:-7000}
+      - DB_DIALECT=${DB_DIALECT:-postgres}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-salesianos}:${DB_PASSWORD:-salesianos}@db:5432/${DB_NAME:-salesianos}}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_TOKEN_TTL_SECONDS=${JWT_ACCESS_TOKEN_TTL_SECONDS:-604800}
+      - JWT_REFRESH_TOKEN_TTL_SECONDS=${JWT_REFRESH_TOKEN_TTL_SECONDS:-2592000}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:${FRONTEND_PORT:-6666}}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:${PORT:-7000}/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - salesianos-network
+
+volumes:
+  salesianos-pgdata:
+    driver: local
+
+networks:
+  salesianos-network:
+    driver: bridge

@@ -1,0 +1,19 @@
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+
+# logs
+*.log

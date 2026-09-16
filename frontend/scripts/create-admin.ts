@@ -20,7 +20,7 @@
 import "dotenv/config";
 import { hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { db } from "@/infra/drizzle/client";
+import { db, schema } from "@/infra/drizzle/client";
 import type { UserRole } from "@/infra/drizzle/schema";
 
 const VALID_ROLES: UserRole[] = ["admin_comite", "admin_finanzas"];
@@ -106,22 +106,22 @@ async function createOrUpdateAdmin(args: Args) {
   // Find existing persona by DNI
   const existingPersonaByDNI = await db
     .select()
-    .from(db.schema.personas)
-    .where(eq(db.schema.personas.numeroDocumento, dni))
+    .from(schema.personas)
+    .where(eq(schema.personas.numeroDocumento, dni))
     .limit(1);
 
   // Find existing user by email or DNI
   const existingByEmail = await db
     .select()
-    .from(db.schema.users)
-    .where(eq(db.schema.users.email, email))
+    .from(schema.users)
+    .where(eq(schema.users.email, email))
     .limit(1);
 
   const existingByDNI = existingPersonaByDNI[0]
     ? await db
         .select()
-        .from(db.schema.users)
-        .where(eq(db.schema.users.personaId, existingPersonaByDNI[0].id))
+        .from(schema.users)
+        .where(eq(schema.users.personaId, existingPersonaByDNI[0].id))
         .limit(1)
     : [];
 
@@ -135,7 +135,7 @@ async function createOrUpdateAdmin(args: Args) {
       existingPersonaByDNI[0] ??
       (
         await db
-          .insert(db.schema.personas)
+          .insert(schema.personas)
           .values({
             tipoDocumento: "DNI",
             numeroDocumento: dni,
@@ -145,7 +145,7 @@ async function createOrUpdateAdmin(args: Args) {
           .returning()
       )[0];
 
-    await db.insert(db.schema.users).values({
+    await db.insert(schema.users).values({
       personaId: persona.id,
       email,
       passwordHash,
@@ -156,19 +156,19 @@ async function createOrUpdateAdmin(args: Args) {
   } else {
     // Update existing user
     await db
-      .update(db.schema.users)
+      .update(schema.users)
       .set({
         passwordHash,
         rol: role,
         email,
         updatedAt: new Date(),
       })
-      .where(eq(db.schema.users.id, existingUser.id));
+      .where(eq(schema.users.id, existingUser.id));
 
     // Update persona if exists
     if (existingPersonaByDNI[0]) {
       await db
-        .update(db.schema.personas)
+        .update(schema.personas)
         .set({
           tipoDocumento: "DNI",
           numeroDocumento: dni,
@@ -176,7 +176,7 @@ async function createOrUpdateAdmin(args: Args) {
           apellidos: apellido,
           updatedAt: new Date(),
         })
-        .where(eq(db.schema.personas.id, existingPersonaByDNI[0].id));
+        .where(eq(schema.personas.id, existingPersonaByDNI[0].id));
     }
 
     console.log(`✓ Admin user updated: ${existingUser.id}`);
@@ -201,6 +201,7 @@ async function main() {
 
   try {
     await createOrUpdateAdmin(args);
+    process.exit(0);
   } catch (err) {
     console.error("Failed to create admin:", err);
     process.exit(1);

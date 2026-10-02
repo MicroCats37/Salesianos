@@ -22,7 +22,13 @@ export interface Paquete {
   cantidad_maxima_equipos: number;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+const configuredBaseUrl =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+
+const BASE_URL =
+  typeof window === "undefined" && configuredBaseUrl.startsWith("/")
+    ? "http://backend:8000/api"
+    : configuredBaseUrl;
 
 /**
  * Fetch active paquetes from the backend.

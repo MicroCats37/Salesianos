@@ -132,7 +132,7 @@ export function Disciplines() {
     <section
       id="disciplinas"
       ref={sectionRef}
-      className="relative overflow-hidden bg-[#17214b] py-24 scroll-mt-20 sm:py-28"
+      className="flex min-h-screen w-full items-center relative overflow-hidden bg-[#17214b] py-16 scroll-mt-20 sm:py-24"
     >
       {/* Decorative background elements */}
       <div className="absolute inset-0 opacity-30">
@@ -201,7 +201,7 @@ export function Disciplines() {
               </span>
             </div>
           </div>
-          {CATEGORY_ROWS.map((row, i) => (
+          {CATEGORY_ROWS.map((row) => (
             <div
               key={row.discipline}
               className="discipline-row grid grid-cols-[1fr_3fr] divide-x divide-white/10 border-t border-white/10"

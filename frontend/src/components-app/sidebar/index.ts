@@ -1,2 +1,1 @@
-export { AdminSidebar } from "./AdminSidebar";
-export { ResponsableSidebar } from "./ResponsableSidebar";
+export { ProtectedSidebar } from "./ProtectedSidebar";

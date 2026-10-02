@@ -4,7 +4,7 @@ import {
   type UseMutationResult,
   useMutation,
 } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosResponse } from "axios";
 import type { ZodType } from "zod";
 import { handleApiError, notify } from "@/errors";
 import api from "@/lib/api";
@@ -23,6 +23,18 @@ type ClassicVariables<TPayload> = {
 /** Direct payload shape (like useApiCreate): variable IS the payload. */
 type DirectVariables<TPayload> = TPayload;
 
+/** Optional envelope message extractor shared between modes. */
+function maybeToastSuccess(
+  response: AxiosResponse<unknown>,
+  showSuccessToast: boolean,
+): void {
+  if (!showSuccessToast) return;
+  const envelope = response.data as { message?: string } | null;
+  if (envelope && typeof envelope.message === "string" && envelope.message.length > 0) {
+    notify.success(envelope.message);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Props — two modes
 // ---------------------------------------------------------------------------
@@ -34,6 +46,7 @@ interface UseApiUpdateDirectProps<TData, TVariables> {
   schema?: ZodType<TData>;
   method?: "PUT" | "PATCH";
   showToast?: boolean;
+  showSuccessToast?: boolean;
   options?: Omit<
     UseMutationOptions<TData, AxiosError, DirectVariables<TVariables>>,
     "mutationFn"
@@ -47,6 +60,7 @@ interface UseApiUpdateClassicProps<TData, TPayload> {
   schema?: ZodType<TData>;
   method?: "PUT" | "PATCH";
   showToast?: boolean;
+  showSuccessToast?: boolean;
   options?: Omit<
     UseMutationOptions<TData, AxiosError, ClassicVariables<TPayload>>,
     "mutationFn"
@@ -66,7 +80,7 @@ interface UseApiUpdateClassicProps<TData, TPayload> {
  *
  * **Classic mode** (baseUrl prop — backward-compatible):
  *   const m = useApiUpdate({ baseUrl: "/users" })
- *   m.mutate({ id: 5, data: { name: "Ana" } })  // PATCH /users/5 with data
+ *   m.mutate({ id: 5, data: { name: "Ana" } })   // PATCH /users/5 with data
  */
 
 // Overload 1: direct mode
@@ -98,6 +112,7 @@ export function useApiUpdate<TData, TVariables>(
       schema,
       method = "PUT",
       showToast = true,
+      showSuccessToast = true,
       options,
     } = props as UseApiUpdateDirectProps<TData, TVariables>;
 
@@ -105,8 +120,13 @@ export function useApiUpdate<TData, TVariables>(
       mutationFn: async (variables) => {
         try {
           const payload = buildApiPayload(variables);
-          const { data } = await api.request({ url, method, data: payload });
-          return schema ? schema.parse(data) : (data as TData);
+          const response: AxiosResponse<unknown> = await api.request({
+            url,
+            method,
+            data: payload,
+          });
+          maybeToastSuccess(response, showSuccessToast);
+          return schema ? schema.parse(response.data) : (response.data as TData);
         } catch (error) {
           const apiError = handleApiError(error);
           if (showToast) notify.error(apiError.message);
@@ -125,6 +145,7 @@ export function useApiUpdate<TData, TVariables>(
     schema,
     method = "PUT",
     showToast = true,
+    showSuccessToast = true,
     options,
   } = props as UseApiUpdateClassicProps<TData, TVariables>;
 
@@ -132,12 +153,13 @@ export function useApiUpdate<TData, TVariables>(
     mutationFn: async ({ id, data }) => {
       try {
         const payload = buildApiPayload(data);
-        const { data: responseData } = await api.request({
+        const response: AxiosResponse<unknown> = await api.request({
           url: `${baseUrl}/${id}`,
           method,
           data: payload,
         });
-        return schema ? schema.parse(responseData) : (responseData as TData);
+        maybeToastSuccess(response, showSuccessToast);
+        return schema ? schema.parse(response.data) : (response.data as TData);
       } catch (error) {
         const apiError = handleApiError(error);
         if (showToast) notify.error(apiError.message);

@@ -22,9 +22,6 @@ export interface FieldConfig {
   required?: boolean;
   hidden?: boolean | ((values: any) => boolean);
 
-  /** Smart Field: maps to RHF field names for compound lookups (e.g. documento-lookup) */
-  fieldNames?: Record<string, string>;
-
   // Para select/radio
   options?: readonly InputOption[];
   isLoading?: boolean;
@@ -45,6 +42,16 @@ export interface FieldConfig {
   step?: number;
   /** Keyboard handler for number inputs (e.g., onKeyDown for Enter) */
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+
+  // Data shaping (browser hints + register transforms)
+  /** maxLength on the underlying input. */
+  maxLength?: number;
+  /** inputMode hint for mobile keyboards. */
+  inputMode?: "numeric" | "text" | "tel" | "email" | "url" | "search";
+  /** HTML5 pattern attribute. */
+  pattern?: string;
+  /** RHF setValueAs transform applied before validation. */
+  setValueAs?: (value: string) => unknown;
 }
 
 /** Props que recibe cada componente de input del registry */
@@ -58,11 +65,6 @@ export interface InputComponentProps<
   id: string;
   /** When true, the input component should not render error messages (GenericInput's wrapper handles it). Defaults to false. */
   hideErrorMessage?: boolean;
-  /**
-   * Smart Field: maps to RHF field names for compound lookups.
-   * e.g. InputDocumentoLookup uses fieldNames to know which form fields to set.
-   */
-  fieldNames?: Record<string, string>;
 }
 
 /** Tipo para los componentes del registry */

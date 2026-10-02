@@ -97,7 +97,7 @@ export function AreaInput<TFieldValues extends FieldValues = FieldValues>({
     (val: number | "" | null | undefined): string => {
       if (val === "" || val === null || val === undefined) return "0 m²";
       const num = Number(val);
-      if (Number.isNaN(num) || !Number.isFinite(num)) return "0 m²";
+      if (isNaN(num) || !isFinite(num)) return "0 m²";
 
       const intPart = Math.round(num).toString();
 
@@ -148,7 +148,7 @@ export function AreaInput<TFieldValues extends FieldValues = FieldValues>({
       }
 
       const parsed = parseFloat(stripped);
-      if (Number.isNaN(parsed) || !Number.isFinite(parsed)) {
+      if (isNaN(parsed) || !isFinite(parsed)) {
         return;
       }
 
@@ -188,7 +188,7 @@ export function AreaInput<TFieldValues extends FieldValues = FieldValues>({
         field.onChange(0 as never);
       } else {
         const parsed = parseFloat(stripped);
-        if (!Number.isNaN(parsed)) {
+        if (!isNaN(parsed)) {
           const clamped = Math.max(Number(min) || 0, Math.round(parsed));
           isInternalUpdate.current = true;
           setDisplayValue(formatDisplay(clamped));

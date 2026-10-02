@@ -1,25 +1,26 @@
+export interface MeResponse {
+  id: string;
+  email: string;
+  nombres?: string;
+  apellidos?: string;
+  rol?: string;
+  /** ID de la persona asociada al usuario (null si no tiene persona vinculada). */
+  persona_id?: string | null;
+}
+
 export {
-  type LoginDniFormData,
-  LoginDniFormSchema,
-  type LoginEmailFormData,
-  LoginEmailFormSchema,
-  type LoginFormData,
-  LoginFormSchema,
-  type LoginMode,
-  type LoginPayload,
-  type LoginUsernameFormData,
   LoginUsernameFormSchema,
+  LoginDniFormSchema,
+  LoginEmailFormSchema,
 } from "./login.schema";
+export type {
+  LoginUsernameFormData,
+  LoginDniFormData,
+  LoginEmailFormData,
+} from "./login.schema";
+
 export {
-  type LoginResponse,
-  LoginResponseSchema,
+  RegisterFormSchema,
+  type RegisterFormData,
   type RegisterResponse,
-  RegisterResponseSchema,
-} from "./login-response.schema";
-export { type RegisterFormData, RegisterFormSchema } from "./register.schema";
-export {
-  type User,
-  type UserRole,
-  UserRoleSchema,
-  UserSchema,
-} from "./user.schema";
+} from "./register.schema";

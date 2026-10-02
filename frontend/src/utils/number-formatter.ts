@@ -32,7 +32,7 @@ export function trimTrailingZeros(
 
   const fixed = num.toFixed(maxDecimals);
   // Strip trailing zeros after the decimal point
-  return fixed.replace(/\.(\d*?)0+$/, (_match, decimals) =>
+  return fixed.replace(/\.(\d*?)0+$/, (match, decimals) =>
     decimals ? `.${decimals}` : "",
   );
 }

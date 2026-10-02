@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 
 interface ConfirmOptions {

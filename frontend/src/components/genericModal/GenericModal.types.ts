@@ -37,6 +37,12 @@ export interface GenericModalProps {
   /** Async or sync interceptor before closing. Return false to cancel close. */
   onBeforeClose?: () => boolean | Promise<boolean>;
   children: ReactNode;
+  /**
+   * Visual variant.
+   * - "default": renders inside a Dialog with backdrop (normal modal behavior).
+   * - "embedded": renders children directly without Dialog wrapper (no backdrop).
+   */
+  variant?: "default" | "embedded";
 }
 
 /** Root wrapper for trigger */

@@ -4,6 +4,8 @@ import { Menu, User, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { NavbarBrand } from "@/components/branding/NavbarBrand";
+import { PreinscribirButton } from "./PreinscribirButton";
 import { useAuthUser } from "@/features/auth/store/auth.store";
 
 export function Navbar() {
@@ -39,21 +41,7 @@ export function Navbar() {
     >
       <div className="mx-auto flex h-[74px] max-w-[1480px] items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3">
-          <img
-            src="/images/logo.jpeg"
-            alt="Salesianos"
-            className="size-14 rounded-2xl bg-white object-contain"
-          />
-          <div className="hidden leading-tight sm:block">
-            <strong className="block text-base font-black tracking-[-.02em] text-[#312e8e]">
-              SALESIANOS FEST 2026
-            </strong>
-            <span className="text-xs font-bold uppercase tracking-[.16em] text-[#626195]">
-              Preinscripción deportiva
-            </span>
-          </div>
-        </Link>
+        <NavbarBrand href="/" />
 
         {/* Desktop nav links */}
         <nav className="hidden items-center gap-7 text-sm font-bold text-[#4c5480] lg:flex">
@@ -98,18 +86,16 @@ export function Navbar() {
               >
                 <Link href="/login">Iniciar sesión</Link>
               </Button>
-              <Button
-                asChild
+              <PreinscribirButton
                 className="btn-brand-gradient btn-shine h-11 rounded-full px-5 text-sm font-black text-white"
-              >
-                <Link href="/register">Preinscribir equipo</Link>
-              </Button>
+              />
             </>
           )}
         </div>
 
         {/* Mobile menu button */}
         <button
+          type="button"
           className="flex size-11 items-center justify-center rounded-xl border border-[#312e8e]/10 lg:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
         >
@@ -163,12 +149,9 @@ export function Navbar() {
                   >
                     <Link href="/login">Iniciar sesión</Link>
                   </Button>
-                  <Button
-                    asChild
+                  <PreinscribirButton
                     className="btn-brand-gradient h-11 rounded-xl font-black text-white"
-                  >
-                    <Link href="/register">Preinscribir equipo</Link>
-                  </Button>
+                  />
                 </>
               )}
             </div>

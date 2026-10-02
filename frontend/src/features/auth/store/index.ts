@@ -1,6 +1,1 @@
-export {
-  type AuthSlice,
-  useAuthState,
-  useAuthStore,
-  useAuthUser,
-} from "./auth.store";
+export * from "./auth.store";

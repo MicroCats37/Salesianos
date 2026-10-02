@@ -17,23 +17,15 @@ import type { ApiError, ErrorParser } from "./types";
  * Also handles nested details: { error: { code, message, details: { non_field_errors, ... } } }
  */
 const genericRestParser: ErrorParser = (_status, data: any) => {
-  // Handle nested error structure: { success: false, error: { code, message, details: { fieldErrors, ... } } }
+  // Prefer the server-built, human-readable top-level `error.message`
+  // when present (backend now concatenates NonFieldErrors + field errors with " • ").
+  if (data?.error?.message && typeof data.error.message === "string" && data.error.message.length > 0) {
+    return { message: data.error.message, status: _status };
+  }
+
+  // Handle nested error structure: { success: false, error: { code, message, details: { ... } } }
   if (data?.error?.details) {
     const details = data.error.details;
-    // Extract fieldErrors if present (e.g., from ValidationError with fieldErrors in details)
-    const fieldErrors: Record<string, string> | undefined =
-      details?.fieldErrors && typeof details.fieldErrors === "object"
-        ? Object.entries(
-            details.fieldErrors as Record<string, string[] | string>,
-          ).reduce(
-            (acc, [key, val]) => {
-              acc[key] = Array.isArray(val) ? (val[0] ?? "") : val;
-              return acc;
-            },
-            {} as Record<string, string>,
-          )
-        : undefined;
-
     // If details is an object with string values (e.g., { non_field_errors: "..." })
     // flatten them into a single display message
     if (typeof details === "object" && !Array.isArray(details)) {
@@ -47,24 +39,12 @@ const genericRestParser: ErrorParser = (_status, data: any) => {
           return `${label}: ${v}`;
         });
       if (detailMessages.length > 0) {
-        return {
-          message: detailMessages.join("; "),
-          status: _status,
-          fieldErrors,
-        };
+        return { message: detailMessages.join("; "), status: _status };
       }
     }
     // If details is a string itself
     if (typeof details === "string" && details.length > 0) {
-      return { message: details, status: _status, fieldErrors };
-    }
-    // Even if no string details, return fieldErrors if found
-    if (fieldErrors) {
-      return {
-        message: data?.error?.message || "Validation error",
-        status: _status,
-        fieldErrors,
-      };
+      return { message: details, status: _status };
     }
   }
 
@@ -73,11 +53,6 @@ const genericRestParser: ErrorParser = (_status, data: any) => {
     data?.errors?.message || data?.message || data?.detail || data?.error;
   if (typeof msg === "string") {
     return { message: msg, status: _status };
-  }
-
-  // Fallback to error.message if error object exists but no details
-  if (data?.error?.message && typeof data.error.message === "string") {
-    return { message: data.error.message, status: _status };
   }
 
   return null;

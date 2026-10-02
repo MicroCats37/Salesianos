@@ -21,7 +21,7 @@ import { getInputComponent } from "./inputs";
  * Handles paths like "parent.child.field" to access errors.parent.child.field
  */
 const getNestedError = (obj: any, path: string) => {
-  return path.split(".").reduce((acc, part) => acc?.[part], obj) as string;
+  return path.split(".").reduce((acc, part) => acc && acc[part], obj);
 };
 
 // =====================================================================
@@ -98,12 +98,7 @@ export type FieldType =
   | "image"
   | "custom"
   | "searchable-select"
-  | "formatted-number"
-  | "file-collection"
-  | "area-distribution"
-  | "documento-lookup"
-  | "select-area"
-  | "select-tipo-documento";
+  | "formatted-number";
 
 export interface FormField {
   name: string;
@@ -116,7 +111,7 @@ export interface FormField {
   disabled?: boolean;
   isLoading?: boolean;
   helperText?: string;
-  hidden?: boolean | ((values: Record<string, unknown>) => boolean);
+  hidden?: boolean | ((values: any) => boolean);
   valueType?: "string" | "number" | "boolean";
 
   // Visual Properties
@@ -130,11 +125,18 @@ export interface FormField {
   min?: number;
   step?: number;
 
+  // Data shaping (browser-level hints + hard limits)
+  /** maxLength on the underlying input (hard limit; user can't type past this). */
+  maxLength?: number;
+  /** inputMode hint: "numeric" brings up the numeric keypad on mobile. */
+  inputMode?: "numeric" | "text" | "tel" | "email" | "url" | "search";
+  /** HTML5 pattern attribute (regex string) for additional browser-side filtering. */
+  pattern?: string;
+  /** Optional setValueAs transform: applied to the raw input value before validation. */
+  setValueAs?: (value: string) => unknown;
+
   // Keyboard
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
-
-  /** Smart Field: maps to RHF field names for compound lookups (e.g. documento-lookup) */
-  fieldNames?: Record<string, string>;
 }
 
 export interface FormSection {

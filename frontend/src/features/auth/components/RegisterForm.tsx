@@ -1,30 +1,22 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertCircle,
   CheckCircle2,
-  Hash,
+  Eye,
+  EyeOff,
   Loader2,
   Lock,
   Mail,
-  Phone,
-  PhoneCall,
+  Search,
   User,
-  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useRef, useState } from "react";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
+import { GenericForm } from "@/components/genericForm/GenericForm";
+import { FestBrandHeader } from "@/components/branding/FestBrandHeader";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,480 +27,594 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { handleApiError } from "@/errors/error-handler";
-import { notify } from "@/errors/toast-adapter";
-import { stripNonDigits } from "@/lib/utils";
-import { useRegister } from "../hooks/useRegister";
-import { type RegisterFormData, RegisterFormSchema } from "../schemas";
+import { useRegister } from "@/features/auth/hooks";
+import { useDocumentoLookup } from "@/features/inscripciones/hooks/useDocumentoLookup";
+import { toast } from "sonner";
+import {
+  type RegisterFormData,
+  RegisterFormSchema,
+} from "@/features/auth/schemas";
+import { cn, stripNonDigits } from "@/lib/utils";
 
-export function RegisterForm() {
-  const router = useRouter();
-  const registerMutation = useRegister();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+// ── FieldWrapper ───────────────────────────────────────────────────────────────
 
+interface FieldWrapperProps {
+  label: string;
+  error?: string;
+  required?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}
+
+function FieldWrapper({
+  label,
+  error,
+  required,
+  className,
+  children,
+}: FieldWrapperProps) {
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      {label && (
+        <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+          {label}
+          {required && <span className="text-amber-500">*</span>}
+        </Label>
+      )}
+      {children}
+      {error && (
+        <p className="flex items-center gap-1.5 text-xs text-destructive">
+          <AlertCircle className="size-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Smart Components ────────────────────────────────────────────────────────────
+
+interface SmartTextFieldProps {
+  name: "nombres" | "apellidos" | "contactoEmergenciaNombre";
+  label: string;
+  placeholder?: string;
+  icon?: React.ElementType;
+  required?: boolean;
+}
+
+function SmartTextField({
+  name,
+  label,
+  placeholder,
+  icon: Icon,
+  required,
+}: SmartTextFieldProps) {
   const {
     register,
-    handleSubmit,
     formState: { errors },
-    watch,
-    setValue,
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(RegisterFormSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-      tipoDocumento: "DNI",
-      numeroDocumento: "",
-      nombres: "",
-      apellidos: "",
-      genero: null,
-      telefono: null,
-      whatsapp: null,
-      emergencyName: null,
-      emergencyPhone: null,
-      acceptedBases: false,
-    },
-  });
-
-  const onSubmit = handleSubmit(async (data) => {
-    setErrorMessage(null);
-    try {
-      await registerMutation.mutateAsync(data);
-      notify.success("¡Cuenta creada con éxito!");
-      router.push("/inscripcion");
-      router.refresh();
-    } catch (error) {
-      handleApiError(error);
-      setErrorMessage((error as Error).message);
-    }
-  });
+  } = useFormContext<RegisterFormData>();
+  const error = errors[name]?.message as string | undefined;
 
   return (
-    <Card className="card-elevated w-full max-w-xl mx-auto overflow-hidden border-0 shadow-2xl">
-      <div className="bg-gradient-to-br from-[#f4c64e] to-[#d8a93a] px-6 py-8 text-center text-[#17214b]">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/40 backdrop-blur">
-          <UserPlus className="size-8" />
-        </div>
-        <CardTitle className="text-2xl font-black">Crear cuenta</CardTitle>
-        <CardDescription className="mt-2 text-[#17214b]/85">
-          Únete y preinscribe a tu promoción en Salesianos FEST 2026.
-        </CardDescription>
+    <FieldWrapper label={label} error={error} required={required}>
+      <div className="relative">
+        {Icon && (
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+            <Icon className="size-4" />
+          </span>
+        )}
+        <Input
+          {...register(name)}
+          type="text"
+          placeholder={placeholder}
+          autoComplete={
+            name === "nombres" || name === "apellidos" ? "name" : "off"
+          }
+          className={cn(
+            Icon && "pl-9",
+            "input-brand",
+            error && "border-destructive ring-1 ring-destructive",
+          )}
+        />
       </div>
+    </FieldWrapper>
+  );
+}
 
-      <form id="register-form" onSubmit={onSubmit} noValidate>
-        <CardContent className="space-y-5 p-6">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="flex items-center gap-2">
-              <Mail className="size-4 text-[#312e8e]" /> Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="tu@email.com"
-              className="input-brand"
-              {...register("email")}
-              aria-invalid={!!errors.email}
-            />
-            {errors.email && (
-              <p className="flex items-center gap-1.5 text-sm text-destructive">
-                <AlertCircle className="size-4" /> {errors.email.message}
-              </p>
-            )}
-          </div>
+function SmartEmailField() {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext<RegisterFormData>();
+  const error = errors.email?.message as string | undefined;
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2">
-                <Lock className="size-4 text-[#312e8e]" /> Contraseña
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Mín. 8 caracteres"
-                className="input-brand"
-                {...register("password")}
-                aria-invalid={!!errors.password}
-              />
-              {errors.password && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" /> {errors.password.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="confirmPassword"
-                className="flex items-center gap-2"
-              >
-                <CheckCircle2 className="size-4 text-[#312e8e]" /> Confirmar
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Repite"
-                className="input-brand"
-                {...register("confirmPassword")}
-                aria-invalid={!!errors.confirmPassword}
-              />
-              {errors.confirmPassword && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" />{" "}
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label
-                htmlFor="tipoDocumento"
-                className="flex items-center gap-2"
-              >
-                <Hash className="size-4 text-[#312e8e]" /> Tipo de documento
-              </Label>
-              <Select
-                defaultValue="DNI"
-                onValueChange={(val) =>
-                  setValue("tipoDocumento", val as "DNI" | "CE" | "PAS")
-                }
-                {...register("tipoDocumento")}
-              >
-                <SelectTrigger className="input-brand">
-                  <SelectValue placeholder="Selecciona tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DNI">DNI</SelectItem>
-                  <SelectItem value="CE">CE</SelectItem>
-                  <SelectItem value="PAS">PAS</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.tipoDocumento && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" />{" "}
-                  {errors.tipoDocumento.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="numeroDocumento"
-                className="flex items-center gap-2"
-              >
-                <Hash className="size-4 text-[#312e8e]" /> Número de documento
-              </Label>
-              {(() => {
-                const { onChange, ...rest } = register("numeroDocumento");
-                return (
-                  <Input
-                    id="numeroDocumento"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="12345678"
-                    className="input-brand"
-                    maxLength={20}
-                    {...rest}
-                    onChange={(e) => {
-                      const currentTipo = watch("tipoDocumento");
-                      let filtered: string;
-                      let maxLen: number;
-                      if (currentTipo === "PAS") {
-                        // PAS is alphanumeric — strip only special chars
-                        filtered = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
-                        maxLen = 20;
-                      } else if (currentTipo === "CE") {
-                        // CE must be exactly 9 numeric digits
-                        filtered = stripNonDigits(e.target.value).slice(0, 9);
-                        maxLen = 9;
-                      } else {
-                        // DNI must be exactly 8 numeric digits
-                        filtered = stripNonDigits(e.target.value).slice(0, 8);
-                        maxLen = 8;
-                      }
-                      e.target.value = filtered;
-                      // Dynamically enforce maxLength per document type
-                      if (filtered.length > maxLen) {
-                        e.target.value = filtered.slice(0, maxLen);
-                      }
-                      onChange(e);
-                    }}
-                    aria-invalid={!!errors.numeroDocumento}
-                  />
-                );
-              })()}
-              {errors.numeroDocumento && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" />{" "}
-                  {errors.numeroDocumento.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="nombres" className="flex items-center gap-2">
-                <User className="size-4 text-[#312e8e]" /> Nombres
-              </Label>
-              <Input
-                id="nombres"
-                type="text"
-                autoComplete="given-name"
-                placeholder="Juan Carlos"
-                className="input-brand"
-                {...register("nombres")}
-                aria-invalid={!!errors.nombres}
-              />
-              {errors.nombres && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" /> {errors.nombres.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="apellidos" className="flex items-center gap-2">
-                <User className="size-4 text-[#312e8e]" /> Apellidos
-              </Label>
-              <Input
-                id="apellidos"
-                type="text"
-                autoComplete="family-name"
-                placeholder="Pérez López"
-                className="input-brand"
-                {...register("apellidos")}
-                aria-invalid={!!errors.apellidos}
-              />
-              {errors.apellidos && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" /> {errors.apellidos.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="genero" className="flex items-center gap-2">
-                <User className="size-4 text-[#312e8e]" /> Género
-              </Label>
-              <Select
-                onValueChange={(val) =>
-                  setValue("genero", val as "V" | "M" | null)
-                }
-                {...register("genero")}
-              >
-                <SelectTrigger className="input-brand">
-                  <SelectValue placeholder="Opcional" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="V">Masculino</SelectItem>
-                  <SelectItem value="M">Femenino</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.genero && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" /> {errors.genero.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="telefono" className="flex items-center gap-2">
-                <Phone className="size-4 text-[#312e8e]" /> Teléfono
-              </Label>
-              {(() => {
-                const { onChange, ...rest } = register("telefono");
-                return (
-                  <Input
-                    id="telefono"
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    maxLength={9}
-                    placeholder="987654321 (opcional)"
-                    className="input-brand"
-                    {...rest}
-                    onChange={(e) => {
-                      const filtered = stripNonDigits(e.target.value).slice(
-                        0,
-                        9,
-                      );
-                      e.target.value = filtered;
-                      onChange(e);
-                    }}
-                    aria-invalid={!!errors.telefono}
-                  />
-                );
-              })()}
-              {errors.telefono && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" /> {errors.telefono.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="whatsapp" className="flex items-center gap-2">
-              <Phone className="size-4 text-[#312e8e]" /> WhatsApp
-            </Label>
-            {(() => {
-              const { onChange, ...rest } = register("whatsapp");
-              return (
-                <Input
-                  id="whatsapp"
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="tel"
-                  maxLength={9}
-                  placeholder="987654321 (opcional)"
-                  className="input-brand"
-                  {...rest}
-                  onChange={(e) => {
-                    const filtered = stripNonDigits(e.target.value).slice(0, 9);
-                    e.target.value = filtered;
-                    onChange(e);
-                  }}
-                  aria-invalid={!!errors.whatsapp}
-                />
-              );
-            })()}
-            {errors.whatsapp && (
-              <p className="flex items-center gap-1.5 text-sm text-destructive">
-                <AlertCircle className="size-4" /> {errors.whatsapp.message}
-              </p>
-            )}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label
-                htmlFor="emergencyName"
-                className="flex items-center gap-2"
-              >
-                <PhoneCall className="size-4 text-[#312e8e]" /> Contacto de
-                emergencia
-              </Label>
-              <Input
-                id="emergencyName"
-                placeholder="Nombre y apellido (opcional)"
-                className="input-brand"
-                {...register("emergencyName")}
-                aria-invalid={!!errors.emergencyName}
-              />
-              {errors.emergencyName && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" />{" "}
-                  {errors.emergencyName.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="emergencyPhone"
-                className="flex items-center gap-2"
-              >
-                <PhoneCall className="size-4 text-[#312e8e]" /> Tel. emergencia
-              </Label>
-              {(() => {
-                const { onChange, ...rest } = register("emergencyPhone");
-                return (
-                  <Input
-                    id="emergencyPhone"
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={9}
-                    placeholder="999 999 999 (opcional)"
-                    className="input-brand"
-                    {...rest}
-                    onChange={(e) => {
-                      const filtered = stripNonDigits(e.target.value).slice(
-                        0,
-                        9,
-                      );
-                      e.target.value = filtered;
-                      onChange(e);
-                    }}
-                    aria-invalid={!!errors.emergencyPhone}
-                  />
-                );
-              })()}
-              {errors.emergencyPhone && (
-                <p className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertCircle className="size-4" />{" "}
-                  {errors.emergencyPhone.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 rounded-xl border-2 border-[#f4c64e]/40 bg-[#fff9df] p-4">
-            <Checkbox
-              id="acceptedBases"
-              checked={watch("acceptedBases")}
-              onCheckedChange={(checked) =>
-                setValue("acceptedBases", !!checked)
-              }
-              aria-invalid={!!errors.acceptedBases}
-              className="mt-0.5"
-            />
-            <div>
-              <Label
-                htmlFor="acceptedBases"
-                className="cursor-pointer font-bold leading-tight text-[#17214b]"
-              >
-                Acepto las bases oficiales del evento
-              </Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                He leído y acepto los términos del documento{" "}
-                <strong>BASES-SF26-2026-09-06</strong>.
-              </p>
-            </div>
-          </div>
-          {errors.acceptedBases && (
-            <p className="flex items-center gap-1.5 text-sm text-destructive">
-              <AlertCircle className="size-4" /> {errors.acceptedBases.message}
-            </p>
+  return (
+    <FieldWrapper label="Email" error={error} required>
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+          <Mail className="size-4" />
+        </span>
+        <Input
+          {...register("email")}
+          type="email"
+          placeholder="tu@email.com"
+          autoComplete="email"
+          className={cn(
+            "pl-9 input-brand",
+            error && "border-destructive ring-1 ring-destructive",
           )}
+        />
+      </div>
+    </FieldWrapper>
+  );
+}
 
-          {errorMessage && (
-            <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
-            </div>
+function SmartPasswordField() {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext<RegisterFormData>();
+  const error = errors.password?.message as string | undefined;
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <FieldWrapper label="Contraseña" error={error} required>
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+          <Lock className="size-4" />
+        </span>
+        <Input
+          {...register("password")}
+          type={showPassword ? "text" : "password"}
+          placeholder="Mín. 8 caracteres"
+          autoComplete="new-password"
+          className={cn(
+            "pl-9 pr-10 input-brand",
+            error && "border-destructive ring-1 ring-destructive",
           )}
-        </CardContent>
-      </form>
-
-      <div className="flex flex-col gap-3 border-t border-border/60 p-6 pt-5">
-        <Button
-          type="submit"
-          form="register-form"
-          disabled={registerMutation.isPending}
-          className="btn-brand-gradient btn-shine h-12 rounded-xl text-base font-black uppercase tracking-wider"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
         >
-          {registerMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" /> Creando cuenta...
-            </>
+          {showPassword ? (
+            <EyeOff className="h-4 w-4" aria-hidden="true" />
           ) : (
-            "Crear cuenta"
+            <Eye className="h-4 w-4" aria-hidden="true" />
           )}
-        </Button>
-        <p className="text-center text-sm text-muted-foreground">
-          ¿Ya tienes cuenta?{" "}
-          <Link
-            href="/login"
-            className="font-bold text-[#312e8e] underline-offset-4 hover:underline"
-          >
-            Inicia sesión
-          </Link>
-        </p>
+        </button>
       </div>
-    </Card>
+    </FieldWrapper>
+  );
+}
+
+function SmartConfirmPasswordField() {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext<RegisterFormData>();
+  const error = errors.confirmPassword?.message as string | undefined;
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  return (
+    <FieldWrapper label="Confirmar" error={error} required>
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+          <CheckCircle2 className="size-4" />
+        </span>
+        <Input
+          {...register("confirmPassword")}
+          type={showConfirmPassword ? "text" : "password"}
+          placeholder="Repite la contraseña"
+          autoComplete="new-password"
+          className={cn(
+            "pl-9 pr-10 input-brand",
+            error && "border-destructive ring-1 ring-destructive",
+          )}
+        />
+        <button
+          type="button"
+          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+          aria-label={showConfirmPassword ? "Ocultar confirmación" : "Mostrar confirmación"}
+        >
+          {showConfirmPassword ? (
+            <EyeOff className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Eye className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+    </FieldWrapper>
+  );
+}
+
+const TIPO_DOCUMENTO_OPTIONS = [
+  { label: "DNI", value: "DNI" as const },
+  { label: "CE", value: "CE" as const },
+  { label: "PAS", value: "PAS" as const },
+];
+
+function SmartTipoDocumentoField() {
+  const {
+    control,
+    formState: { errors },
+  } = useFormContext<RegisterFormData>();
+  const error = errors.tipoDocumento?.message as string | undefined;
+
+  return (
+    <FieldWrapper label="Tipo de documento" error={error} required>
+      <Controller
+        name="tipoDocumento"
+        control={control}
+        render={({ field }) => (
+          <Select onValueChange={field.onChange} value={field.value}>
+            <SelectTrigger
+              className={cn(
+                "input-brand w-full",
+                error && "border-destructive ring-1 ring-destructive",
+              )}
+            >
+              
+              <SelectValue placeholder="Selecciona" className="pl-7" />
+            </SelectTrigger>
+            <SelectContent>
+              {TIPO_DOCUMENTO_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </FieldWrapper>
+  );
+}
+
+function SmartNumeroDocumentoField() {
+  const {
+    control,
+    formState: { errors },
+    setValue,
+    trigger,
+  } = useFormContext<RegisterFormData>();
+  const documentoLookup = useDocumentoLookup();
+
+  const tipoDocumento = useWatch({ control, name: "tipoDocumento" }) ?? "DNI";
+  const numeroDocumento =
+    useWatch({ control, name: "numeroDocumento" }) ?? "";
+  const error = errors.numeroDocumento?.message as string | undefined;
+
+  const maxLen = tipoDocumento === "DNI" ? 8 : tipoDocumento === "CE" ? 9 : 20;
+  const placeholder =
+    tipoDocumento === "DNI"
+      ? "12345678"
+      : tipoDocumento === "CE"
+        ? "123456789"
+        : "ABC123456";
+  const inputMode = tipoDocumento === "PAS" ? "text" : "numeric";
+  const canLookup = tipoDocumento === "DNI" && numeroDocumento.length === 8;
+
+  // Reset numeroDocumento and clear auto-filled names when tipoDocumento changes
+  const prevTipoRef = useRef(tipoDocumento);
+  useEffect(() => {
+    if (prevTipoRef.current !== tipoDocumento) {
+      prevTipoRef.current = tipoDocumento;
+      setValue("numeroDocumento", "", { shouldValidate: true });
+      setValue("nombres", "", { shouldValidate: false });
+      setValue("apellidos", "", { shouldValidate: false });
+    }
+  }, [tipoDocumento, setValue]);
+
+  async function handleLookup() {
+    const valid = await trigger("numeroDocumento");
+    if (!valid) return;
+    try {
+      const result = await documentoLookup.mutateAsync(numeroDocumento);
+      if (!result.nombres || !result.apellidos) {
+        toast.error("La respuesta del documento no contiene nombres completos");
+        return;
+      }
+      setValue("numeroDocumento", result.numero_documento, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      setValue("apellidos", result.apellidos, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      setValue("nombres", result.nombres, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      await trigger(["numeroDocumento", "nombres", "apellidos"]);
+      toast.success("Datos del documento cargados");
+    } catch {
+      /* hook ya tostó el error */
+    }
+  }
+
+  return (
+    <FieldWrapper label="Número de documento" error={error} required>
+      <div className="flex items-stretch gap-2">
+        <div className="flex-1">
+          <Controller
+            name="numeroDocumento"
+            control={control}
+            render={({ field }) => (
+              <Input
+                {...field}
+                type="text"
+                inputMode={inputMode}
+                autoComplete="off"
+                placeholder={placeholder}
+                maxLength={maxLen}
+                className={cn(
+                  "input-brand",
+                  error && "border-destructive ring-1 ring-destructive",
+                )}
+                onChange={(e) => {
+                  const filtered =
+                    tipoDocumento === "PAS"
+                      ? e.target.value
+                          .replace(/[^a-zA-Z0-9]/g, "")
+                          .toUpperCase()
+                          .slice(0, maxLen)
+                      : stripNonDigits(e.target.value).slice(0, maxLen);
+                  field.onChange({ target: { value: filtered } });
+                }}
+              />
+            )}
+          />
+        </div>
+        {tipoDocumento === "DNI" && (
+          <Button
+            type="button"
+            variant="default"
+            size="icon"
+            disabled={!canLookup || documentoLookup.isPending}
+            onClick={handleLookup}
+            aria-label="Buscar nombres por DNI"
+            className="h-11 w-11 rounded-xl bg-[var(--gold)] text-brand-deep-navy hover:bg-[var(--gold)]/90 shadow"
+          >
+            {documentoLookup.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Search className="size-4" />
+            )}
+          </Button>
+        )}
+      </div>
+    </FieldWrapper>
+  );
+}
+
+interface SmartSelectFieldProps {
+  name: "genero";
+  label: string;
+  icon?: React.ElementType;
+  placeholder?: string;
+  options: { label: string; value: string }[];
+  required?: boolean;
+}
+
+function SmartSelectField({
+  name,
+  label,
+  icon: Icon,
+  placeholder,
+  options,
+  required,
+}: SmartSelectFieldProps) {
+  const {
+    control,
+    formState: { errors },
+  } = useFormContext<RegisterFormData>();
+  const error = errors[name]?.message as string | undefined;
+
+  return (
+    <FieldWrapper label={label} error={error} required={required}>
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <Select onValueChange={field.onChange} value={field.value}>
+            <SelectTrigger
+              className={cn(
+                "input-brand w-full",
+                error && "border-destructive ring-1 ring-destructive",
+              )}
+            >
+              
+              <SelectValue
+                placeholder={placeholder ?? "Selecciona"}
+                className={cn(Icon && "pl-9")}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </FieldWrapper>
+  );
+}
+
+function SmartAcceptedBasesCheckboxField() {
+  const {
+    control,
+    formState: { errors },
+  } = useFormContext<RegisterFormData>();
+  const error = errors.acceptedBases?.message as string | undefined;
+
+  return (
+    <div className="flex items-start gap-3 rounded-xl border-2 border-[var(--gold)]/40 surface-form-amber p-4">
+      <Controller
+        name="acceptedBases"
+        control={control}
+        render={({ field }) => (
+          <Checkbox
+            id="acceptedBases"
+            checked={field.value === true}
+            onCheckedChange={(checked) =>
+              field.onChange((checked as boolean) === true)
+            }
+            className="mt-0.5"
+          />
+        )}
+      />
+      <div className="flex-1">
+        <Label
+          htmlFor="acceptedBases"
+          className="cursor-pointer font-bold leading-tight text-brand-deep-navy"
+        >
+          He leído y acepto las bases oficiales del evento.
+        </Label>
+      </div>
+      {error && (
+        <p className="flex items-center gap-1.5 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── RegisterForm ──────────────────────────────────────────────────────────────
+
+export function RegisterForm() {
+  const registerMutation = useRegister();
+
+  const initialData: RegisterFormData = {
+    email: "",
+    password: "",
+    confirmPassword: "",
+    tipoDocumento: "DNI",
+    numeroDocumento: "",
+    nombres: "",
+    apellidos: "",
+    genero: "M",
+    telefono: null,
+    whatsapp: null,
+    contactoEmergenciaNombre: null,
+    contactoEmergenciaTelefono: null,
+    acceptedBases: false as unknown as true,
+  };
+
+  const onSubmit = async (data: RegisterFormData) => {
+    await registerMutation.mutateAsync(data);
+  };
+
+  return (
+    <div className="w-full">
+      <GenericForm<RegisterFormData>
+        schema={RegisterFormSchema}
+        initialData={initialData}
+        onSubmit={onSubmit}
+        formClassName="space-y-3"
+        showErrorsAsToasts
+      >
+        {({ isSubmitting }) => (
+          <>
+            {/* Compact branding header */}
+            <div className="flex flex-col items-center gap-2 pb-4">
+              <FestBrandHeader
+                variant="onLight"
+                size="sm"
+                subtitle="Crear cuenta · Unete y preinscribe a tu promocion"
+              />
+            </div>
+
+            {/* F1 — Email: full width */}
+            <SmartEmailField />
+
+            {/* F2 — Password | Confirmar: 50/50 */}
+            <div className="grid gap-3 md:grid-cols-2">
+              <SmartPasswordField />
+              <SmartConfirmPasswordField />
+            </div>
+
+            {/* F3 — Tipo doc | Número doc: 50/50 */}
+            <div className="grid gap-3 md:grid-cols-2">
+              <SmartTipoDocumentoField />
+              <SmartNumeroDocumentoField />
+            </div>
+
+            {/* F4 — Nombres | Apellidos: 50/50 */}
+            <div className="grid gap-3 md:grid-cols-2">
+              <SmartTextField
+                name="nombres"
+                label="Nombres"
+                placeholder="Juan Carlos"
+                icon={User}
+                required
+              />
+              <SmartTextField
+                name="apellidos"
+                label="Apellidos"
+                placeholder="Pérez López"
+                icon={User}
+                required
+              />
+            </div>
+
+            {/* F5 — Género: full width */}
+            <SmartSelectField
+              name="genero"
+              label="Género"
+              icon={User}
+              placeholder="Selecciona"
+              options={[
+                { label: "Masculino", value: "M" },
+                { label: "Femenino", value: "F" },
+              ]}
+              required
+            />
+
+            {/* F6 — Acepto bases: full width, yellow panel */}
+            <SmartAcceptedBasesCheckboxField />
+
+            {/* F9 — Submit button + login link */}
+            <div className="flex flex-col gap-3 pt-1">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn-brand-gradient btn-shine h-12 w-full rounded-xl text-base font-black uppercase tracking-wider"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Creando cuenta...
+                  </>
+                ) : (
+                  "Crear cuenta"
+                )}
+              </Button>
+              <p className="text-center text-sm text-slate-600">
+                ¿Ya tienes cuenta?{" "}
+                <Link
+                  href="/login"
+                  className="font-bold text-indigo-700 underline-offset-4 hover:underline"
+                >
+                  Inicia sesión
+                </Link>
+              </p>
+            </div>
+          </>
+        )}
+      </GenericForm>
+    </div>
   );
 }

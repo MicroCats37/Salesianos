@@ -1,20 +1,32 @@
 "use client";
 
-import { QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import type { ReactNode } from "react";
-import { getQueryClient } from "@/lib/query-client";
+import {
+  type DehydratedState,
+  HydrationBoundary,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { type PropsWithChildren, useState } from "react";
+import { toast } from "sonner";
+import { configureToast } from "@/errors";
+import { createQueryClient } from "@/lib/query-client";
 
-export function ReactQueryProvider({ children }: { children: ReactNode }) {
-  const queryClient = getQueryClient();
+interface ProvidersProps extends PropsWithChildren {
+  dehydratedState?: DehydratedState;
+}
+
+export default function Providers({
+  children,
+  dehydratedState,
+}: ProvidersProps) {
+  const [queryClient] = useState(() => {
+    // Configure global toast adapter for API hooks
+    configureToast(toast.error, toast.success);
+    return createQueryClient();
+  });
+
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      {process.env.NODE_ENV !== "production" && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
+      <HydrationBoundary state={dehydratedState}>{children}</HydrationBoundary>
     </QueryClientProvider>
   );
 }
-
-export default ReactQueryProvider;

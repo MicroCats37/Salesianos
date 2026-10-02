@@ -39,13 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Drizzle ORM (generated migrations only, not src/infra/drizzle)
-/drizzle/
-dev.db
-dev.db-journal
-
-# logs
-*.log
-server-*.log
-dev-server.log

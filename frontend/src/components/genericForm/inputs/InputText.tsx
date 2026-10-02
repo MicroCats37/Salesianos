@@ -9,6 +9,11 @@ import type { InputComponentProps } from "./types";
 /**
  * Input de texto básico.
  * Soporta icono opcional a la izquierda.
+ *
+ * Data shaping: lee `field.maxLength`, `field.inputMode`, `field.pattern`
+ * y `field.setValueAs` para restringir / transformar el valor antes de
+ * que llegue al formulario. Esto evita que el usuario introduzca basura
+ * en campos numéricos como DNI, CE, teléfono o WhatsApp.
  */
 export const InputText: React.FC<InputComponentProps> = ({
   field,
@@ -19,6 +24,11 @@ export const InputText: React.FC<InputComponentProps> = ({
   const hasIcon = !!field.icon;
   const Icon = field.icon;
 
+  const registerOptions = {
+    ...(field.maxLength !== undefined ? { maxLength: field.maxLength } : {}),
+    ...(field.setValueAs !== undefined ? { setValueAs: field.setValueAs } : {}),
+  };
+
   const inputElement = (
     <Input
       id={id}
@@ -26,8 +36,14 @@ export const InputText: React.FC<InputComponentProps> = ({
       placeholder={field.placeholder}
       disabled={field.disabled}
       aria-invalid={!!error}
-      className={`${hasIcon ? "pl-10" : ""} ${field.className || ""}`}
-      {...register(field.name)}
+      maxLength={field.maxLength}
+      inputMode={field.inputMode}
+      pattern={field.pattern}
+      className={cn(
+        hasIcon ? "pl-10" : "",
+        field.className || "",
+      )}
+      {...register(field.name, registerOptions)}
     />
   );
 

@@ -1,7 +1,12 @@
 export { Disciplines } from "./Disciplines";
+export { EventInfoBlocks } from "./EventInfoBlocks";
 export { Gallery } from "./Gallery";
 export { Hero } from "./Hero";
+export { HeroOverlaySection } from "./HeroOverlaySection";
 export { Navbar } from "./Navbar";
 export { Paquetes } from "./Paquetes";
+export { PaquetesCards } from "./PaquetesCards";
+export { PreinscribirButton } from "./PreinscribirButton";
+export { PreinscribirCTA } from "./PreinscribirCTA";
 export { Process } from "./Process";
 export { Reglamento } from "./Reglamento";

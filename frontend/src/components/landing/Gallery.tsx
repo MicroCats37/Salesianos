@@ -116,25 +116,32 @@ export function Gallery() {
     <section
       id="galeria"
       ref={sectionRef}
-      className="section-gradient-warm py-20"
+      className="section-gradient-warm flex min-h-screen w-full items-center py-16 sm:py-20"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="gallery-header-reveal flex items-end justify-between mb-8">
-          <div>
+        <div className="gallery-header-reveal mb-8 grid items-start gap-6 sm:grid-cols-3">
+          <div className="sm:col-span-2">
             <p className="text-sm font-black uppercase tracking-[0.2em] text-[#312e8e]/70">
-              Confraternidad
+              Torneo deportivo
             </p>
             <h2 className="mt-2 text-4xl font-black tracking-tight text-[#17214b] sm:text-5xl">
-              Todas las generaciones{" "}
-              <span className="text-gradient-brand">vuelven a encontrarse</span>
+              Olimpiadas Deportivas{" "}
+              <span className="text-gradient-brand">Salesianas 2026</span>
             </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[#17214b]/80">
+              Tres dias de competencia entre promociones con siete
+              disciplinas oficiales, finales el sabado 21 de noviembre y
+              premiacion en la cena de gala del domingo. Sede: Av. Asturias
+              588, Ate.
+            </p>
           </div>
-          <div className="hidden sm:flex gap-2">
+          <div className="hidden gap-2 sm:flex sm:justify-end">
             <Button
               variant="outline"
               size="icon"
               onClick={scrollPrev}
               className="rounded-full"
+              aria-label="Imagen anterior"
             >
               <ChevronLeft />
             </Button>
@@ -143,6 +150,7 @@ export function Gallery() {
               size="icon"
               onClick={scrollNext}
               className="rounded-full"
+              aria-label="Siguiente imagen"
             >
               <ChevronRight />
             </Button>
@@ -151,9 +159,9 @@ export function Gallery() {
 
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex gap-4">
-            {IMAGES.map((img, idx) => (
+            {IMAGES.map((img) => (
               <figure
-                key={idx}
+                key={img.src}
                 className="relative flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] group"
               >
                 <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] shadow-2xl">

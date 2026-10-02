@@ -12,12 +12,10 @@ export function resolveImageUrl(path: string | null | undefined): string {
   return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
 }
 
-/** Strip all non-digit characters from a string (for phone/DNI fields). */
+/**
+ * Strips all non-digit characters from a string.
+ * Used for phone/document number inputs.
+ */
 export function stripNonDigits(value: string): string {
   return value.replace(/\D/g, "");
-}
-
-/** Strip all non-alphanumeric characters from a string (for PAS fields). */
-export function stripNonAlphanumeric(value: string): string {
-  return value.replace(/[^a-zA-Z0-9]/g, "");
 }

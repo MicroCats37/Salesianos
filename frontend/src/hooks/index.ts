@@ -1,7 +1,5 @@
 // API hooks
 
-// Cache hooks
-export { useGenericCreateMutation } from "./cache/useGenericCreateMutation";
 export { useApiCreate } from "./callsApi/useApiCreate";
 export { useApiDelete } from "./callsApi/useApiDelete";
 export { useApiQuery } from "./callsApi/useApiQuery";

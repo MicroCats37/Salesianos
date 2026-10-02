@@ -71,7 +71,7 @@ export function Reglamento() {
     <section
       id="reglamento"
       ref={sectionRef}
-      className="bg-white py-20 scroll-mt-20 sm:py-24"
+      className="flex min-h-screen w-full items-center bg-white py-16 scroll-mt-20 sm:py-24"
     >
       <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.76fr_1.24fr] lg:px-8">
         <div className="reglamento-reveal">
@@ -99,7 +99,7 @@ export function Reglamento() {
         <div className="reglamento-reveal rounded-[1.75rem] border border-[#312e8e]/10 bg-white px-6 shadow-xl shadow-[#1f2357]/8">
           {FAQ.map((item, idx) => (
             <div
-              key={idx}
+              key={item.q}
               className="border-b border-[#312e8e]/10 last:border-0"
             >
               <button

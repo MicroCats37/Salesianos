@@ -69,14 +69,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { LucideIcon } from "lucide-react";
 import { CheckCircle2, Loader2, X } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   type DefaultValues,
   type FieldValues,
@@ -426,7 +419,7 @@ export function MultiPartFormStepper({
   mapToFinal,
   finalSchema,
   onSubmit,
-  initialAggregate,
+  initialAggregate = {},
   onAggregateChange,
   onStepChange,
   isLoading = false,
@@ -445,14 +438,8 @@ export function MultiPartFormStepper({
   const [pendingStep, setPendingStep] = useState<number | null>(null);
 
   // Aggregate state — shared across all parts
-  // Use useMemo to ensure stable reference for default {} to avoid reset-effect loops
-  const stableInitialAggregate = useMemo(
-    () => initialAggregate ?? {},
-    [initialAggregate],
-  );
-  const [aggregate, setAggregate] = useState<Record<string, unknown>>(
-    stableInitialAggregate,
-  );
+  const [aggregate, setAggregate] =
+    useState<Record<string, unknown>>(initialAggregate);
 
   // Track the active part's form methods for imperative access
   const activeMethodsRef = useRef<UseFormReturn<FieldValues> | null>(null);
@@ -482,10 +469,10 @@ export function MultiPartFormStepper({
       setDirection("forward");
       setIsTransitioning(false);
       setPendingStep(null);
-      setAggregate(stableInitialAggregate);
+      setAggregate(initialAggregate);
       activeMethodsRef.current = null;
     }
-  }, [open, stableInitialAggregate]);
+  }, [open, initialAggregate]);
 
   // Commit step change after transition animation
   useEffect(() => {

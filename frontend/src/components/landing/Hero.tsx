@@ -5,6 +5,7 @@ import { Calendar, MapPin, ShieldCheck, Sparkles, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { PreinscribirButton } from "./PreinscribirButton";
 
 const CYCLING_WORDS = ["cancha", "familia", "reencuentro", "promocion"];
 
@@ -12,7 +13,7 @@ export function Hero() {
   const heroRef = useRef<HTMLDivElement>(null);
   const keywordRef = useRef<HTMLSpanElement>(null);
   const isRunning = useRef(true);
-  const [currentWord, setCurrentWord] = useState(CYCLING_WORDS[0]!);
+  const [currentWord, setCurrentWord] = useState(CYCLING_WORDS[0] ?? "cancha");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -95,7 +96,7 @@ export function Hero() {
         await animateKeywordOut();
         if (!isRunning.current) break;
         wordIdx = (wordIdx + 1) % CYCLING_WORDS.length;
-        setCurrentWord(CYCLING_WORDS[wordIdx]!);
+        setCurrentWord(CYCLING_WORDS[wordIdx] ?? "cancha");
         if (!isRunning.current) break;
         await new Promise((r) => setTimeout(r, 50));
       }
@@ -192,13 +193,10 @@ export function Hero() {
 
           {/* CTA buttons */}
           <div className="hero-stagger mt-6 flex flex-wrap gap-3">
-            <Button
-              asChild
+            <PreinscribirButton
               size="lg"
               className="btn-brand-gradient btn-shine h-14 rounded-2xl px-8 text-base font-black"
-            >
-              <Link href="/register">Preinscribir equipo</Link>
-            </Button>
+            />
             <Button
               asChild
               size="lg"
@@ -229,6 +227,7 @@ export function Hero() {
                 >
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
+                <span className="sr-only">Facebook</span>
               </a>
               <a
                 href="https://www.instagram.com/salesianos2002bodasdeplata?stkn=MWVwd3FxcXZ0ZzVhNg%3D%3D&utm_source=qr"
@@ -246,6 +245,7 @@ export function Hero() {
                 >
                   <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
                 </svg>
+                <span className="sr-only">Instagram</span>
               </a>
               <a
                 href="https://www.tiktok.com/@salesianos.2002"
@@ -263,38 +263,156 @@ export function Hero() {
                 >
                   <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.77 1.52V6.84a4.83 4.83 0 01-1.01-.15z" />
                 </svg>
+                <span className="sr-only">TikTok</span>
               </a>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN — official image as main visual */}
-        <div className="hidden lg:flex items-start pt-0">
-          <div className="hero-stagger w-full overflow-hidden rounded-[1.5rem] border-2 border-white/25 bg-white/8 shadow-[0_32px_80px_rgba(7,10,52,.45)] backdrop-blur">
-            {/* Official image — the ONE instance in Hero */}
-            <div className="relative">
-              <img
-                src="/logo-oficial-salesianos-2002.jpeg"
-                alt="Logotipo oficial Salesianos 2002 - Bodas de Plata"
-                width={640}
-                height={640}
-                className="w-full object-contain"
-                style={{ maxHeight: "480px" }}
-              />
-              {/* Overlay badge */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0d0d2b]/90 to-transparent p-4 text-center">
-                <p className="text-xs font-bold uppercase tracking-[.13em] text-[#bfc3ff]">
-                  25 anos de hermandad
-                </p>
-                <p className="mt-0.5 text-lg font-black text-white">
-                  2002 - 2027
-                </p>
-              </div>
-            </div>
-          </div>
+        {/* RIGHT COLUMN — official image carousel with overlay */}
+        <div className="hidden lg:flex items-center pt-0">
+          <HeroVisual />
         </div>
       </div>
     </section>
+  );
+}
+
+function HeroVisual() {
+  const [idx, setIdx] = useState(0);
+  const layerRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const images = [
+    "/images/fulbito-varones.webp",
+    "/images/voley-mixto.webp",
+    "/images/basket-varones.webp",
+  ];
+
+  useEffect(() => {
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduced) return;
+
+    const interval = setInterval(() => {
+      const next = (idx + 1) % images.length;
+      const out = layerRefs.current[idx];
+      const into = layerRefs.current[next];
+      if (!out || !into) {
+        setIdx(next);
+        return;
+      }
+
+      gsap.set(into, { opacity: 0, scale: 1.04, filter: "blur(8px)" });
+      gsap.to(out, { opacity: 0, duration: 1.1, ease: "power2.inOut" });
+      gsap.to(into, {
+        opacity: 1,
+        scale: 1,
+        filter: "blur(0px)",
+        duration: 1.1,
+        ease: "power2.inOut",
+        onStart: () => setIdx(next),
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [idx, images.length]);
+
+  return (
+    <div className="hero-stagger relative w-full overflow-hidden rounded-[1.5rem] border-2 border-white/25 shadow-[0_32px_80px_rgba(7,10,52,.45)]">
+      <div className="relative aspect-[4/5] w-full">
+        {images.map((src, i) => (
+          <div
+            key={src}
+            ref={(el) => {
+              layerRefs.current[i] = el;
+            }}
+            className="absolute inset-0"
+            style={{
+              opacity: i === 0 ? 1 : 0,
+              transition: "opacity 1.1s ease-in-out",
+            }}
+          >
+            <img
+              src={src}
+              alt=""
+              className="size-full object-cover"
+            />
+          </div>
+        ))}
+
+        {/* Dark overlay gradient */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(7,8,28,0.55) 0%, rgba(7,8,28,0.35) 40%, rgba(7,8,28,0.85) 100%)",
+          }}
+        />
+
+        {/* Centered logo */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+          <div
+            className="relative size-44 xl:size-56"
+            aria-hidden="true"
+          >
+            <div
+              className="absolute -inset-3 rounded-full"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, #f4c64e, #ec4899, #6366f1, #22d3ee, #f4c64e)",
+                filter: "blur(18px)",
+                opacity: 0.6,
+                animation: "spin 8s linear infinite",
+              }}
+            />
+            <div className="relative h-full w-full overflow-hidden rounded-full border-4 border-white/80 shadow-2xl">
+              <img
+                src="/logo-oficial-salesianos-2002.jpeg"
+                alt="Logotipo oficial Salesianos 2002 - Bodas de Plata"
+                className="size-full object-cover"
+              />
+            </div>
+          </div>
+
+          <p
+            className="mt-6 text-xs font-black uppercase tracking-[0.4em] text-[#f4c64e]"
+            style={{ textShadow: "0 0 18px rgba(244,197,74,0.55)" }}
+          >
+            25 anos de hermandad
+          </p>
+          <p
+            className="mt-1 text-3xl font-black tracking-tight text-white"
+            style={{
+              fontFamily: "'Brush Script MT', 'Comic Sans MS', cursive",
+              textShadow: "0 0 24px rgba(0,0,0,0.6)",
+            }}
+          >
+            2002 - 2027
+          </p>
+        </div>
+
+        {/* Carousel indicators */}
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              aria-label={`Ir a imagen ${i + 1}`}
+              className="h-1.5 rounded-full transition-all duration-500"
+              style={{
+                width: i === idx ? "2rem" : "0.5rem",
+                background:
+                  i === idx
+                    ? "linear-gradient(90deg, #f4c64e, #ec4899)"
+                    : "rgba(255,255,255,0.4)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 

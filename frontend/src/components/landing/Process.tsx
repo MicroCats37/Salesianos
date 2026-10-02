@@ -70,7 +70,7 @@ export function Process() {
     <section
       id="proceso"
       ref={sectionRef}
-      className="bg-gradient-to-br from-[#312e8e] to-[#1557b8] py-20 text-white scroll-mt-20 sm:py-24"
+      className="flex min-h-screen w-full items-center bg-gradient-to-br from-[#312e8e] to-[#1557b8] py-16 text-white scroll-mt-20 sm:py-24"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">

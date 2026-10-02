@@ -1,11 +1,10 @@
 // genericForm/inputs/index.ts
-// Barrel exports for the inputs folder
+// Barrel exports para la carpeta inputs
 
 export { AreaInput } from "./AreaInput";
 export { FormattedNumberInput } from "./FormattedNumberInput";
 export { InputCheckbox } from "./InputCheckbox";
 export { InputDatePicker } from "./InputDatePicker";
-export { InputFileCollection } from "./InputFileCollection";
 export { InputFormattedNumber } from "./InputFormattedNumber";
 export { InputHidden } from "./InputHidden";
 export { InputImage } from "./InputImage";

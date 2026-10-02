@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { GenericModal } from "@/components/genericModal/GenericModal";
 import { Button } from "@/components/ui/button";
 

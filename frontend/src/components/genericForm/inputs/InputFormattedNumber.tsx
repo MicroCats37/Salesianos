@@ -1,5 +1,7 @@
 // InputFormattedNumber.tsx
 "use client";
+
+import type { KeyboardEvent } from "react";
 /**
  * InputFormattedNumber — InputComponent-compatible wrapper for FormattedNumberInput.
  *

@@ -212,7 +212,6 @@ export const GenericForm = <T extends FieldValues>({
   const internalMethods = useForm<T>({
     resolver: zodResolver(schema),
     defaultValues: defaults,
-    values: initialData as any, // Reinitializes form when async initialData arrives
   });
 
   const methods =
@@ -337,7 +336,6 @@ export const GenericForm = <T extends FieldValues>({
           });
         });
       }
-      throw e;
     }
   };
 

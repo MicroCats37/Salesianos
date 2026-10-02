@@ -103,7 +103,7 @@ export function FormattedNumberInput<
     (val: number | "" | null | undefined): string => {
       if (val === "" || val === null || val === undefined) return "0";
       const num = Number(val);
-      if (Number.isNaN(num) || !Number.isFinite(num)) return "0";
+      if (isNaN(num) || !isFinite(num)) return "0";
 
       // Defensive: ensure decimalPlaces is a safe number (aligns with MoneyInput pattern)
       const dp =
@@ -138,7 +138,7 @@ export function FormattedNumberInput<
         .replace(/[^\d.-]/g, "");
       if (stripped === "" || stripped === "-") return 0;
       const parsed = parseFloat(stripped);
-      if (Number.isNaN(parsed) || !Number.isFinite(parsed)) return 0;
+      if (isNaN(parsed) || !isFinite(parsed)) return 0;
 
       if (decimalPlaces === 0) {
         return Math.max(Number(min) || 0, Math.round(parsed));
@@ -189,7 +189,7 @@ export function FormattedNumberInput<
       }
 
       const parsed = parseFloat(stripped);
-      if (Number.isNaN(parsed) || !Number.isFinite(parsed)) {
+      if (isNaN(parsed) || !isFinite(parsed)) {
         return;
       }
 

@@ -44,6 +44,3 @@ coverage
 Dockerfile
 docker-compose*.yml
 .dockerignore
-
-# Local SQLite dev database
-dev.db

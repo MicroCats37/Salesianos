@@ -1,12 +1,5 @@
 export type { AppFormModalProps } from "./AppFormModal";
 export { AppFormModal } from "./AppFormModal";
-export type {
-  AppStepperFormModalProps,
-  StepConfig,
-} from "./AppStepperFormModal";
-export { AppStepperFormModal } from "./AppStepperFormModal";
-export type { FormSectionHeaderVariant } from "./FormSectionHeader";
-export { FormSectionHeader } from "./FormSectionHeader";
 export type { ModalShellProps } from "./ModalShell";
 export { ModalShell } from "./ModalShell";
 export type {

@@ -92,9 +92,9 @@ export function StatsArea({
       {/* Main stat card - Gestión de Beneficiarios */}
       <StatCard
         className="lg:col-span-6 bg-card"
-        bgColor="success-bg-subtle"
-        iconBg="success-bg"
-        iconColor="success-foreground"
+        bgColor="bg-emerald-100"
+        iconBg="bg-emerald-500"
+        iconColor="text-white"
         icon={<ShieldCheck className="h-6 w-6" />}
         decorativeIcon={
           <ShieldCheck className="h-20 w-20 text-secondary-foreground" />
@@ -116,8 +116,8 @@ export function StatsArea({
 
       {/* Beneficiarios stat */}
       <StatCard
-        className="lg:col-span-3 bg-primary"
-        bgColor="bg-primary"
+        className="lg:col-span-3 bg-blue-600"
+        bgColor="bg-blue-600"
         iconBg="bg-white/20"
         iconColor="text-white"
         isDarkBg
@@ -154,8 +154,8 @@ export function StatsArea({
       >
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-1 w-4 success-bg-subtle rounded-full animate-pulse" />
-            <span className="text-[9px] font-black uppercase tracking-[0.15em] success-text">
+            <div className="h-1 w-4 bg-emerald-400/50 rounded-full animate-pulse" />
+            <span className="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-300">
               Pases Libres
             </span>
           </div>

@@ -1,6 +1,5 @@
 import {
   type MutationFunction,
-  type QueryClient,
   type QueryKey,
   type UseMutationOptions,
   useMutation,
@@ -17,9 +16,8 @@ interface UseGenericCreateMutationOptions<TVars = unknown> {
   /**
    * URL del POST — construye el mutationFn internamente (buildApiPayload + api.post
    * + manejo de errores + toast), como useApiCreate. Alternativa a `mutationFn`.
-   * También acepta función (vars) => string para URLs dinámicas.
    */
-  url?: string | ((vars: TVars) => string);
+  url?: string;
   /** mutationFn manual (modo original). Se usa si no se provee `url`. */
   mutationFn?: MutationFunction<unknown, TVars>;
   schema?: ZodType<unknown>;
@@ -33,31 +31,6 @@ interface UseGenericCreateMutationOptions<TVars = unknown> {
    *   por prefijo para cubrir las listas paginadas (page/page_size/filtros).
    */
   listShape?: "array" | "paginated";
-  /**
-   * Transforma las variables antes de buildApiPayload.
-   * Útil para convertir variables de UI (ej. archivos: File[]) al formato
-   * que espera el backend (ej. archivos_adjuntos).
-   * Si se usa junto con URL función, la URL se resuelve ANTES de mapVariables.
-   */
-  mapVariables?: (vars: TVars) => Record<string, unknown>;
-  /**
-   * Si `true`, fuerza el envolture en FormData (con campo "data") incluso
-   * cuando buildApiPayload devuelve un objeto plano (sin archivos).
-   * Necesario para backends que siempre esperan FormData con parse_form_json.
-   */
-  forceFormData?: boolean;
-  /**
-   * Callback que se ejecuta DESPUÉS del éxito de la mutación,
-   * después de las actualizaciones de cache internas del generic hook.
-   * Siempre se ejecuta, incluso si `options.onSuccess` está definido.
-   * Útil para invalidación de cache específica de un feature
-   * (ej. invalidar una query de detalle en lugar de la lista genérica).
-   */
-  afterSuccess?: (
-    queryClient: QueryClient,
-    rawResult: unknown,
-    variables: TVars,
-  ) => void;
   options?: Omit<UseMutationOptions<unknown, AxiosError, TVars>, "mutationFn">;
 }
 
@@ -83,9 +56,6 @@ export function useGenericCreateMutation<
   showToast = true,
   insertPosition = "start",
   listShape = "array",
-  mapVariables,
-  forceFormData = false,
-  afterSuccess,
   options,
 }: UseGenericCreateMutationOptions<TVars>) {
   const queryClient = useQueryClient();
@@ -93,23 +63,8 @@ export function useGenericCreateMutation<
   const internalMutationFn: MutationFunction<unknown, TVars> = url
     ? async (variables) => {
         try {
-          // Resolve dynamic URL if url is a function
-          const resolvedUrl = typeof url === "function" ? url(variables) : url;
-          // Apply variable transformation before buildApiPayload
-          const payloadVars = mapVariables
-            ? mapVariables(variables)
-            : (variables as Record<string, unknown>);
-          const payload = buildApiPayload(payloadVars);
-
-          // Force FormData wrap when backend always expects it (parse_form_json pattern)
-          let finalPayload: FormData | Record<string, unknown> = payload;
-          if (forceFormData && !(payload instanceof FormData)) {
-            const fd = new FormData();
-            fd.append("data", JSON.stringify(payload));
-            finalPayload = fd;
-          }
-
-          const { data } = await api.post(resolvedUrl, finalPayload);
+          const payload = buildApiPayload(variables);
+          const { data } = await api.post(url, payload);
           return schema ? schema.parse(data) : data;
         } catch (error) {
           const apiError = handleApiError(error);
@@ -126,7 +81,7 @@ export function useGenericCreateMutation<
 
   return useMutation<unknown, AxiosError, TVars>({
     mutationFn: internalMutationFn,
-    onSuccess: (rawResult, variables) => {
+    onSuccess: (rawResult) => {
       // Desenvuelve el envelope ApiResponse para obtener el item de la lista
       const newItem = ((rawResult as { data?: TItem })?.data ??
         rawResult) as TItem;
@@ -157,10 +112,6 @@ export function useGenericCreateMutation<
       }
       // Seed detail cache
       queryClient.setQueryData([...queryKey, newItem.id], newItem);
-
-      // afterSuccess callback: runs regardless of options.onSuccess override.
-      // Use for feature-specific cache invalidation (e.g. detail queries).
-      afterSuccess?.(queryClient, rawResult, variables);
     },
     ...options,
   });

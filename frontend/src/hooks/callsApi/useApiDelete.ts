@@ -1,5 +1,5 @@
 import { type UseMutationOptions, useMutation } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosResponse } from "axios";
 import { handleApiError, notify } from "@/errors";
 import api from "@/lib/api";
 
@@ -18,6 +18,7 @@ interface UseApiDeleteProps<TData, TPayload = never> {
    *  For classic id-based delete, omit this. */
   getUrl?: (variables: DeleteVariables<TPayload>) => string;
   showToast?: boolean;
+  showSuccessToast?: boolean;
   options?: Omit<
     UseMutationOptions<TData, AxiosError, DeleteVariables<TPayload>>,
     "mutationFn"
@@ -28,6 +29,7 @@ export function useApiDelete<TData = unknown, TPayload = never>({
   baseUrl,
   getUrl,
   showToast = true,
+  showSuccessToast = true,
   options,
 }: UseApiDeleteProps<TData, TPayload>) {
   return useMutation<TData, AxiosError, DeleteVariables<TPayload>>({
@@ -45,8 +47,14 @@ export function useApiDelete<TData = unknown, TPayload = never>({
           url = `${baseUrl}/${variables}`;
         }
 
-        const { data } = await api.delete(url);
-        return data as TData;
+        const response: AxiosResponse<unknown> = await api.delete(url);
+        if (showSuccessToast) {
+          const envelope = response.data as { message?: string } | null;
+          if (envelope && typeof envelope.message === "string" && envelope.message.length > 0) {
+            notify.success(envelope.message);
+          }
+        }
+        return response.data as TData;
       } catch (error) {
         const apiError = handleApiError(error);
         if (showToast) notify.error(apiError.message);

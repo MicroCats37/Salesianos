@@ -1,9 +1,3 @@
-export {
-  getMe,
-  login,
-  loginDni,
-  loginEmail,
-  loginUsername,
-  logout,
-  registerUser,
-} from "./auth.service";
+export { loginService } from "./login.service";
+export type { LoginServiceInput, LoginServiceResult } from "./login.service";
+export { registerUser } from "./register.service";

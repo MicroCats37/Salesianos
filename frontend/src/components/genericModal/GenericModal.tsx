@@ -5,10 +5,8 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useImperativeHandle,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import {
@@ -65,19 +63,13 @@ const GenericModalRoot = ({
   ref,
   preventClose = false,
   onBeforeClose,
+  variant = "default",
 }: GenericModalProps) => {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [hasHeader, setHasHeader] = useState(false);
 
   const isOpen =
     controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
-
-  // Keep a ref with the current isOpen value so handleOpenChange stays stable
-  // (isOpen is NOT in handleOpenChange's deps to avoid rebuilding actions on every open change)
-  const isOpenRef = useRef(isOpen);
-  useEffect(() => {
-    isOpenRef.current = isOpen;
-  }, [isOpen]);
 
   const handleOpenChange = useCallback(
     async (nextOpen: boolean) => {
@@ -86,8 +78,8 @@ const GenericModalRoot = ({
         return;
       }
 
-      // Interceptor logic — use ref to avoid stale closure while keeping deps stable
-      if (isOpenRef.current && !nextOpen && onBeforeClose) {
+      // Interceptor logic
+      if (isOpen && !nextOpen && onBeforeClose) {
         const canClose = await onBeforeClose();
         if (!canClose) return;
       }
@@ -95,14 +87,13 @@ const GenericModalRoot = ({
       if (onOpenChange) onOpenChange(nextOpen);
       else setUncontrolledOpen(nextOpen);
     },
-    [onOpenChange, onBeforeClose, preventClose],
+    [isOpen, onOpenChange, onBeforeClose, preventClose],
   );
 
   const registerHeader = useCallback((exists: boolean) => {
     setHasHeader(exists);
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: isOpen is stable via isOpenRef; actions must not rebuild on isOpen changes
   const actions: GenericModalRef = useMemo(
     () => ({
       open: () => handleOpenChange(true),
@@ -116,16 +107,29 @@ const GenericModalRoot = ({
       hasHeader,
       registerHeader,
     }),
-    [handleOpenChange, onOpenChange, preventClose, hasHeader, registerHeader],
+    [
+      handleOpenChange,
+      onOpenChange,
+      isOpen,
+      preventClose,
+      hasHeader,
+      registerHeader,
+    ],
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useImperativeHandle(ref, () => actions, [actions]);
 
   return (
     <GenericModalContext.Provider value={actions}>
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        {children}
-      </Dialog>
+      {variant === "embedded" ? (
+        // Embedded mode: no Dialog, render children directly
+        children
+      ) : (
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+          {children}
+        </Dialog>
+      )}
     </GenericModalContext.Provider>
   );
 };

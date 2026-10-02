@@ -1,10 +1,9 @@
+"use client";
+
 import { AlertCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
-import {
-  fetchPaquetes,
-  getFeaturedPaquetes,
-} from "@/features/landing/paquetes.service";
+import { usePaquetes } from "@/features/inscripciones/hooks/useInscripcionCatalogs";
 import { PaquetesCards } from "./PaquetesCards";
 import { PreinscribirCTA } from "./PreinscribirCTA";
 
@@ -136,13 +135,13 @@ function FallbackCard({ pkg }: { pkg: (typeof FALLBACK_PAQUETES)[number] }) {
  * 2. Falls back to FALLBACK_PAQUETES if API is unavailable
  * 3. Passes data to PaquetesCards (client) for rendering + animation
  */
-export async function Paquetes() {
-  const paquetes = await fetchPaquetes();
-  const featuredPaquetes = paquetes ? getFeaturedPaquetes(paquetes) : null;
+export function Paquetes() {
+  const { data: paquetes, isLoading } = usePaquetes();
+  const featuredPaquetes = paquetes?.filter((paquete) => paquete.esta_activo) ?? null;
 
   return (
     <>
-      {featuredPaquetes ? (
+      {featuredPaquetes && featuredPaquetes.length > 0 ? (
         <PaquetesCards paquetes={featuredPaquetes} />
       ) : (
         <section
@@ -165,7 +164,12 @@ export async function Paquetes() {
             </div>
 
             <div className="paquete-reveal mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-2 lg:items-start xl:grid-cols-4">
-              {FALLBACK_PAQUETES.map((pkg) => (
+              {isLoading ? FALLBACK_PAQUETES.slice(0, 4).map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className="h-[32rem] animate-pulse rounded-3xl bg-[#f4f6fb] shadow-xl ring-1 ring-[#312e8e]/10"
+                />
+              )) : FALLBACK_PAQUETES.map((pkg) => (
                 <FallbackCard key={pkg.id} pkg={pkg} />
               ))}
             </div>

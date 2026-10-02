@@ -37,8 +37,7 @@ const BASE_URL =
 export async function fetchPaquetes(): Promise<Paquete[] | null> {
   try {
     const res = await fetch(`${BASE_URL}/inscripciones/paquetes/`, {
-      // Next.js cache semantics — revalidate every 5 minutes on the landing page
-      next: { revalidate: 300 },
+      cache: "no-store",
     });
 
     if (!res.ok) return null;

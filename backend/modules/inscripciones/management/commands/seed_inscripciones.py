@@ -1,11 +1,18 @@
 """
 Seed command for Inscripciones module.
 
-Seeds reference data: Evento, Promociones, Disciplinas, Categorias, Paquetes.
-Idempotent — safe to re-run (uses get_or_create/update_or_create).
+Loads reference data from `seed_data/seed_inscripciones.json`.
+Idempotent — safe to re-run (uses update_or_create/get_or_create).
+
+Usage:
+    python manage.py seed_inscripciones
+    python manage.py seed_inscripciones --path /custom/path/to/seed.json
 """
 
-from django.core.management.base import BaseCommand
+import json
+from pathlib import Path
+
+from django.core.management.base import BaseCommand, CommandError
 
 from modules.inscripciones.domain.models import (
     Evento,
@@ -22,47 +29,69 @@ from modules.inscripciones.domain.constants import (
 )
 
 
+DEFAULT_SEED_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "seed_data"
+    / "seed_inscripciones.json"
+)
+
+
 class Command(BaseCommand):
-    help = "Seed reference data for Salesianos FEST 2026"
+    help = "Seed reference data for Salesianos FEST from a JSON file."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--path",
+            type=str,
+            default=str(DEFAULT_SEED_PATH),
+            help=f"Path to the seed JSON file (default: {DEFAULT_SEED_PATH})",
+        )
 
     def handle(self, *args, **options):
-        self.stdout.write("Seeding Salesianos FEST reference data...")
+        seed_path = Path(options["path"])
+        if not seed_path.exists():
+            raise CommandError(f"Seed file not found: {seed_path}")
 
-        self._seed_evento()
-        self._seed_promociones()
-        self._seed_disciplinas()
-        self._seed_categorias()
-        self._seed_paquetes()
+        self.stdout.write(f"Loading seed data from: {seed_path}")
+        with seed_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        self.stdout.write("Seeding Salesianos FEST reference data...")
+        self._seed_evento(data["evento"])
+        self._seed_promociones(data["promociones"])
+        self._seed_disciplinas(data["disciplinas"])
+        self._seed_categorias(data["categorias"])
+        self._seed_paquetes(data["paquetes"])
 
         self.stdout.write(self.style.SUCCESS("Seed completed successfully."))
 
-    def _seed_evento(self):
-        """Seed the main event."""
+    def _seed_evento(self, evento_data):
         evento, created = Evento.objects.update_or_create(
-            nombre="Salesianos FEST 2026",
+            nombre=evento_data["nombre"],
             defaults={
-                "fecha_inicio": "2026-10-01",
-                "fecha_fin": "2026-10-31",
-                "esta_activo": True,
+                "fecha_inicio": evento_data["fecha_inicio"],
+                "fecha_fin": evento_data["fecha_fin"],
+                "esta_activo": evento_data.get("esta_activo", True),
             },
         )
         action = "Created" if created else "Updated"
         self.stdout.write(f"  {action} Evento: {evento.nombre}")
 
-    def _seed_promociones(self):
-        """Seed promotions from 1970 to 2026."""
-        current_year = 2026
-        start_year = 1970
+    def _seed_promociones(self, promos_data):
+        anio_inicio = int(promos_data["anio_inicio"])
+        anio_fin = int(promos_data["anio_fin"])
+        colegio = ColegioChoices(promos_data["colegio"])
+        activa = promos_data.get("activa", True)
         created_count = 0
         updated_count = 0
 
-        for anio in range(start_year, current_year + 1):
+        for anio in range(anio_inicio, anio_fin + 1):
             promo, created = Promocion.objects.update_or_create(
                 anio=anio,
                 defaults={
-                    "colegio": ColegioChoices.MA,
+                    "colegio": colegio,
                     "nombre": f"Promoción {anio}",
-                    "activa": True,
+                    "activa": activa,
                 },
             )
             if created:
@@ -71,82 +100,27 @@ class Command(BaseCommand):
                 updated_count += 1
 
         self.stdout.write(
-            f"  Created {created_count}, updated {updated_count} Promociones (range {start_year}-{current_year})"
+            f"  Created {created_count}, updated {updated_count} Promociones "
+            f"(range {anio_inicio}-{anio_fin})"
         )
 
-    def _seed_disciplinas(self):
-        """Seed disciplines from the mockup."""
-        disciplinas_data = [
-            {
-                "nombre": "Fulbito Varones",
-                "sigla": "fulbito_var",
-                "modalidad": ModalidadChoices.MASCULINO,
-                "min_jugadores": None,
-                "max_jugadores": 12,
-            },
-            {
-                "nombre": "Fulbito Mujeres",
-                "sigla": "fulbito_dam",
-                "modalidad": ModalidadChoices.FEMENINO,
-                "min_jugadores": None,
-                "max_jugadores": 12,
-            },
-            {
-                "nombre": "Vóley Mixto",
-                "sigla": "voley_mix",
-                "modalidad": ModalidadChoices.MIXTO,
-                "min_jugadores": None,
-                "max_jugadores": 12,
-            },
-            {
-                "nombre": "Básquet Varones",
-                "sigla": "basket_var",
-                "modalidad": ModalidadChoices.MASCULINO,
-                "min_jugadores": None,
-                "max_jugadores": 10,
-            },
-        ]
-
+    def _seed_disciplinas(self, disciplinas_data):
         for data in disciplinas_data:
+            modalidad = ModalidadChoices(data["modalidad"])
             disc, created = Disciplina.objects.update_or_create(
                 sigla=data["sigla"],
                 defaults={
                     "nombre": data["nombre"],
-                    "modalidad": data["modalidad"],
-                    "min_jugadores": data["min_jugadores"],
-                    "max_jugadores": data["max_jugadores"],
+                    "modalidad": modalidad,
+                    "min_jugadores": data.get("min_jugadores"),
+                    "max_jugadores": data.get("max_jugadores"),
                     "esta_activa": True,
                 },
             )
             action = "Created" if created else "Updated"
             self.stdout.write(f"  {action} Disciplina: {disc.nombre}")
 
-    def _seed_categorias(self):
-        """Seed categories from the mockup."""
-        # Map of disciplina sigla -> list of (nombre, anio_min, anio_max)
-        categorias_data = {
-            "fulbito_var": [
-                ("Junior", 2012, 2025),
-                ("Senior", 1998, 2011),
-                ("Master", 1987, 1997),
-                ("Super Master", 1970, 1986),
-            ],
-            "fulbito_dam": [
-                ("Junior", 2001, 2024),
-                ("Master", 1975, 2000),
-            ],
-            "voley_mix": [
-                ("Junior", 2012, 2025),
-                ("Senior", 1998, 2011),
-                ("Master", 1975, 1986),
-            ],
-            "basket_var": [
-                ("Junior", 2012, 2025),
-                ("Senior", 1998, 2011),
-                ("Master", 1970, 1997),
-            ],
-        }
-
+    def _seed_categorias(self, categorias_data):
         total_created = 0
         total_updated = 0
 
@@ -155,17 +129,19 @@ class Command(BaseCommand):
                 disciplina = Disciplina.objects.get(sigla=sigla)
             except Disciplina.DoesNotExist:
                 self.stdout.write(
-                    self.style.WARNING(f"  Skipping categorias for unknown disciplina: {sigla}")
+                    self.style.WARNING(
+                        f"  Skipping categorias for unknown disciplina: {sigla}"
+                    )
                 )
                 continue
 
-            for nombre, anio_min, anio_max in categorias:
+            for cat_data in categorias:
                 cat, created = Categoria.objects.update_or_create(
                     disciplina=disciplina,
-                    nombre=nombre,
+                    nombre=cat_data["nombre"],
                     defaults={
-                        "anio_minimo": anio_min,
-                        "anio_maximo": anio_max,
+                        "anio_minimo": int(cat_data["anio_minimo"]),
+                        "anio_maximo": int(cat_data["anio_maximo"]),
                         "esta_activa": True,
                     },
                 )
@@ -178,90 +154,37 @@ class Command(BaseCommand):
             f"  Created {total_created}, updated {total_updated} Categorias"
         )
 
-    def _seed_paquetes(self):
-        """
-        Seed packages from user reference image.
-
-        Four package cards:
-        1. PREVENTA BOX TRIO — ELEGIBLE, 3 disciplines (fulbito_var, fulbito_dam, voley_mix),
-           promo S/1300, regular S/1500, up to 20 persons.
-        2. PREVENTA BOX DUO — ELEGIBLE, 2 disciplines (fulbito_var, voley_mix),
-           promo S/1100, regular S/1300, up to 20 persons.
-        3. PREVENTA STAND UP F7M — FIJO, 1 discipline (fulbito_var),
-           promo S/500, regular S/600, up to 10 persons.
-        4. PREVENTA STAND UP BVF — ELEGIBLE, 1 of 3 disciplines (basket_var, voley_mix, fulbito_dam),
-           promo S/500, regular S/600, up to 10 persons.
-
-        Note on discipline mapping:
-        - fulbito_var = football/futsal masculine (modalidad=M, max_jugadores=12)
-        - fulbito_dam = football/futsal feminine (modalidad=F, max_jugadores=12)
-        - voley_mix = volleyball mixed (modalidad=X, max_jugadores=12)
-        - basket_var = basketball masculine (modalidad=M, max_jugadores=10)
-        """
-        paquetes_data = [
-            {
-                "nombre": "PREVENTA BOX TRIO",
-                "descripcion": "3 disciplinas: fulbito masculino, fulbito femenino, vóley mixto. Hasta 20 personas.",
-                "cantidad_maxima_participantes": 20,
-                "precio_regular": 1500.00,
-                "precio_promocional": 1300.00,
-                "disciplinas_siglas": ["fulbito_var", "fulbito_dam", "voley_mix"],
-                "modo_disciplinas": ModoDisciplinasPaqueteChoices.ELEGIBLE,
-                "cantidad_disciplinas_requeridas": 3,
-            },
-            {
-                "nombre": "PREVENTA BOX DUO",
-                "descripcion": "2 disciplinas: fulbito masculino, vóley mixto. Hasta 20 personas.",
-                "cantidad_maxima_participantes": 20,
-                "precio_regular": 1300.00,
-                "precio_promocional": 1100.00,
-                "disciplinas_siglas": ["fulbito_var", "voley_mix"],
-                "modo_disciplinas": ModoDisciplinasPaqueteChoices.ELEGIBLE,
-                "cantidad_disciplinas_requeridas": 2,
-            },
-            {
-                "nombre": "PREVENTA STAND UP F7M",
-                "descripcion": "Fútbol 7 Masculino. Hasta 10 personas.",
-                "cantidad_maxima_participantes": 10,
-                "precio_regular": 600.00,
-                "precio_promocional": 500.00,
-                "disciplinas_siglas": ["fulbito_var"],
-                "modo_disciplinas": ModoDisciplinasPaqueteChoices.FIJO,
-                "cantidad_disciplinas_requeridas": 1,
-            },
-            {
-                "nombre": "PREVENTA STAND UP BVF",
-                "descripcion": "Elegir 1 disciplina: Básquet Varones, Vóley Mixto o Fulbito Femenino. Hasta 10 personas.",
-                "cantidad_maxima_participantes": 10,
-                "precio_regular": 500.00,
-                "precio_promocional": 400.00,
-                "disciplinas_siglas": ["basket_var", "voley_mix", "fulbito_dam"],
-                "modo_disciplinas": ModoDisciplinasPaqueteChoices.ELEGIBLE,
-                "cantidad_disciplinas_requeridas": 1,
-            },
-        ]
-
+    def _seed_paquetes(self, paquetes_data):
         for data in paquetes_data:
+            modo = ModoDisciplinasPaqueteChoices(data["modo_disciplinas"])
             paquete, created = Paquete.objects.update_or_create(
                 nombre=data["nombre"],
                 defaults={
-                    "descripcion": data["descripcion"],
-                    "cantidad_maxima_participantes": data["cantidad_maxima_participantes"],
+                    "descripcion": data.get("descripcion", ""),
+                    "cantidad_maxima_participantes": int(
+                        data["cantidad_maxima_participantes"]
+                    ),
                     "precio_regular": data["precio_regular"],
-                    "precio_promocional": data["precio_promocional"],
-                    "valido_desde": "2026-09-01",
-                    "valido_hasta": "2026-10-31",
-                    "esta_activo": True,
-                    "modo_disciplinas": data["modo_disciplinas"],
-                    "cantidad_disciplinas_requeridas": data["cantidad_disciplinas_requeridas"],
+                    "precio_promocional": data.get("precio_promocional"),
+                    "valido_desde": data["valido_desde"],
+                    "valido_hasta": data["valido_hasta"],
+                    "esta_activo": data.get("esta_activo", True),
+                    "modo_disciplinas": modo,
+                    "cantidad_disciplinas_requeridas": data.get(
+                        "cantidad_disciplinas_requeridas"
+                    ),
                 },
             )
             action = "Created" if created else "Updated"
-            self.stdout.write(f"  {action} Paquete: {paquete.nombre} (S/{data['precio_promocional']} promo / S/{data['precio_regular']} regular)")
+            promo = data.get("precio_promocional")
+            self.stdout.write(
+                f"  {action} Paquete: {paquete.nombre} "
+                f"(S/{promo if promo is not None else '-'} promo / "
+                f"S/{data['precio_regular']} regular)"
+            )
 
-            # Link disciplines to package
             linked_count = 0
-            for sigla in data["disciplinas_siglas"]:
+            for sigla in data.get("disciplinas_siglas", []):
                 try:
                     disciplina = Disciplina.objects.get(sigla=sigla)
                     _, created_link = PaqueteDisciplina.objects.get_or_create(
@@ -272,6 +195,8 @@ class Command(BaseCommand):
                         linked_count += 1
                 except Disciplina.DoesNotExist:
                     self.stdout.write(
-                        self.style.WARNING(f"    Skipping unknown disciplina: {sigla}")
+                        self.style.WARNING(
+                            f"    Skipping unknown disciplina: {sigla}"
+                        )
                     )
             self.stdout.write(f"    Linked {linked_count} disciplines to package")

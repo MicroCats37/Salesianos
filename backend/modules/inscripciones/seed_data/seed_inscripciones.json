@@ -1,0 +1,112 @@
+{
+  "evento": {
+    "nombre": "Salesianos FEST 2026",
+    "fecha_inicio": "2026-10-01",
+    "fecha_fin": "2026-10-31",
+    "esta_activo": true
+  },
+  "promociones": {
+    "anio_inicio": 1970,
+    "anio_fin": 2026,
+    "colegio": "ma",
+    "activa": true
+  },
+  "disciplinas": [
+    {
+      "nombre": "Fútbol 7 Masculino",
+      "sigla": "futbol7_mas",
+      "modalidad": "M",
+      "max_jugadores": 12
+    },
+    {
+      "nombre": "Fútbol 7 Femenino",
+      "sigla": "futbol7_fem",
+      "modalidad": "F",
+      "max_jugadores": 12
+    },
+    {
+      "nombre": "Vóley Mixto",
+      "sigla": "voley_mix",
+      "modalidad": "X",
+      "max_jugadores": 12
+    },
+    {
+      "nombre": "Básquet Masculino",
+      "sigla": "basket_mas",
+      "modalidad": "M",
+      "max_jugadores": 10
+    }
+  ],
+  "categorias": {
+    "futbol7_mas": [
+      { "nombre": "Junior", "anio_minimo": 2012, "anio_maximo": 2025 },
+      { "nombre": "Senior", "anio_minimo": 1998, "anio_maximo": 2011 },
+      { "nombre": "Master", "anio_minimo": 1987, "anio_maximo": 1997 },
+      { "nombre": "Super Master", "anio_minimo": 1970, "anio_maximo": 1986 }
+    ],
+    "futbol7_fem": [
+      { "nombre": "Junior", "anio_minimo": 2001, "anio_maximo": 2024 },
+      { "nombre": "Master", "anio_minimo": 1975, "anio_maximo": 2000 }
+    ],
+    "voley_mix": [
+      { "nombre": "Junior", "anio_minimo": 2012, "anio_maximo": 2025 },
+      { "nombre": "Senior", "anio_minimo": 1998, "anio_maximo": 2011 },
+      { "nombre": "Master", "anio_minimo": 1975, "anio_maximo": 1986 }
+    ],
+    "basket_mas": [
+      { "nombre": "Junior", "anio_minimo": 2012, "anio_maximo": 2025 },
+      { "nombre": "Senior", "anio_minimo": 1998, "anio_maximo": 2011 },
+      { "nombre": "Master", "anio_minimo": 1970, "anio_maximo": 1997 }
+    ]
+  },
+  "paquetes": [
+    {
+      "nombre": "PACK REENCUENTRO + FIESTA",
+      "descripcion": "Elige una disciplina, compite y celebra con tu promoción. Incluye: inscripción a Fútbol 7 femenino, Vóley mixto o Básquet masculino. 10 pases para ingreso a la fiesta. Promo S/400 x equipo (regular S/500). S/40 x integrante.",
+      "cantidad_maxima_participantes": 12,
+      "precio_regular": 500.00,
+      "precio_promocional": 400.00,
+      "valido_desde": "2026-09-01",
+      "valido_hasta": "2026-10-31",
+      "modo_disciplinas": "ELEGIBLE",
+      "cantidad_disciplinas_requeridas": 1,
+      "disciplinas_siglas": ["futbol7_fem", "voley_mix", "basket_mas"]
+    },
+    {
+      "nombre": "PACK PICHANGA + FIESTA",
+      "descripcion": "Para los peloteros y toneros. Incluye: inscripción a Fútbol 7 masculino. 10 pases para ingreso a la fiesta. Promo S/450 x equipo (regular S/550). S/45 x integrante.",
+      "cantidad_maxima_participantes": 12,
+      "precio_regular": 550.00,
+      "precio_promocional": 450.00,
+      "valido_desde": "2026-09-01",
+      "valido_hasta": "2026-10-31",
+      "modo_disciplinas": "FIJO",
+      "cantidad_disciplinas_requeridas": 1,
+      "disciplinas_siglas": ["futbol7_mas"]
+    },
+    {
+      "nombre": "PACK DUO + FIESTA BOX",
+      "descripcion": "Comptan a 2 disciplinas y festejan en un box exclusivo. Incluye: inscripción a 2 disciplinas. 15 pases para el ingreso a la fiesta (zona box). Acceso a un box exclusivo para la promoción. 1 caja de cerveza. Promo S/900 x promoción (regular S/1050). S/60 x integrante.",
+      "cantidad_maxima_participantes": 20,
+      "precio_regular": 1050.00,
+      "precio_promocional": 900.00,
+      "valido_desde": "2026-09-01",
+      "valido_hasta": "2026-10-31",
+      "modo_disciplinas": "ELEGIBLE",
+      "cantidad_disciplinas_requeridas": 2,
+      "disciplinas_siglas": ["futbol7_mas", "futbol7_fem", "voley_mix", "basket_mas"]
+    },
+    {
+      "nombre": "PACK TRIO + FIESTA BOX",
+      "descripcion": "Para los más organizadores, full competencia a un mejor precio. Incluye: inscripción a 3 disciplinas. 20 pases para el ingreso a la fiesta (zona box). Acceso a un box exclusivo para la promoción. 1 caja de cerveza. Promo S/1200 x promoción (regular S/1400). S/60 x integrante.",
+      "cantidad_maxima_participantes": 20,
+      "precio_regular": 1400.00,
+      "precio_promocional": 1200.00,
+      "valido_desde": "2026-09-01",
+      "valido_hasta": "2026-10-31",
+      "modo_disciplinas": "ELEGIBLE",
+      "cantidad_disciplinas_requeridas": 3,
+      "disciplinas_siglas": ["futbol7_mas", "futbol7_fem", "voley_mix", "basket_mas"]
+    }
+  ]
+}

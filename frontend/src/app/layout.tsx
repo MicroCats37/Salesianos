@@ -29,10 +29,15 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
 export const metadata: Metadata = {
-  title: "CAM",
-  description: "CAM",
+  title: "Salesianos FEST 2026",
+  description:
+    "Por que un festival, familia y convivencia, infraestructura, comodidad para todos y la fiesta que continua cuando cae la noche.",
+  icons: {
+    icon: "/images/logo.ico",
+    shortcut: "/images/logo.ico",
+    apple: "/images/logo.ico",
+  },
 };
 
 export default function RootLayout({

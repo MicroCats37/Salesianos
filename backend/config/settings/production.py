@@ -36,6 +36,19 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool('SECURE_CONTENT_TYPE_NOSNIFF', default=Fa
 X_FRAME_OPTIONS = 'DENY'
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 
+# ── Proxy / X-Forwarded-* ───────────────────────────────────
+# Nginx (proxy/nginx.conf) envía X-Forwarded-Proto: https y X-Forwarded-Host.
+# Sin esto, Django ve HTTP en el socket y CSRF falla en producción HTTPS.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# ── HSTS — solo con HTTPS verificado ────────────────────────
+# SECURE_HSTS_PRELOAD=True requiere submit manual a https://hstspreload.org
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
 # ── Email — SMTP ─────────────────────────────────────────────
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')

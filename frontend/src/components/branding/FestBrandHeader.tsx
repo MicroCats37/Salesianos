@@ -1,28 +1,34 @@
-"use client";
-
 import Image, { type ImageProps } from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
- * FestBrandHeader — single source of truth for the "Salesianos FEST 2026"
- * brand mark across the frontend.
+ * FestBrandHeader — single source of truth for the "Salesianos FEST" brand
+ * mark across the frontend. Renders the circular logo and the horizontal
+ * wordmark image together.
  *
  * Variants:
- *  - "onLight" (default): logo image on top, dark text. Use on white cards.
- *  - "onDark": logo image on top, light/white text. Use on dark gradient cards.
+ *  - "onLight" (default): light card background.
+ *  - "onDark": dark gradient background (light subtitle).
+ *
+ * Wordmark switch:
+ *  - "brand2" (default): navy/cyan wordmark for login, register, wizard,
+ *    navbar, footer and any non-landing context.
+ *  - "brand": cyan wordmark for the marketing landing banner only.
  *
  * Sizes:
- *  - sm: 64×64 logo + ~1.5rem title. Compact forms (Register, Wizard).
- *  - md: 80×80 logo + ~1.875rem title. Default login.
- *  - lg: 112×112 logo + ~2.25rem title. Marketing-style.
+ *  - sm: compact forms (Register, Wizard).
+ *  - md: default login.
+ *  - lg: marketing-style.
  */
 export type FestBrandVariant = "onLight" | "onDark";
 export type FestBrandSize = "sm" | "md" | "lg";
+export type FestBrandWordmark = "brand" | "brand2";
 
 export interface FestBrandHeaderProps {
   showLogo?: boolean;
   variant?: FestBrandVariant;
   size?: FestBrandSize;
+  wordmark?: FestBrandWordmark;
   /** Optional subtitle displayed below the main mark. */
   subtitle?: string;
   /** Optional label displayed above the mark (eyebrow). */
@@ -31,24 +37,29 @@ export interface FestBrandHeaderProps {
   imageProps?: Partial<ImageProps>;
 }
 
-const SIZE_MAP: Record<FestBrandSize, { logo: number; title: string; ring: string }> = {
-  sm: { logo: 64, title: "text-2xl", ring: "border-2" },
-  md: { logo: 80, title: "text-3xl sm:text-4xl", ring: "border-2" },
-  lg: { logo: 112, title: "text-4xl sm:text-5xl", ring: "border-4" },
+const SIZE_MAP: Record<FestBrandSize, { logo: number; wordmark: number }> = {
+  sm: { logo: 56, wordmark: 40 },
+  md: { logo: 72, wordmark: 56 },
+  lg: { logo: 128, wordmark: 192 },
 };
 
 const LOGO_SRC = "/images/logo.jpeg";
+const WORDMARK_SRC: Record<FestBrandWordmark, string> = {
+  brand: "/images/brand.png",
+  brand2: "/images/brand2.png",
+};
 
 export function FestBrandHeader({
   showLogo = true,
   variant = "onLight",
   size = "md",
+  wordmark = "brand2",
   subtitle,
   eyebrow,
   className,
   imageProps,
 }: FestBrandHeaderProps) {
-  const { logo, title, ring } = SIZE_MAP[size];
+  const { logo, wordmark: wordmarkHeight } = SIZE_MAP[size];
   const onDark = variant === "onDark";
 
   return (
@@ -73,11 +84,8 @@ export function FestBrandHeader({
       {showLogo && (
         <div
           className={cn(
-            "flex items-center justify-center rounded-full p-1 shadow-md",
-            ring,
-            onDark
-              ? "bg-white/10 border-yellow-400/80"
-              : "bg-white/40 border-yellow-400",
+            "flex items-center justify-center rounded-full p-1 shadow-md ring-2 ring-yellow-400",
+            onDark ? "bg-white/10" : "bg-white/40",
           )}
           style={{ width: logo, height: logo }}
         >
@@ -96,25 +104,15 @@ export function FestBrandHeader({
         </div>
       )}
 
-      <h1
-        className={cn(
-          "font-black tracking-tighter leading-none",
-          title,
-        )}
-        style={{ fontFamily: "'Brush Script MT', 'Comic Sans MS', cursive" }}
-      >
-        <span
-          className="inline-block animate-[goldPulse_2.6s_ease-in-out_infinite] text-yellow-400"
-        >
-          Salesianos
-        </span>{" "}
-        <span className="inline-block animate-[cyanPulse_2.6s_ease-in-out_infinite] text-brand-cyan">
-          FEST
-        </span>{" "}
-        <span className={cn(onDark ? "text-white" : "text-slate-900")}>
-          2026
-        </span>
-      </h1>
+      <Image
+        src={WORDMARK_SRC[wordmark]}
+        alt="Salesianos FEST"
+        width={400}
+        height={120}
+        priority
+        style={{ height: wordmarkHeight, width: "auto" }}
+        className="select-none"
+      />
 
       {subtitle && (
         <p

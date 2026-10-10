@@ -13,8 +13,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
-import { LightRays } from "@/components/event/LightRays";
-import { NeonSmoke } from "@/components/event/NeonSmoke";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -151,9 +149,6 @@ export function EventBlock({
           "linear-gradient(180deg, #ffffff 0%, #f4f6fb 50%, #eef1f8 100%)",
       }}
     >
-      <NeonSmoke density="low" />
-      <LightRays count={6} />
-
       {festivalBadge && (
         <div
           data-stagger
@@ -327,16 +322,6 @@ export function EventBlock({
 
         {/* RIGHT — COLLAGE estilo mockup (1 dominante + 2 recortes diagonales) */}
         <div ref={rightRef} className="relative h-[460px] sm:h-[560px] lg:h-[640px]">
-          <div
-            aria-hidden="true"
-            className="absolute -inset-10 -z-10 opacity-90"
-            style={{
-              background:
-                "radial-gradient(ellipse at 60% 40%, rgba(99,102,241,0.45) 0%, rgba(34,211,238,0.25) 35%, rgba(236,72,153,0.18) 65%, transparent 80%)",
-              filter: "blur(60px)",
-            }}
-          />
-
           {/* Dominant image (right side, ~70% width) */}
           {images[0] && (
             <div

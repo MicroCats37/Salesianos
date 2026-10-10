@@ -37,17 +37,6 @@ export function EventFooter() {
           "linear-gradient(180deg, #0c0c1f 0%, #1a1857 50%, #312e8e 100%)",
       }}
     >
-      {/* Halo */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-10 opacity-90"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 30%, rgba(236,72,153,0.35) 0%, rgba(99,102,241,0.25) 35%, rgba(34,211,238,0.18) 65%, transparent 80%)",
-          filter: "blur(80px)",
-        }}
-      />
-
       <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <div
           data-footer-stagger
@@ -56,17 +45,8 @@ export function EventFooter() {
           <Link
             href="/"
             aria-label="Ir al inicio"
-            className="relative size-20 animate-[badgePulse_3s_ease-in-out_infinite]"
+            className="relative size-20"
           >
-            <div
-              className="absolute -inset-2 rounded-full"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, #f4c64e, #ec4899, #6366f1, #22d3ee, #f4c64e)",
-                filter: "blur(10px)",
-                opacity: 0.6,
-              }}
-            />
             <div
               className="relative h-full w-full overflow-hidden rounded-full border-4 border-white/70 shadow-2xl"
               style={{

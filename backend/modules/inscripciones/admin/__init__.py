@@ -143,6 +143,137 @@ class InscripcionResource(resources.ModelResource):
         return " | ".join(participantes)
 
 
+class ParticipanteInscripcionResource(resources.ModelResource):
+    """Export UNROLLED — una fila por ParticipanteInscripcion.
+
+    A diferencia de InscripcionResource (que concatena participantes en una
+    celda separada por `|`), este recurso aplana la jerarquía para que cada
+    participante tenga su propia fila. Esto permite filtrar en Excel por
+    `rol`, `talle_camiseta`, `disciplina`, `equipo`, etc.
+    """
+
+    inscripcion_id = fields.Field(column_name="inscripcion_id")
+    inscripcion_estado = fields.Field(column_name="inscripcion_estado")
+    evento = fields.Field(column_name="evento")
+    paquete = fields.Field(column_name="paquete")
+    promocion = fields.Field(column_name="promocion")
+    responsable_documento = fields.Field(column_name="responsable_documento")
+    responsable_nombre = fields.Field(column_name="responsable_nombre")
+    equipo = fields.Field(column_name="equipo")
+    equipo_disciplina = fields.Field(column_name="equipo_disciplina")
+    equipo_categoria = fields.Field(column_name="equipo_categoria")
+    participacion_disciplina = fields.Field(column_name="participacion_disciplina")
+    participante_documento = fields.Field(column_name="participante_documento")
+    participante_nombre = fields.Field(column_name="participante_nombre")
+    participante_telefono = fields.Field(column_name="participante_telefono")
+    participante_whatsapp = fields.Field(column_name="participante_whatsapp")
+    rol = fields.Field(column_name="rol")
+    talle_camiseta = fields.Field(column_name="talle_camiseta")
+    notas = fields.Field(column_name="notas")
+    created_at = fields.Field(column_name="created_at")
+
+    class Meta:
+        model = ParticipanteInscripcion
+        fields = [
+            "inscripcion_id",
+            "inscripcion_estado",
+            "evento",
+            "paquete",
+            "promocion",
+            "responsable_documento",
+            "responsable_nombre",
+            "equipo",
+            "equipo_disciplina",
+            "equipo_categoria",
+            "participacion_disciplina",
+            "participante_documento",
+            "participante_nombre",
+            "participante_telefono",
+            "participante_whatsapp",
+            "rol",
+            "talle_camiseta",
+            "notas",
+            "created_at",
+        ]
+        export_order = fields
+
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            "participacion",
+            "participacion__persona",
+            "participacion__disciplina",
+            "participacion__equipo",
+            "participacion__equipo__disciplina",
+            "participacion__equipo__categoria",
+            "participacion__equipo__inscripcion",
+            "participacion__equipo__inscripcion__evento",
+            "participacion__equipo__inscripcion__paquete",
+            "participacion__equipo__inscripcion__promocion",
+            "participacion__equipo__inscripcion__responsable",
+            "equipo",
+        )
+
+    def dehydrate_inscripcion_id(self, obj):
+        return obj.participacion.equipo.inscripcion_id
+
+    def dehydrate_inscripcion_estado(self, obj):
+        return obj.participacion.equipo.inscripcion.get_estado_display()
+
+    def dehydrate_evento(self, obj):
+        return obj.participacion.equipo.inscripcion.evento.nombre
+
+    def dehydrate_paquete(self, obj):
+        return obj.participacion.equipo.inscripcion.paquete.nombre
+
+    def dehydrate_promocion(self, obj):
+        return obj.participacion.equipo.inscripcion.promocion.anio
+
+    def dehydrate_responsable_documento(self, obj):
+        return obj.participacion.equipo.inscripcion.responsable.numero_documento
+
+    def dehydrate_responsable_nombre(self, obj):
+        r = obj.participacion.equipo.inscripcion.responsable
+        return f"{r.nombres} {r.apellidos}"
+
+    def dehydrate_equipo(self, obj):
+        return obj.participacion.equipo.nombre
+
+    def dehydrate_equipo_disciplina(self, obj):
+        return obj.participacion.equipo.disciplina.nombre
+
+    def dehydrate_equipo_categoria(self, obj):
+        cat = obj.participacion.equipo.categoria
+        return cat.nombre if cat else ""
+
+    def dehydrate_participacion_disciplina(self, obj):
+        return obj.participacion.disciplina.nombre
+
+    def dehydrate_participante_documento(self, obj):
+        return obj.participacion.persona.numero_documento
+
+    def dehydrate_participante_nombre(self, obj):
+        p = obj.participacion.persona
+        return f"{p.nombres} {p.apellidos}"
+
+    def dehydrate_participante_telefono(self, obj):
+        return obj.participacion.persona.telefono or ""
+
+    def dehydrate_participante_whatsapp(self, obj):
+        return obj.participacion.persona.whatsapp or ""
+
+    def dehydrate_rol(self, obj):
+        return obj.get_rol_display()
+
+    def dehydrate_talle_camiseta(self, obj):
+        return obj.get_talle_camiseta_display()
+
+    def dehydrate_notas(self, obj):
+        return obj.notas or ""
+
+    def dehydrate_created_at(self, obj):
+        return obj.created_at.isoformat() if obj.created_at else ""
+
+
 class ParticipanteInscripcionInline(NestedTabularInline):
     """Level 3 — participant within a participation."""
     model = ParticipanteInscripcion
@@ -433,15 +564,43 @@ class ParticipacionDisciplinaAdmin(NestedModelAdmin):
 
 
 @admin.register(ParticipanteInscripcion)
-class ParticipanteInscripcionAdmin(NestedModelAdmin):
-    list_display = ["participacion", "equipo", "rol", "talle_camiseta", "created_at"]
-    list_filter = ["rol", "talle_camiseta"]
+class ParticipanteInscripcionAdmin(ExportMixin, NestedModelAdmin):
+    resource_classes = [ParticipanteInscripcionResource]
+    list_display = [
+        "participacion",
+        "equipo",
+        "rol",
+        "talle_camiseta",
+        "created_at",
+    ]
+    list_filter = [
+        "rol",
+        "talle_camiseta",
+        "equipo__disciplina",
+        "participacion__equipo__inscripcion__estado",
+        "participacion__equipo__inscripcion__evento",
+        "participacion__equipo__inscripcion__promocion",
+    ]
+    search_fields = [
+        "participacion__persona__nombres",
+        "participacion__persona__apellidos",
+        "participacion__persona__numero_documento",
+        "equipo__nombre",
+        "equipo__inscripcion__responsable__numero_documento",
+    ]
     readonly_fields = ["created_at", "updated_at"]
     raw_id_fields = ["participacion", "equipo"]
+    date_hierarchy = "created_at"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
             "participacion__persona",
             "participacion__disciplina",
+            "participacion__equipo__disciplina",
+            "participacion__equipo__categoria",
+            "participacion__equipo__inscripcion__evento",
+            "participacion__equipo__inscripcion__paquete",
+            "participacion__equipo__inscripcion__promocion",
+            "participacion__equipo__inscripcion__responsable",
             "equipo",
         )

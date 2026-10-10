@@ -20,6 +20,15 @@ export interface Paquete {
   modo_disciplinas: "FIJO" | "ELEGIBLE" | string;
   cantidad_disciplinas_requeridas: number | null;
   cantidad_maxima_equipos: number;
+  disciplinas: PaqueteDisciplina[];
+}
+
+export interface PaqueteDisciplina {
+  disciplina_id: string;
+  disciplina_nombre: string;
+  disciplina_sigla: string;
+  min_jugadores: number | null;
+  max_jugadores: number | null;
 }
 
 const configuredBaseUrl =

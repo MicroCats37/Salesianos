@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { NeonSmoke } from "@/components/event/NeonSmoke";
+import { FestBrandHeader } from "@/components/branding/FestBrandHeader";
 import { PreinscribirCta } from "@/components/event/PreinscribirCta";
 
 export function FestivalBanner() {
@@ -126,26 +126,13 @@ export function FestivalBanner() {
         }}
       />
 
-      <NeonSmoke density="low" />
-
       <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center px-6 py-16 text-center">
-        {/* Logo + halo + brand mark (single compositional unit) */}
+        {/* Logo + brand mark (single compositional unit) */}
         <div
           data-banner-stagger
           className="relative mb-10 flex flex-col items-center gap-4"
         >
           <Link href="/" aria-label="Ir al inicio" className="relative grid place-items-center">
-            <div
-              aria-hidden="true"
-              className="absolute size-56 rounded-full"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, #f4c64e, #ec4899, #6366f1, #22d3ee, #f4c64e)",
-                filter: "blur(34px)",
-                opacity: 0.28,
-                animation: "spin 8s linear infinite",
-              }}
-            />
             <div
               className="relative h-32 w-32 overflow-hidden rounded-full border-[5px] border-white/80 shadow-2xl sm:h-40 sm:w-40"
               style={{
@@ -171,49 +158,9 @@ export function FestivalBanner() {
         </div>
 
         {/* Hero brand mark — single source of truth, matches login/registro/wizard */}
-        <h1
-          ref={titleRef}
-          data-banner-stagger
-          className="mt-6 flex flex-wrap items-baseline justify-center gap-x-3 text-center font-black leading-[0.95] tracking-[-0.04em]"
-          style={{
-            fontFamily: "'Brush Script MT', 'Comic Sans MS', cursive",
-            fontSize: "clamp(3.5rem, 10vw, 7rem)",
-          }}
-        >
-          <span
-            className="inline-block animate-[goldPulse_2.6s_ease-in-out_infinite]"
-            style={{
-              color: "#f5b840",
-              WebkitTextStroke: "0.1px #5a2f0a",
-              textShadow:
-                "0 0 10px rgba(245,184,64,0.55), 0 0 22px rgba(245,184,64,0.35), 0 2px 4px rgba(0,0,0,0.55), -1px 0 0 rgba(0,0,0,0.35), 1px 0 0 rgba(0,0,0,0.35)",
-            }}
-          >
-            Salesianos
-          </span>{" "}
-          <span
-            className="inline-block animate-[cyanPulse_2.6s_ease-in-out_infinite]"
-            style={{
-              color: "#22d3ee",
-              WebkitTextStroke: "0.1px #06324a",
-              textShadow:
-                "0 0 10px rgba(34,211,238,0.55), 0 0 22px rgba(34,211,238,0.30), 0 2px 4px rgba(0,0,0,0.55), -1px 0 0 rgba(0,0,0,0.35), 1px 0 0 rgba(0,0,0,0.35)",
-            }}
-          >
-            FEST
-          </span>{" "}
-          <span
-            className="inline-block"
-            style={{
-              color: "#ffffff",
-              WebkitTextStroke: "0.1px rgba(0,0,0,0.45)",
-              textShadow:
-                "0 0 14px rgba(255,255,255,0.45), 0 2px 6px rgba(0,0,0,0.55), -1px 0 0 rgba(0,0,0,0.35), 1px 0 0 rgba(0,0,0,0.35)",
-            }}
-          >
-            2026
-          </span>
-        </h1>
+        <div data-banner-stagger className="mt-6">
+          <FestBrandHeader showLogo={false} size="lg" wordmark="brand" />
+        </div>
 
         {/* Sub */}
         <p

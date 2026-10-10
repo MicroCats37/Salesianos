@@ -236,6 +236,37 @@ export function PaquetesCards({ paquetes }: PaquetesCardsProps) {
                 </li>
               </ul>
 
+              {pkg.disciplinas && pkg.disciplinas.length > 0 && (
+                <div className="mb-8">
+                  <p className="mb-2 text-xs font-black uppercase tracking-wider text-[#626195]">
+                    {pkg.modo_disciplinas === "FIJO"
+                      ? "Disciplinas incluidas"
+                      : "Disciplinas disponibles"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {pkg.disciplinas.map((d) => (
+                      <span
+                        key={d.disciplina_id}
+                        className="inline-flex items-center rounded-full bg-[#312e8e]/8 px-3 py-1 text-xs font-bold text-[#312e8e] ring-1 ring-[#312e8e]/20"
+                      >
+                        <span className="mr-1 font-black uppercase tracking-wider">
+                          {d.disciplina_sigla}
+                        </span>
+                        <span className="text-[#17214b]">
+                          {d.disciplina_nombre}
+                        </span>
+                        {d.min_jugadores !== null &&
+                          d.max_jugadores !== null && (
+                            <span className="ml-1 text-[10px] font-medium text-[#626195]">
+                              ({d.min_jugadores}-{d.max_jugadores})
+                            </span>
+                          )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <PreinscribirCTA />
             </article>
           ))}

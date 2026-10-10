@@ -1,32 +1,38 @@
 "use client";
 
-import Image, { type ImageProps } from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 /**
- * NavbarBrand — compact brand mark for the landing Navbar.
- * Logo (40×40) + inline cursive "Salesianos FEST 2026" with the same
- * Brush Script MT font and brand tokens as `FestBrandHeader`.
+ * NavbarBrand — compact "Salesianos FEST" wordmark image for the landing
+ * Navbar. Sized to fit a 74px Navbar with horizontal nav links to its right.
  *
- * Fits a 74px Navbar with horizontal nav links to its right.
+ * Wordmark switch:
+ *  - "brand2" (default): navy/cyan wordmark.
+ *  - "brand": cyan wordmark.
  */
+export type NavbarBrandWordmark = "brand" | "brand2";
+
 export interface NavbarBrandProps {
   href?: string;
   showLogo?: boolean;
   showSubtitle?: boolean;
+  wordmark?: NavbarBrandWordmark;
   className?: string;
-  imageProps?: Partial<ImageProps>;
 }
 
-const LOGO_SRC = "/images/logo.jpeg";
+const WORDMARK_SRC: Record<NavbarBrandWordmark, string> = {
+  brand: "/images/brand.png",
+  brand2: "/images/brand2.png",
+};
 
 export function NavbarBrand({
   href = "/",
   showLogo = true,
   showSubtitle = true,
+  wordmark = "brand2",
   className,
-  imageProps,
 }: NavbarBrandProps) {
   return (
     <Link
@@ -35,44 +41,24 @@ export function NavbarBrand({
         "flex items-center gap-3 transition-opacity hover:opacity-90",
         className,
       )}
-      aria-label="Salesianos FEST 2026 - Inicio"
+      aria-label="Salesianos FEST - Inicio"
     >
       {showLogo && (
         <Image
-          src={LOGO_SRC}
-          alt="Logo Salesianos"
-          width={40}
-          height={40}
+          src={WORDMARK_SRC[wordmark]}
+          alt="Salesianos FEST"
+          width={350}
+          height={105}
           priority
-          {...imageProps}
-          className={cn(
-            "size-10 rounded-2xl bg-white object-contain ring-1 ring-[#312e8e]/10",
-            imageProps?.className,
-          )}
+          style={{ height: 32, width: "auto" }}
+          className="select-none"
         />
       )}
-      <div className="hidden leading-tight sm:block">
-        <span
-          className="block text-base font-black tracking-[-0.02em] leading-none"
-          style={{ fontFamily: "'Brush Script MT', 'Comic Sans MS', cursive" }}
-        >
-          <span
-            className="inline-block animate-[goldPulse_2.6s_ease-in-out_infinite]"
-            style={{ color: "var(--brand-cyan-soft)" }}
-          >
-            Salesianos
-          </span>{" "}
-          <span className="inline-block animate-[cyanPulse_2.6s_ease-in-out_infinite] text-brand-cyan">
-            FEST
-          </span>{" "}
-          <span className="text-[#17214b]">2026</span>
+      {showSubtitle && (
+        <span className="hidden text-[10px] font-bold uppercase tracking-[.16em] text-[#626195] sm:block">
+          Preinscripcion deportiva
         </span>
-        {showSubtitle && (
-          <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-[.16em] text-[#626195]">
-            Preinscripcion deportiva
-          </span>
-        )}
-      </div>
+      )}
     </Link>
   );
 }

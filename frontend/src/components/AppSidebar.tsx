@@ -2,13 +2,13 @@
 
 import {
   CalendarDays,
-  CircleUserRound,
   FilePlus2,
   LogOut,
   Package,
   ScrollText,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -100,32 +100,22 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-white/10">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              size="lg"
-              className="!p-2 transition-transform hover:scale-[1.02]"
+            <Link
+              href="/dashboard"
+              className="flex flex-col items-center gap-1 rounded-lg p-3 transition-transform hover:scale-[1.02]"
             >
-                <Link href="/dashboard" className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-md shadow-amber-500/30">
-                    <CircleUserRound className="size-5 text-[#17214b]" />
-                  </div>
-                  <div className="flex flex-col gap-0.5 leading-none">
-                    <span
-                      className="text-sm font-black tracking-tight text-white"
-                      style={{ fontFamily: "'Brush Script MT', 'Comic Sans MS', cursive" }}
-                    >
-                      <span style={{ color: "var(--brand-cyan-soft)" }}>
-                        Salesianos
-                      </span>{" "}
-                      <span className="text-brand-cyan">FEST</span>{" "}
-                      <span>2026</span>
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300/90">
-                      Panel de equipo
-                    </span>
-                  </div>
-                </Link>
-            </SidebarMenuButton>
+              <Image
+                src="/images/brand.png"
+                alt="Salesianos FEST"
+                width={160}
+                height={48}
+                priority
+                className="select-none"
+              />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300/90">
+                Panel de equipo
+              </span>
+            </Link>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

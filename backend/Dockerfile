@@ -23,6 +23,10 @@ RUN uv sync --frozen --no-install-project
 # Copy project source into /app (which is the workdir)
 COPY backend/ .
 
+# Ensure entrypoint.sh is executable regardless of host filemode
+# (Windows checkouts drop the +x bit; explicit chmod is idempotent)
+RUN chmod +x /app/docker/entrypoint.sh
+
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app

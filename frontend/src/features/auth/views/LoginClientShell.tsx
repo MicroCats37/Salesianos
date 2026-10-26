@@ -1,5 +1,6 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Eye,
   EyeOff,
@@ -13,28 +14,27 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { type UseFormRegisterReturn, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { FestBrandHeader } from "@/components/branding/FestBrandHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FestBrandHeader } from "@/components/branding/FestBrandHeader";
-import { useLogin } from "@/features/auth/hooks";
-import { AuthShell } from "@/features/auth/components/AuthShell";
-import { AuthGlassCard } from "@/features/auth/components/AuthGlassCard";
 import { handleApiError } from "@/errors/error-handler";
+import { AuthGlassCard } from "@/features/auth/components/AuthGlassCard";
+import { AuthShell } from "@/features/auth/components/AuthShell";
+import { useLogin } from "@/features/auth/hooks";
 import {
-  type LoginUsernameFormData,
   type LoginDniFormData,
-  type LoginEmailFormData,
-  LoginUsernameFormSchema,
   LoginDniFormSchema,
+  type LoginEmailFormData,
   LoginEmailFormSchema,
+  type LoginUsernameFormData,
+  LoginUsernameFormSchema,
 } from "@/features/auth/schemas";
 import { useAuthStore } from "@/features/auth/store/auth.store";
-import { consumePostAuthRedirect } from "@/lib/post-auth-redirect";
+import { resolverDeDestino } from "@/features/auth/utils/resolver-destino";
 import { cn } from "@/lib/utils";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { type UseFormRegisterReturn, useForm } from "react-hook-form";
 
 // =============================================================================
 // TAB TYPES — ordered: DNI, Email, Usuario
@@ -66,7 +66,11 @@ interface PasswordInputFieldProps {
   error?: string;
 }
 
-function PasswordInputField({ id, registration, error }: PasswordInputFieldProps) {
+function PasswordInputField({
+  id,
+  registration,
+  error,
+}: PasswordInputFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -97,7 +101,9 @@ function PasswordInputField({ id, registration, error }: PasswordInputFieldProps
           type="button"
           onClick={() => setShowPassword(!showPassword)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
-          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+          aria-label={
+            showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+          }
         >
           {showPassword ? (
             <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -137,8 +143,7 @@ function DniTabForm({ isLoading }: { isLoading: boolean }) {
       const result = await loginMutation.mutateAsync(data);
       setAuth(result.data);
       if (result.message) toast.success(result.message);
-      const postAuth = consumePostAuthRedirect();
-      router.push(postAuth ?? "/dashboard");
+      router.push(await resolverDeDestino());
     } catch (error) {
       toast.error(handleApiError(error).message);
     }
@@ -167,7 +172,8 @@ function DniTabForm({ isLoading }: { isLoading: boolean }) {
             maxLength={8}
             className={cn(
               "input-brand pl-9",
-              errors.dni?.message && "border-destructive ring-1 ring-destructive",
+              errors.dni?.message &&
+                "border-destructive ring-1 ring-destructive",
             )}
             {...register("dni")}
           />
@@ -232,8 +238,7 @@ function EmailTabForm({ isLoading }: { isLoading: boolean }) {
       const result = await loginMutation.mutateAsync(data);
       setAuth(result.data);
       if (result.message) toast.success(result.message);
-      const postAuth = consumePostAuthRedirect();
-      router.push(postAuth ?? "/dashboard");
+      router.push(await resolverDeDestino());
     } catch (error) {
       toast.error(handleApiError(error).message);
     }
@@ -260,7 +265,8 @@ function EmailTabForm({ isLoading }: { isLoading: boolean }) {
             autoComplete="email"
             className={cn(
               "input-brand pl-9",
-              errors.email?.message && "border-destructive ring-1 ring-destructive",
+              errors.email?.message &&
+                "border-destructive ring-1 ring-destructive",
             )}
             {...register("email")}
           />
@@ -325,8 +331,7 @@ function UsernameTabForm({ isLoading }: { isLoading: boolean }) {
       const result = await loginMutation.mutateAsync(data);
       setAuth(result.data);
       if (result.message) toast.success(result.message);
-      const postAuth = consumePostAuthRedirect();
-      router.push(postAuth ?? "/dashboard");
+      router.push(await resolverDeDestino());
     } catch (error) {
       toast.error(handleApiError(error).message);
     }
@@ -353,7 +358,8 @@ function UsernameTabForm({ isLoading }: { isLoading: boolean }) {
             autoComplete="username"
             className={cn(
               "input-brand pl-9",
-              errors.username?.message && "border-destructive ring-1 ring-destructive",
+              errors.username?.message &&
+                "border-destructive ring-1 ring-destructive",
             )}
             {...register("username")}
           />
@@ -396,114 +402,6 @@ function UsernameTabForm({ isLoading }: { isLoading: boolean }) {
   );
 }
 
-// =============================================================================
-// LOGIN FORM PANEL — visual layout shared by AuthShell
-// =============================================================================
-
-function LoginFormBody({ activeTab }: { activeTab: LoginTab }) {
-  return (
-    <AuthGlassCard>
-      {/* Logo + branding header */}
-      <div className="mb-8 flex flex-col items-center gap-2 text-center">
-        <FestBrandHeader
-          variant="onLight"
-          size="md"
-          subtitle="Acceso para responsables de equipo"
-        />
-        <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500 sm:text-sm">
-          Inicia sesion para revisar tu progreso, ver tus pagos pendientes y
-          editar tus equipos.
-        </p>
-      </div>
-
-      {/* Tab control */}
-      <div className="relative flex items-center w-full bg-slate-100 p-1 rounded-full mb-8">
-        <div
-          className="absolute top-1 bottom-1 bg-primary rounded-full transition-all duration-300 ease-out shadow-md"
-          style={{
-            width: "calc(33.333% - 4px)",
-            transform: `translateX(${
-              activeTab === "dni"
-                ? "0"
-                : activeTab === "email"
-                  ? "calc(100% + 4px)"
-                  : "calc(200% + 8px)"
-            })`,
-          }}
-        />
-        {TAB_ORDER.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => {
-              const button = document.querySelector<HTMLButtonElement>(
-                `button[data-tab='${tab}']`,
-              );
-              button?.click();
-            }}
-            data-tab={tab}
-            className="hidden"
-            aria-hidden
-          />
-        ))}
-        {TAB_ORDER.map((tab) => (
-          <LoginTabButton key={tab} tab={tab} activeTab={activeTab} />
-        ))}
-      </div>
-
-      <div className="animate-in fade-in slide-in-from-right-4 duration-200">
-        {activeTab === "dni" && <DniTabForm isLoading={false} />}
-        {activeTab === "email" && <EmailTabForm isLoading={false} />}
-        {activeTab === "username" && <UsernameTabForm isLoading={false} />}
-      </div>
-
-      <div className="mt-8 text-center">
-        <p className="text-sm text-slate-600">
-          ¿No tienes cuenta?{" "}
-          <Link
-            href="/register"
-            className="font-bold text-indigo-700 hover:underline"
-          >
-            Inscribe tu equipo
-          </Link>
-        </p>
-      </div>
-    </AuthGlassCard>
-  );
-}
-
-function LoginTabButton({
-  tab,
-  activeTab,
-}: {
-  tab: LoginTab;
-  activeTab: LoginTab;
-}) {
-  return (
-    <button
-      type="button"
-      data-tab-active={tab}
-      onClick={() => {
-        const event = new CustomEvent("auth-tab-change", {
-          detail: { tab },
-        });
-        window.dispatchEvent(event);
-      }}
-      className={cn(
-        "relative z-10 flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full transition-all duration-300",
-        activeTab === tab
-          ? "text-white font-bold"
-          : "text-slate-600 hover:text-slate-900",
-      )}
-    >
-      {TAB_ICONS[tab]}
-      <span className="text-xs uppercase tracking-wider font-semibold">
-        {TAB_LABELS[tab]}
-      </span>
-    </button>
-  );
-}
-
 export function LoginClientShell() {
   const [activeTab, setActiveTab] = useState<LoginTab>("dni");
 
@@ -530,11 +428,10 @@ function LoginBody({
         <FestBrandHeader
           variant="onLight"
           size="md"
-          subtitle="Acceso para responsables de equipo"
+          subtitle="Acceso a Salesianos FEST"
         />
         <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500 sm:text-sm">
-          Inicia sesion para revisar tu progreso, ver tus pagos pendientes y
-          editar tus equipos.
+          Inicia sesion para gestionar tu inscripcion, tus pagos y tu equipo.
         </p>
       </div>
 

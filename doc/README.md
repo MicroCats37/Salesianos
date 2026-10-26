@@ -6,6 +6,7 @@
 |-----------|-------------|
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Despliegue con Docker (PostgreSQL), seeds y creación de admin. |
 | [DEVELOPMENT.md](./DEVELOPMENT.md) | Entorno local de desarrollo (SQLite). |
+| [../backend/README.md](../backend/README.md) | Operación del backend: auditoría de compatibilidad género/modalidad, remediación, secuencia de despliegue, rollback y gate de aprobación en producción. |
 | [ENVIRONMENT.md](./ENVIRONMENT.md) | Referencia de variables de entorno. |
 | [FRONTEND_MOCKUP_FLOW.md](./FRONTEND_MOCKUP_FLOW.md) | Flujo de referencia del `frontend-mokup` para registro, inscripción, dashboard y Comité. |
 | [BACKEND_DOMAIN_PLAN.md](./BACKEND_DOMAIN_PLAN.md) | Plan de dominio backend: módulos, modelos, reglas de negocio y fases de implementación. |
@@ -16,6 +17,8 @@
 | [FRONTEND_IMPLEMENTATION_FLOW.md](./FRONTEND_IMPLEMENTATION_FLOW.md) | Análisis de gaps entre frontend mockup y backend Django: endpoints faltantes, payloads y acciones previas al desarrollo frontend. |
 | [FRONTEND_ARCHITECTURE_EXPLORE.md](./FRONTEND_ARCHITECTURE_EXPLORE.md) | Arquitectura frontend real + plan de migración UI desde mockup: qué copiar visualmente, qué reconstruir con GenericForm, gaps de backend y plan de SDD apply por batches. |
 | [FRONTEND_MODULAR_TASKS.md](./FRONTEND_MODULAR_TASKS.md) | Plan de tareas modulares SDD apply: F1-LANDING, F2-FRONT-SCAFFOLD, F3-AUTH, F4-CATALOGS, F5-INSCRIPCION-WIZARD, F6-DASHBOARD. |
+| [ADMINISTRACION_OPERATIVA_FEST.md](./ADMINISTRACION_OPERATIVA_FEST.md) | Área `/administracion` (read-only): endpoints A1–A14, filtros, ordenamiento, paginación, roles, límites del MVP y fronteras de QR y secretos de pago. |
+| [../backend/modules/competencias/README.md](../backend/modules/competencias/README.md) | Módulo `competencias` (cuadros eliminatorios): superficies HTTP, uso operativo, despliegue por fases, rollback en solo lectura y gate de verificación PostgreSQL. |
 
 ## Resumen rápido
 

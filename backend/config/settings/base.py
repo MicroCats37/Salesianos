@@ -50,7 +50,18 @@ LOCAL_APPS = [
     "core",
     "core_application",
     "modules.usuarios",
-    "modules.inscripciones",  # Inscripciones FEST
+    "modules.eventos",
+    "modules.commerce",
+    "modules.salesianos_fest",
+    # Torneos eliminatorios — depende de eventos + salesianos_fest, por eso
+    # se registra después de ambos.
+    "modules.competencias",
+    # Superficie de administración operativa — read-only, sin modelos ni
+    # migraciones propias (agrega los datos de los módulos de negocio).
+    "modules.administracion",
+    # modules.pagos is temporarily disabled in Fase 1 due to FK dependency
+    # on modules.inscripciones.Inscripcion. Will be re-enabled in Fase 4
+    # when the payment boundary is redesigned.
     "modules.pagos",          # Pagos Izipay
 ]
 
@@ -143,8 +154,12 @@ NINJA_JWT = {
 NINJA_EXTRA = {
     "INJECTOR_MODULES": [
         "modules.usuarios.di.UsuariosModule",
-        "modules.inscripciones.di.InscripcionesModule",
-        "modules.pagos.di.PagosModule",
+        "modules.eventos.di.EventosModule",
+        "modules.commerce.di.CommerceModule",
+        "modules.salesianos_fest.di.SalesianosFestModule",
+        "modules.competencias.di.CompetenciasModule",
+        "modules.administracion.di.AdministracionModule",
+        # modules.pagos.di.PagosModule disabled — pagos app disabled in Fase 1
     ]
 }
 
@@ -191,10 +206,17 @@ else:
 # Credentials obtained from: https://sandbox-panel.izipay.pe/
 #   - IZIPAY_SHOP_ID: Código de comercio / tienda
 #   - IZIPAY_KEY: Clave pública del botón de pagos (public key)
+#   - IZIPAY_KEY_HASH: Clave secreta HMAC-SHA256 (keyHash) del comercio.
+#     Es la ÚNICA forma de verificar que un payload de pago lo emitió el
+#     proveedor. Vacía = la verificación de firma NO está disponible: el
+#     relay del navegador queda sin firma verificable y el canal servidor a
+#     servidor rechaza las notificaciones (fallo cerrado). El release debe
+#     quedar bloqueado hasta que esta clave esté configurada.
 # ---------------------------------------------------------------------------
 
 IZIPAY_SHOP_ID = env("IZIPAY_SHOP_ID", default="")
 IZIPAY_KEY = env("IZIPAY_KEY", default="")
+IZIPAY_KEY_HASH = env("IZIPAY_KEY_HASH", default="")
 IZIPAY_API_URL = env(
     "IZIPAY_API_URL",
     default="https://sandbox-api-pw.izipay.pe"

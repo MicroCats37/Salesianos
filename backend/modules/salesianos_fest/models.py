@@ -1,0 +1,38 @@
+"""Re-export from domain/models/."""
+from .domain.models import (
+    Disciplina,
+    Promocion,
+    Categoria,
+    Paquete,
+    PaqueteDisciplina,
+    PaquetePrecio,
+    PaqueteBeneficio,
+    Inscripcion,
+    Equipo,
+    InscripcionPersona,
+    Participacion,
+    CompraInscripcion,
+    AsignacionCupo,
+    AcreditacionEvento,
+    ControlAcceso,
+    AceptacionInscripcion,
+)
+
+__all__ = [
+    "Disciplina",
+    "Promocion",
+    "Categoria",
+    "Paquete",
+    "PaqueteDisciplina",
+    "PaquetePrecio",
+    "PaqueteBeneficio",
+    "Inscripcion",
+    "Equipo",
+    "InscripcionPersona",
+    "Participacion",
+    "CompraInscripcion",
+    "AsignacionCupo",
+    "AcreditacionEvento",
+    "ControlAcceso",
+    "AceptacionInscripcion",
+]

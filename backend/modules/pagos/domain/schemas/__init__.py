@@ -7,7 +7,6 @@ from decimal import Decimal
 
 class IzipayTransaccionCreateData(BaseModel):
     """Data needed to create an Izipay transaction record."""
-    inscripcion_id: str
     transaction_id: str
     order_number: str
     amount: Decimal
@@ -29,7 +28,6 @@ class IzipayPrepareData(BaseModel):
     order_number: str
     amount: Decimal
     currency: str
-    inscripcion_id: str
 
 
 class IzipayConfirmData(BaseModel):

@@ -1,7 +1,7 @@
 # API Wrapper & Presenter Contract
 
-> **Version:** 1.0
-> **Date:** 2026-09-11
+> **Version:** 1.1
+> **Date:** 2026-10-17
 > **Scope:** General contextual wrapper and presenter architecture — applies to all modules (notifications, solicitudes, reclamaciones, liquidaciones, etc.)
 > **Reference:** Motivation from notification module; principles are module-agnostic.
 
@@ -179,7 +179,67 @@ const UnknownOutSchema = z.object({
 
 ---
 
-## 8. Checklist for Future Endpoints / Presenters
+## 8. Public Message Contract
+
+### Public messages are part of the HTTP boundary
+
+Controllers may declare a short, fixed success message that describes the completed action. They must not build error messages, interpolate user input, or expose internal identifiers.
+
+```python
+# Correct: fixed, user-facing success message at the HTTP boundary.
+return success_response(
+    InscripcionPresenter.present(result),
+    message="La inscripción se registró correctamente.",
+)
+```
+
+Presenters only transform result objects into typed response schemas. They do not select success messages or translate errors.
+
+### Error ownership
+
+Domain services and flows raise typed domain exceptions with a stable machine-readable `code`. `core/exceptions.py` owns the public error catalog and maps that code to a safe Spanish message and HTTP status.
+
+```python
+# Domain/flow: no public prose and no interpolated identifiers.
+class InscripcionNotFoundError(NotFoundError):
+    code = "INSCRIPCION_NOT_FOUND"
+
+    def __init__(self):
+        super().__init__(resource="Inscripción", code=self.code)
+
+
+raise InscripcionNotFoundError()
+
+# core/exceptions.py: the only HTTP error translation point.
+PUBLIC_ERROR_MESSAGES = {
+    "INSCRIPCION_NOT_FOUND": "No se encontró la inscripción solicitada.",
+}
+```
+
+The public message must never contain UUIDs, database primary keys, request identifiers, SQL constraints, stack traces, filesystem paths, provider payloads, credentials, or raw exception text. Technical context belongs only in structured server logs.
+
+Unknown codes and unexpected exceptions return a generic message such as `"Ocurrió un error inesperado. Inténtalo nuevamente."` while the handler records the technical cause internally.
+
+### Error response categories
+
+| Category | HTTP status | Example code | Public message rule |
+|----------|-------------|--------------|---------------------|
+| Validation | 422 | `INVALID_REQUEST` | State what the user must correct without echoing sensitive values. |
+| Authentication | 401 | `AUTHENTICATION_REQUIRED` | Explain that authentication is required. |
+| Authorization | 403 | `ACTION_NOT_ALLOWED` | Explain that the action is not permitted. |
+| Not found | 404 | `INSCRIPCION_NOT_FOUND` | Name the resource, never its internal identifier. |
+| Business conflict | 409 | `CUPO_NOT_AVAILABLE` | Explain the business condition and next safe action. |
+| Payment | 409 or 422 | `PAYMENT_NOT_CONFIRMED` | Explain the payment state without provider internals. |
+| Concurrency | 409 | `RESOURCE_CHANGED` | Ask the user to refresh and retry. |
+| Unexpected | 500 | `INTERNAL_ERROR` | Use a generic message only. |
+
+### Logging and support correlation
+
+Exception handlers log the stable error code, technical details, and a server-side correlation identifier. The correlation identifier is not returned in the public response unless a separate, approved support-facing contract defines a safe reference format.
+
+---
+
+## 9. Checklist for Future Endpoints / Presenters
 
 Before merging a new endpoint or presenter, verify:
 
@@ -193,10 +253,13 @@ Before merging a new endpoint or presenter, verify:
 - [ ] No leakage of unrelated module fields into another module's presenter
 - [ ] Frontend schema mirrors the backend wrapper with exact field match (no `z.any()`)
 - [ ] Presenter is module-specific; cross-module data flows through orchestrator selectors
+- [ ] Controller success messages are fixed, contextual, and user-facing
+- [ ] Error messages come only from the global exception-handler catalog
+- [ ] No public response exposes UUIDs, internal IDs, raw exception text, SQL details, traces, paths, or secrets
 
 ---
 
-## 9. Reference: Notification Use Case (Motivation)
+## 10. Reference: Notification Use Case (Motivation)
 
 The notification module (`modules/notificaciones/`) motivated these rules:
 
@@ -209,7 +272,7 @@ These same principles apply to future modules: `solicitudes`, `reclamaciones`, `
 
 ---
 
-## 10. Relationship to Existing Contracts
+## 11. Relationship to Existing Contracts
 
 | Contract | What it covers | Relationship |
 |----------|---------------|-------------|

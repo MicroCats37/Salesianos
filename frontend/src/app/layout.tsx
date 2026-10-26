@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -16,8 +16,7 @@ const IZIPAY_SDK_URL =
   process.env.NEXT_PUBLIC_IZIPAY_SDK_URL ||
   "https://sandbox-checkout.izipay.pe/payments/v1/js/index.js";
 
-const isIzipayEnabled =
-  process.env.NEXT_PUBLIC_IZIPAY_ENABLED === "true";
+const isIzipayEnabled = process.env.NEXT_PUBLIC_IZIPAY_ENABLED === "true";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
@@ -30,6 +29,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://salesianosfest.pe",
+  ),
   title: "Salesianos FEST 2026",
   description:
     "Por que un festival, familia y convivencia, infraestructura, comodidad para todos y la fiesta que continua cuando cae la noche.",
@@ -38,6 +40,10 @@ export const metadata: Metadata = {
     shortcut: "/images/logo.ico",
     apple: "/images/logo.ico",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#312e8e",
 };
 
 export default function RootLayout({

@@ -5,13 +5,17 @@ from datetime import timedelta
 
 from .base import *  # noqa
 
-DEBUG = False
+DEBUG = True
 SECRET_KEY = "django-insecure-test-secret-key-1234567890"
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': ':memory:',
+        'OPTIONS': {
+            'timeout': 30,
+            'isolation_level': None,
+        },
     }
 }
 

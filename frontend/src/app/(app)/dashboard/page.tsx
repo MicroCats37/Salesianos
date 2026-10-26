@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertCircle,
   ArrowRight,
   CalendarDays,
   ChevronRight,
@@ -8,7 +9,6 @@ import {
   Clock4,
   CreditCard,
   GraduationCap,
-  Package,
   PackageOpen,
   PartyPopper,
   ShieldCheck,
@@ -26,11 +26,21 @@ import {
 } from "@/features/inscripciones/services/inscripcion.service";
 import { cn } from "@/lib/utils";
 
+/**
+ * Real backend states from EstadoInscripcionChoices:
+ * BORRADOR, RECIBIDA, EN_REVISION, OBSERVADA, VALIDADA, CONFIRMADA, RECHAZADA, CANCELADA
+ *
+ * Note: Compra has separate PENDIENTE/PAGADA/CANCELADA states managed independently.
+ * The flow below maps Inscripcion states to a simplified 4-step user journey.
+ */
 type EstadoInscripcion =
+  | "BORRADOR"
+  | "RECIBIDA"
+  | "EN_REVISION"
+  | "OBSERVADA"
+  | "VALIDADA"
   | "CONFIRMADA"
-  | "PENDIENTE"
-  | "PAGO_PENDIENTE"
-  | "PAGADA"
+  | "RECHAZADA"
   | "CANCELADA"
   | string;
 
@@ -45,38 +55,61 @@ const ESTADO_META: Record<
     icon: React.ComponentType<{ className?: string }>;
   }
 > = {
-  PENDIENTE: {
-    label: "Pendiente",
-    description: "Tu inscripcion esta creada. Falta elegir paquete y equipos.",
+  BORRADOR: {
+    label: "Borrador",
+    description: "Inscripcion creada. Selecciona paquete y promo.",
     pillClass: "bg-amber-100 text-amber-800 border-amber-200",
     accentClass: "from-amber-100/80 to-amber-50",
-    stepIndex: 2,
+    stepIndex: 1,
     icon: Clock4,
   },
-  PAGO_PENDIENTE: {
-    label: "Pago Pendiente",
-    description:
-      "Tu inscripcion esta guardando confirmacion de pago. Completa el pago para que sea procesada.",
+  RECIBIDA: {
+    label: "Recibida",
+    description: "Inscripcion recibida. En espera de revision del Comite.",
+    pillClass: "bg-blue-100 text-blue-800 border-blue-200",
+    accentClass: "from-blue-100/80 to-blue-50",
+    stepIndex: 2,
+    icon: ShieldCheck,
+  },
+  EN_REVISION: {
+    label: "En Revision",
+    description: "El Comite esta revisando tu inscripcion.",
+    pillClass: "bg-purple-100 text-purple-800 border-purple-200",
+    accentClass: "from-purple-100/80 to-purple-50",
+    stepIndex: 2,
+    icon: ShieldCheck,
+  },
+  OBSERVADA: {
+    label: "Observada",
+    description: "El Comite requiere ajustes. Revisa las observaciones.",
     pillClass: "bg-orange-100 text-orange-800 border-orange-200",
-    accentClass: "from-orange-100/80 to-rose-50",
+    accentClass: "from-orange-100/80 to-orange-50",
+    stepIndex: 2,
+    icon: AlertCircle,
+  },
+  VALIDADA: {
+    label: "Validada",
+    description: "Inscripcion validada. Listo para pagar.",
+    pillClass: "bg-cyan-100 text-cyan-800 border-cyan-200",
+    accentClass: "from-cyan-100/80 to-cyan-50",
     stepIndex: 3,
     icon: CreditCard,
   },
-  PAGADA: {
-    label: "Pagada",
-    description: "Pago confirmado. Esperamos validacion del Comite.",
-    pillClass: "bg-sky-100 text-sky-800 border-sky-200",
-    accentClass: "from-sky-100/80 to-indigo-50",
-    stepIndex: 4,
-    icon: ShieldCheck,
-  },
   CONFIRMADA: {
     label: "Confirmada",
-    description: "Inscripcion validada. Ya puedes inscribir a las personas.",
+    description: "Pago confirmado. El equipo queda inscrito.",
     pillClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
     accentClass: "from-emerald-100/80 to-emerald-50",
     stepIndex: 4,
     icon: PartyPopper,
+  },
+  RECHAZADA: {
+    label: "Rechazada",
+    description: "Inscripcion rechazada. Contacta al Comite.",
+    pillClass: "bg-red-100 text-red-800 border-red-200",
+    accentClass: "from-red-100/80 to-red-50",
+    stepIndex: 0,
+    icon: ShieldCheck,
   },
   CANCELADA: {
     label: "Cancelada",
@@ -246,7 +279,9 @@ function InscripcionCard({
           {paqueteNombre && (
             <span className="inline-flex items-center gap-1">
               <PackageOpen className="size-3.5" />
-              <span className="font-semibold text-slate-700">{paqueteNombre}</span>
+              <span className="font-semibold text-slate-700">
+                {paqueteNombre}
+              </span>
             </span>
           )}
           {promocionNombre && (
@@ -313,9 +348,9 @@ function EmptyState({ onCreateNew }: { onCreateNew: () => void }) {
             Aun no tienes inscripciones
           </h2>
           <p className="text-sm leading-relaxed text-slate-600">
-            Empieza creando una inscripcion: elige promocion, paquete y
-            registra a tus equipos. Despues de validar el pago podras inscribir
-            a las personas desde el detalle.
+            Empieza creando una inscripcion: elige promocion, paquete y registra
+            a tus equipos. Despues de validar el pago podras inscribir a las
+            personas desde el detalle.
           </p>
         </div>
         <Button
@@ -361,7 +396,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="flex min-h-svh w-full flex-col bg-[linear-gradient(180deg,#f6f4ee_0%,#ffffff_30%,#ffffff_100%)] text-slate-900">
+    <div className="surface-page-gradient flex min-h-svh w-full flex-col text-slate-900">
       {/* Brand hero */}
       <section className="relative overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-[#f6f4ee] via-white to-[#eef1f8]">
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-300/40 blur-3xl" />

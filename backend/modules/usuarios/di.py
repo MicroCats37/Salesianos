@@ -17,6 +17,7 @@ from .domain.services.orchestrators.auth_orchestrator import AuthOrchestrator
 from .domain.services.orchestrators.registro_orchestrator import RegistroOrchestrator
 from .domain.services.orchestrators.persona_busqueda_orchestrator import PersonaBusquedaOrchestrator
 from .domain.ports import IConsultaExternaClient
+from .domain.selectors import PersonaSelector, UsuarioSelector
 from .infrastructure.services import ConsultaExternaSimulator, RealConsultaExternaClient
 
 
@@ -52,6 +53,11 @@ class UsuariosModule(Module):
         # Servicios de búsqueda de personas — ámbito singleton
         binder.bind(PersonaBusquedaFlujo, to=PersonaBusquedaFlujo, scope=singleton)
         binder.bind(PersonaBusquedaOrchestrator, to=PersonaBusquedaOrchestrator, scope=singleton)
+
+        # Selectors de identidad (solo lectura) — los consume la superficie de
+        # administración operativa para listar cuentas y personas.
+        binder.bind(UsuarioSelector, to=UsuarioSelector, scope=singleton)
+        binder.bind(PersonaSelector, to=PersonaSelector, scope=singleton)
 
         # External Clients (reutilizado de entidades)
         # En DEBUG: usar simulador para desarrollo

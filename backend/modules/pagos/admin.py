@@ -1,18 +1,39 @@
-"""Admin registrations for pagos module — IzipayTransaccion read-only admin."""
+"""Admin registrations for pagos module — OrdenPago and TransaccionPago."""
 
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
 
-from modules.pagos.domain.models.pago import IzipayTransaccion
+from modules.pagos.domain.models import OrdenPago, TransaccionPago
 
 
-@admin.register(IzipayTransaccion)
-class IzipayTransaccionAdmin(SimpleHistoryAdmin):
-    """Read-only admin for Izipay transactions — payment records are immutable audit trail."""
+@admin.register(OrdenPago)
+class OrdenPagoAdmin(SimpleHistoryAdmin):
+    """Admin for generic payment orders."""
+
+    list_display = [
+        "numero",
+        "monto_total",
+        "moneda",
+        "estado",
+        "pagada_en",
+        "expires_at",
+        "descripcion",
+        "referencia_externa",
+        "created_at",
+    ]
+    list_filter = ["estado", "moneda"]
+    search_fields = ["numero", "descripcion", "referencia_externa"]
+    readonly_fields = ["created_at", "updated_at", "pagada_en"]
+    ordering = ["-created_at"]
+
+
+@admin.register(TransaccionPago)
+class TransaccionPagoAdmin(SimpleHistoryAdmin):
+    """Read-only admin for payment transactions — records are immutable audit trail."""
 
     list_display = [
         "transaction_id",
-        "inscripcion",
+        "orden_pago",
         "amount",
         "currency",
         "status",
@@ -24,11 +45,9 @@ class IzipayTransaccionAdmin(SimpleHistoryAdmin):
     search_fields = [
         "transaction_id",
         "order_number",
-        "inscripcion__responsable__nombres",
-        "inscripcion__responsable__apellidos",
     ]
     readonly_fields = [
-        "inscripcion",
+        "orden_pago",
         "proveedor",
         "transaction_id",
         "order_number",
@@ -55,4 +74,4 @@ class IzipayTransaccionAdmin(SimpleHistoryAdmin):
         return False
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("inscripcion")
+        return super().get_queryset(request).select_related("orden_pago")

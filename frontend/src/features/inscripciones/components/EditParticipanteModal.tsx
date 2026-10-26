@@ -5,24 +5,23 @@ import {
   Info,
   MessageSquare,
   Shield,
-  Shirt,
   UserCog,
   Users,
 } from "lucide-react";
-import { AppFormModal } from "@/components-app/forms/AppFormModal";
 import { GenericInput } from "@/components/genericForm/GenericInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AppFormModal } from "@/components-app/forms/AppFormModal";
 import { cn } from "@/lib/utils";
 import { useEditarParticipante } from "../hooks/useEditarParticipante";
+import { ASEGURADORAS_PERU } from "../schemas/participante.schema";
 import {
+  type EditarParticipanteFormData,
   EditarParticipanteSchema,
   NOTAS_MAX_LENGTH,
   ROLES_PERMITIDOS,
   TALLES_PERMITIDOS,
-  type EditarParticipanteFormData,
 } from "../schemas/participanteEdit.schema";
-import { ASEGURADORAS_PERU } from "../schemas/participante.schema";
 import type { ParticipanteOut } from "../services/inscripcion.service";
 
 interface EditParticipanteModalProps {
@@ -42,7 +41,7 @@ const ROL_LABEL: Record<string, string> = {
 
 /**
  * Modal para editar la asignación de un participante dentro de un equipo
- * (rol, talle_camiseta, aseguradora, notas y aceptaciones).
+ * (rol, talla_camiseta, aseguradora, notas y aceptaciones).
  *
  * Usa `AppFormModal` + `GenericInput` y aplica el schema
  * `EditarParticipanteSchema` con `superRefine`.
@@ -55,10 +54,7 @@ export function EditParticipanteModal({
   equipoLabel,
   onSuccess,
 }: EditParticipanteModalProps) {
-  const mutation = useEditarParticipante(
-    inscripcionId,
-    participante?.id ?? "",
-  );
+  const mutation = useEditarParticipante(inscripcionId, participante?.id ?? "");
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) onOpenChange(false);
@@ -67,17 +63,18 @@ export function EditParticipanteModal({
   if (!participante) return null;
 
   const initialData: EditarParticipanteFormData = {
-    rol: participante.rol ?? "JUGADOR",
-    talle_camiseta: participante.talle_camiseta ?? "",
+    rol: participante.rol ?? "J",
+    talla_camiseta: participante.talla_camiseta ?? "",
     aseguradora_nombre: participante.persona?.aseguradora_nombre ?? "",
-    aseguradora_numero_poliza: participante.persona?.aseguradora_numero_poliza ?? "",
+    aseguradora_numero_poliza:
+      participante.persona?.aseguradora_numero_poliza ?? "",
     notas: participante.notas ?? "",
   };
 
   async function handleSubmit(data: EditarParticipanteFormData) {
     const payload = {
       rol: data.rol,
-      talle_camiseta: data.talle_camiseta || null,
+      talla_camiseta: data.talla_camiseta || null,
       aseguradora_nombre: data.aseguradora_nombre || null,
       aseguradora_numero_poliza: data.aseguradora_numero_poliza || null,
       notas: data.notas || null,
@@ -87,7 +84,8 @@ export function EditParticipanteModal({
     handleOpenChange(false);
   }
 
-  const fullName = `${participante.persona.nombres} ${participante.persona.apellidos}`;
+  const fullName =
+    `${participante.persona?.nombres ?? ""} ${participante.persona?.apellidos ?? ""}`.trim();
 
   return (
     <AppFormModal<EditarParticipanteFormData>
@@ -110,7 +108,13 @@ export function EditParticipanteModal({
       bodyClassName="px-6 sm:px-8 py-6"
     >
       {({ methods }) => {
-        const { register, control, watch, setValue, formState: { errors } } = methods;
+        const {
+          register,
+          control,
+          watch,
+          setValue,
+          formState: { errors },
+        } = methods;
         const notasValue = watch("notas") ?? "";
         const length = notasValue.length;
 
@@ -119,8 +123,8 @@ export function EditParticipanteModal({
             {/* Player context strip */}
             <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/[0.04] px-4 py-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-black text-sm shadow-sm">
-                {participante.persona.nombres.charAt(0)}
-                {participante.persona.apellidos.charAt(0)}
+                {(participante.persona?.nombres ?? "?").charAt(0)}
+                {(participante.persona?.apellidos ?? "?").charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
@@ -130,7 +134,7 @@ export function EditParticipanteModal({
                   {fullName}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {participante.persona.numero_documento}
+                  {participante.persona?.numero_documento ?? "—"}
                 </p>
               </div>
               <span
@@ -158,7 +162,8 @@ export function EditParticipanteModal({
                     Rol y Talle
                   </h3>
                   <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
-                    Define la función del jugador en el equipo y su talle de camiseta.
+                    Define la función del jugador en el equipo y su talle de
+                    camiseta.
                   </p>
                 </div>
               </header>
@@ -181,8 +186,8 @@ export function EditParticipanteModal({
                 />
                 <GenericInput
                   field={{
-                    name: "talle_camiseta",
-                    label: "Talle camiseta",
+                    name: "talla_camiseta",
+                    label: "Talla camiseta",
                     type: "select",
                     placeholder: "Sin talle",
                     options: TALLES_PERMITIDOS.map((t) => ({
@@ -257,7 +262,8 @@ export function EditParticipanteModal({
                     Notas internas
                   </h3>
                   <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
-                    Información adicional para el comité (alergias, observaciones).
+                    Información adicional para el comité (alergias,
+                    observaciones).
                   </p>
                 </div>
               </header>
@@ -314,9 +320,10 @@ export function EditParticipanteModal({
               <Info className="size-4 text-sky-700 mt-0.5 shrink-0" />
               <p className="text-xs text-sky-900 leading-relaxed">
                 Los cambios se aplican a este equipo y disciplina
-                inmediatamente. Para mover al jugador entre equipos usa el
-                <Shirt className="inline size-3 mx-1 align-text-bottom" />
-                arrastre en la lista del equipo.
+                inmediatamente. Para agregar al jugador a otra disciplina usa el
+                selector de participantes del otro equipo: un solo cupo pagado
+                habilita a la misma persona en todas las disciplinas
+                contratadas.
               </p>
             </div>
 

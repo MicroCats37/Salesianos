@@ -17,13 +17,13 @@ from modules.usuarios.domain.schemas.registro_result_schemas import RegistroToke
 
 class RegistroFlujo:
     """
-    Flujo asíncrono para registro de usuario con Persona.
+    Flujo asincrono para registro de usuario con Persona.
 
     Pasos:
     1. Validar que no exista usuario con el mismo email.
     2. Buscar si existe Persona con (tipo_documento, numero_documento).
-    3. Si no existe Persona: crear Persona + Usuario + acepto_bases=True.
-    4. Si existe Persona sin usuario: crear Usuario + acepto_bases=True, vincular.
+    3. Si no existe Persona: crear Persona + Usuario.
+    4. Si existe Persona sin usuario: crear Usuario, vincular.
     5. Si existe Persona con usuario: error 409 conflict.
     """
 
@@ -69,7 +69,7 @@ class RegistroFlujo:
         )
 
         if persona is None:
-            # Paso 2a: Crear Persona nueva + Usuario + acepto_bases=True
+            # Paso 2a: Crear Persona nueva + Usuario
             result = await self._crear_persona_y_usuario(
                 email=email,
                 password=password,
@@ -113,7 +113,7 @@ class RegistroFlujo:
         contacto_emergencia_nombre: str | None = None,
         contacto_emergencia_telefono: str | None = None,
     ) -> RegistroTokenResult:
-        """Crea Persona nueva + Usuario + acepto_bases=True dentro de transaction.atomic."""
+        """Crea Persona nueva + Usuario dentro de transaction.atomic."""
 
         @sync_to_async
         def _atomic_creacion():
@@ -125,7 +125,6 @@ class RegistroFlujo:
                     "tipo_documento": tipo_documento,
                     "numero_documento": numero_documento,
                     "genero": genero,
-                    "acepto_bases": True,
                 }
                 if telefono:
                     persona_data["telefono"] = telefono
@@ -182,15 +181,11 @@ class RegistroFlujo:
         email: str,
         password: str,
     ) -> RegistroTokenResult:
-        """Crea Usuario vinculado a Persona existente + acepto_bases=True dentro de transaction.atomic."""
+        """Crea Usuario vinculado a Persona existente dentro de transaction.atomic."""
 
         @sync_to_async
         def _atomic_vinculacion():
             with transaction.atomic():
-                # Set acepto_bases=True on existing Persona
-                persona.acepto_bases = True
-                persona.save(update_fields=["acepto_bases"])
-
                 username = self._generar_username(persona.tipo_documento, persona.numero_documento)
                 usuario = Usuario(
                     username=username,

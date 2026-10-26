@@ -79,19 +79,7 @@ class Persona(BaseModel):
         max_length=50,
         blank=True,
         null=True,
-        verbose_name="Número de póliza"
-    )
-    acepto_bases = models.BooleanField(
-        default=False,
-        verbose_name="Aceptó bases del evento"
-    )
-    acepto_aptitud_fisica = models.BooleanField(
-        default=False,
-        verbose_name="Aceptó certificado de aptitud física"
-    )
-    acepto_imagen = models.BooleanField(
-        default=False,
-        verbose_name="Aceptó uso de imagen"
+        verbose_name="Numero de poliza"
     )
 
     class Meta:

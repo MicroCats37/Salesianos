@@ -18,14 +18,11 @@ class PagosModule(Module):
         # Infrastructure: Izipay HTTP client (singleton per process)
         binder.bind(IzipayClient, to=IzipayClient, scope=singleton)
 
-        # Core service: transaction CRUD, idempotency, ID generation
+        # Core service: transaction + order CRUD, idempotency, ID generation
         binder.bind(IzipayCoreService, to=IzipayCoreService, scope=singleton)
 
         # Flow: async use-case with transaction.atomic for confirm step
-        # Depends on: IzipayCoreService, InscripcionService (from InscripcionesModule),
-        #            IzipayClient (from infrastructure)
         binder.bind(RegistrarPagoIzipayFlujo, to=RegistrarPagoIzipayFlujo, scope=singleton)
 
-        # Orchestrator: thin async facade with ownership validation
-        # Depends on: RegistrarPagoIzipayFlujo, InscripcionSelector (from InscripcionesModule)
+        # Orchestrator: thin async facade
         binder.bind(PagosOrchestrator, to=PagosOrchestrator, scope=singleton)

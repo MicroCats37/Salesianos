@@ -12,12 +12,44 @@ from modules.usuarios.presentation.controllers.auth_controller import AuthLoginC
 from modules.usuarios.presentation.controllers.registro_controller import RegistroController
 from modules.usuarios.presentation.controllers.persona_busqueda_controller import PersonaBusquedaController
 from modules.usuarios.presentation.controllers.me_controller import AuthMeController
-from modules.inscripciones.presentation.controllers.disciplina_controller import DisciplinaController
-from modules.inscripciones.presentation.controllers.paquete_controller import PaqueteController
-from modules.inscripciones.presentation.controllers.evento_controller import EventoController
-from modules.inscripciones.presentation.controllers.inscripcion_controller import InscripcionController
-from modules.inscripciones.presentation.controllers.promocion_controller import PromocionController
 from modules.pagos.presentation.controllers.pagos_controller import PagosController
+from modules.salesianos_fest.presentation.controllers.catalogo_controller import CatalogoController
+from modules.salesianos_fest.presentation.controllers.inscripcion_controller import (
+    InscripcionController,
+    EquipoController,
+    ParticipacionController,
+)
+from modules.salesianos_fest.presentation.controllers.compra_controller import CompraController
+from modules.salesianos_fest.presentation.controllers.asignacion_controller import AsignacionController, InscripcionSaldoController
+from modules.salesianos_fest.presentation.controllers.acreditacion_controller import AcreditacionController, AccesoController
+from modules.salesianos_fest.presentation.controllers.cotizacion_controller import CotizacionController
+from modules.administracion.presentation.controllers.admin_fundacion_controller import (
+    AdminFundacionController,
+)
+from modules.administracion.presentation.controllers.admin_resumen_controller import (
+    AdminResumenController,
+)
+from modules.administracion.presentation.controllers.admin_inscripcion_controller import (
+    AdminInscripcionController,
+)
+from modules.administracion.presentation.controllers.admin_pago_controller import (
+    AdminPagoController,
+)
+from modules.administracion.presentation.controllers.admin_operacion_controller import (
+    AdminOperacionController,
+)
+from modules.administracion.presentation.controllers.admin_usuario_controller import (
+    AdminUsuarioController,
+)
+from modules.competencias.presentation.controllers.admin_competencias_controller import (
+    AdminCompetenciasController,
+)
+from modules.competencias.presentation.controllers.admin_encuentros_controller import (
+    AdminEncuentrosController,
+)
+from modules.competencias.presentation.controllers.public_competencias_controller import (
+    PublicCompetenciasController,
+)
 
 import os
 
@@ -76,15 +108,47 @@ api.register_controllers(PersonaBusquedaController)
 # ── Auth Me Controller (revalidar sesión tras reload) ─
 api.register_controllers(AuthMeController)
 
-# ── Inscripciones Controllers (catalogs and lifecycle) ─
-api.register_controllers(DisciplinaController)
-api.register_controllers(PaqueteController)
-api.register_controllers(EventoController)
-api.register_controllers(PromocionController)
-api.register_controllers(InscripcionController)
-
-# ── Pagos Controller (Izipay Perú) ─
+# ── Pagos Controller (Izipay Perú) ──
 api.register_controllers(PagosController)
+
+# ── Salesianos FEST Controller (Catálogo público — Fase 2) ─────
+api.register_controllers(CatalogoController)
+
+# ── Salesianos FEST Controllers (Inscripción deportiva — Fase 3) ─────
+api.register_controllers(InscripcionController)
+api.register_controllers(EquipoController)
+api.register_controllers(ParticipacionController)
+
+# ── Salesianos FEST Controllers (Compras y Pagos — Fase 4) ─────
+api.register_controllers(CompraController)
+
+# ── Salesianos FEST Controllers (Asignacion Cupos — Fase 5) ─────
+api.register_controllers(AsignacionController)
+api.register_controllers(InscripcionSaldoController)
+
+# ── Salesianos FEST Controllers (Acreditacion y Acceso — Fase 5) ─────
+api.register_controllers(AcreditacionController)
+api.register_controllers(AccesoController)
+
+# ── Salesianos FEST Controllers (Cotización — Fase 3/4) ─────
+api.register_controllers(CotizacionController)
+
+# ── Administración Operativa FEST (read-only, admin-only) ─────
+api.register_controllers(AdminFundacionController)
+api.register_controllers(AdminResumenController)
+api.register_controllers(AdminInscripcionController)
+api.register_controllers(AdminPagoController)
+api.register_controllers(AdminOperacionController)
+api.register_controllers(AdminUsuarioController)
+
+# ── Competencias: superficie administrativa (RequireAdmin) ─────
+# The order matters: the commands of the encounters live under the prefix
+# "/administracion/competencias/encuentros".
+api.register_controllers(AdminCompetenciasController)
+api.register_controllers(AdminEncuentrosController)
+
+# ── Competencias: superficie pública (solo lectura, eventos autorizados) ─────
+api.register_controllers(PublicCompetenciasController)
 
 # ── Exception handlers globales ────────────────────────────────
 register_exception_handlers(api)

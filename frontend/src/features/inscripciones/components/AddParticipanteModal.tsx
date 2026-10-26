@@ -1,40 +1,37 @@
 "use client";
 
 import {
-  AlertTriangle,
-  FileSignature,
   IdCard,
-  IdCardLanyard,
   Info,
   MessageSquare,
-  Package,
   Shield,
-  Sparkles,
-  Stethoscope,
   UserPlus,
   Users,
 } from "lucide-react";
-import { AppFormModal } from "@/components-app/forms/AppFormModal";
 import { GenericInput } from "@/components/genericForm/GenericInput";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AppFormModal } from "@/components-app/forms/AppFormModal";
 import { cn } from "@/lib/utils";
 import {
   ASEGURADORAS_PERU,
   NOTAS_MAX_LENGTH,
   type ParticipanteFormData,
   type ParticipanteFormInput,
+  ParticipanteSchema,
 } from "../schemas/participante.schema";
-import { ParticipanteSchema } from "../schemas/participante.schema";
 import { DocumentoLookupSmartField } from "./forms/DocumentoLookupSmartField";
 
 interface AddParticipanteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  equipoId: string;
-  equipoLabel: string;
-  onAdd: (data: ParticipanteFormData) => void;
+  /** Show the loading state on the primary action. */
+  primaryLoading?: boolean;
+  /**
+   * Receives the validated form data. Returning a promise lets the caller
+   * surface a rejection — the modal closes only when the promise resolves.
+   */
+  onAdd: (data: ParticipanteFormData) => void | Promise<void>;
 }
 
 interface SectionProps {
@@ -115,7 +112,12 @@ function Section({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className={cn("text-sm font-black uppercase tracking-wider", a.text)}>
+            <h3
+              className={cn(
+                "text-sm font-black uppercase tracking-wider",
+                a.text,
+              )}
+            >
               {title}
             </h3>
             {badge && (
@@ -141,134 +143,59 @@ function Section({
   );
 }
 
-interface CheckboxRowProps {
-  label: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  accent: "amber" | "rose" | "violet";
-  value: boolean | undefined;
-  onChange: (checked: boolean) => void;
-}
-
-function CheckboxRow({
-  label,
-  description,
-  icon: Icon,
-  accent,
-  value,
-  onChange,
-}: CheckboxRowProps) {
-  const checked = value === true;
-  const palettes: Record<typeof accent, { ring: string; bg: string; iconBg: string; text: string }> = {
-    amber: {
-      ring: "ring-amber-200",
-      bg: "bg-amber-50/60",
-      iconBg: "bg-amber-100 text-amber-700",
-      text: "text-amber-900",
-    },
-    rose: {
-      ring: "ring-rose-200",
-      bg: "bg-rose-50/60",
-      iconBg: "bg-rose-100 text-rose-700",
-      text: "text-rose-900",
-    },
-    violet: {
-      ring: "ring-violet-200",
-      bg: "bg-violet-50/60",
-      iconBg: "bg-violet-100 text-violet-700",
-      text: "text-violet-900",
-    },
-  };
-  const p = palettes[accent];
-  return (
-    <label
-      className={cn(
-        "group flex items-start gap-3 rounded-xl border border-border/60 p-3 cursor-pointer transition-all duration-150",
-        checked
-          ? cn("ring-2", p.ring, p.bg)
-          : "ring-1 ring-transparent hover:border-border hover:bg-muted/30",
-      )}
-    >
-      <div
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
-          checked ? p.iconBg : "bg-muted text-muted-foreground",
-        )}
-      >
-        <Icon className="size-4" />
-      </div>
-      <div className="flex-1 min-w-0 pt-0.5">
-        <p
-          className={cn(
-            "text-sm font-semibold leading-tight",
-            checked ? p.text : "text-foreground",
-          )}
-        >
-          {label}
-        </p>
-        <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-          {description}
-        </p>
-      </div>
-      <Checkbox
-        checked={checked}
-        onCheckedChange={(v) => onChange(Boolean(v))}
-        aria-label={label}
-        className="mt-1 shrink-0"
-      />
-    </label>
-  );
-}
-
 /**
- * Modal para agregar un participante a un equipo.
+ * Modal de pre-registro de un participante en el pool de la inscripción.
+ *
+ * POOL FIRST: this modal is the ONLY way to register a participant. There is
+ * no team context: the preregistration is submitted WITHOUT `equipo_id`, so
+ * the backend creates the `InscripcionPersona` and claims the paid cup when
+ * there is free capacity. Placing the participant in a team is a later,
+ * separate action (the team selector).
  *
  * UI/UX: secciones con jerarquía visual clara (iconos, badges, helper texts),
  * checkboxes con feedback visual de selección, campo de notas con contador,
- * contexto del equipo visible y declaraciones agrupadas.
+ * contexto visible (el pool) y declaraciones agrupadas.
+ *
+ * The team-only fields (rol and talla) are NOT asked: the preregistration
+ * endpoint does not accept them — no data that the backend would discard.
  */
 export function AddParticipanteModal({
   open,
   onOpenChange,
-  equipoId,
-  equipoLabel,
+  primaryLoading = false,
   onAdd,
 }: AddParticipanteModalProps) {
-  // equipoId is part of the public contract but the modal body resolves
-  // everything through `equipoLabel`. Keep the destructure so existing
-  // callers (e.g. InscripcionDetailView) keep working.
-  void equipoId;
   const initialData: ParticipanteFormInput = {
     tipoDocumento: "DNI",
     numeroDocumento: "",
     nombres: "",
     apellidos: "",
     genero: "M",
-    rol: "JUGADOR",
+    rol: "J",
     telefono: "",
     whatsapp: "",
-    talle_camiseta: "",
+    talla_camiseta: "",
     aseguradora_nombre: "",
     notas: "",
-    acepto_bases: false,
-    acepto_aptitud_fisica: false,
-    acepto_imagen: false,
   };
 
   async function handleSubmit(data: ParticipanteFormInput) {
-    onAdd(data as ParticipanteFormData);
+    // Awaited so a caller rejection (e.g. a backend capacity error) is
+    // handled before the modal decides to close.
+    await onAdd(data as ParticipanteFormData);
   }
 
   return (
     <AppFormModal<ParticipanteFormInput>
       open={open}
       onOpenChange={onOpenChange}
-      title="Agregar Participante"
-      description={`Vas a registrar un nuevo integrante en el equipo "${equipoLabel}".`}
-      eyebrow="Inscripción · Nuevo integrante"
+      title="Pre-registrar Participante"
+      description="Vas a pre-registrar a un participante en el pool de la inscripción. Quedará esperando un cupo pagado para poder entrar a un equipo."
+      eyebrow="Inscripción · Pre-registro"
       icon={<UserPlus className="h-5 w-5 text-primary" />}
-      primaryLabel="Agregar al equipo"
-      primaryLoadingLabel="Agregando..."
+      primaryLabel="Agregar al pool"
+      primaryLoadingLabel="Registrando..."
+      primaryLoading={primaryLoading}
       onPrimary={() => {}}
       secondaryLabel="Cancelar"
       schema={ParticipanteSchema}
@@ -278,22 +205,28 @@ export function AddParticipanteModal({
       bodyClassName="px-6 sm:px-8 py-6"
     >
       {({ methods }) => {
-        const { register, control, setValue, watch, formState: { errors } } = methods;
+        const {
+          register,
+          control,
+          setValue,
+          watch,
+          formState: { errors },
+        } = methods;
         const notasValue = String(watch("notas") ?? "");
 
         return (
           <div className="space-y-5">
-            {/* Team context strip */}
+            {/* Pool context strip */}
             <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/[0.04] px-4 py-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Package className="size-4" />
+                <Users className="size-4" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-                  Equipo destino
+                  Destino
                 </p>
                 <p className="truncate text-sm font-bold text-foreground">
-                  {equipoLabel}
+                  Pool de participantes (sin equipo)
                 </p>
               </div>
             </div>
@@ -369,11 +302,11 @@ export function AddParticipanteModal({
               </div>
             </Section>
 
-            {/* ── Contacto y Rol ─────────────────────────────────────── */}
+            {/* ── Contacto ──────────────────────────────────────────── */}
             <Section
               icon={Users}
-              title="Contacto y Rol"
-              description="Datos de contacto opcionales y rol dentro del equipo."
+              title="Contacto"
+              description="Datos de contacto opcionales del participante."
               accent="amber"
             >
               <div className="grid grid-cols-12 gap-3">
@@ -403,44 +336,8 @@ export function AddParticipanteModal({
                   control={control as never}
                   errors={errors}
                 />
-                <GenericInput
-                  field={{
-                    name: "rol",
-                    label: "Rol en el equipo",
-                    type: "select",
-                    required: true,
-                    options: [
-                      { label: "Jugador", value: "JUGADOR" },
-                      { label: "Capitán", value: "CAPITAN" },
-                      { label: "Delegado", value: "DELEGADO" },
-                    ],
-                    containerClassName: "col-span-12 sm:col-span-6",
-                  }}
-                  register={register as never}
-                  control={control as never}
-                  errors={errors}
-                />
-                <GenericInput
-                  field={{
-                    name: "talle_camiseta",
-                    label: "Talle de Camiseta",
-                    type: "select",
-                    placeholder: "Sin talle",
-                    options: [
-                      { label: "XS", value: "XS" },
-                      { label: "S", value: "S" },
-                      { label: "M", value: "M" },
-                      { label: "L", value: "L" },
-                      { label: "XL", value: "XL" },
-                      { label: "XXL", value: "XXL" },
-                    ],
-                    helperText: "Opcional — para entrega del polo oficial",
-                    containerClassName: "col-span-12 sm:col-span-6",
-                  }}
-                  register={register as never}
-                  control={control as never}
-                  errors={errors}
-                />
+                {/* Rol y talla son conceptos de equipo: el preregistro al pool
+                    no los acepta, así que no se piden. */}
               </div>
             </Section>
 
@@ -499,74 +396,14 @@ export function AddParticipanteModal({
               />
             </Section>
 
-            {/* ── Declaraciones Obligatorias ─────────────────────────── */}
-            <Section
-              icon={FileSignature}
-              title="Declaraciones Obligatorias"
-              description="El equipo debe aceptar las bases y compromisos del evento."
-              badge="Requerido"
-              accent="amber"
-            >
-              <div className="space-y-3">
-                <CheckboxRow
-                  icon={Sparkles}
-                  accent="amber"
-                  label="Acepto las bases del evento"
-                  description="Bases del campeonato, reglamento y protocolo de competencia."
-                  value={watch("acepto_bases")}
-                  onChange={(v) =>
-                    setValue("acepto_bases", v, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    })
-                  }
-                />
-                <CheckboxRow
-                  icon={Stethoscope}
-                  accent="rose"
-                  label="Certificado de aptitud física"
-                  description="Certifico que el participante está física y mentalmente apto. Adjunto certificado médico si aplica."
-                  value={watch("acepto_aptitud_fisica")}
-                  onChange={(v) =>
-                    setValue("acepto_aptitud_fisica", v, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    })
-                  }
-                />
-                <CheckboxRow
-                  icon={IdCardLanyard}
-                  accent="violet"
-                  label="Autorización de uso de imagen"
-                  description="Autorizo el uso de mi imagen en fotografías y videos del evento con fines de difusión."
-                  value={watch("acepto_imagen")}
-                  onChange={(v) =>
-                    setValue("acepto_imagen", v, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-start gap-2 rounded-xl border border-amber-200/60 bg-amber-50/50 p-3">
-                <AlertTriangle className="size-4 text-amber-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-amber-900 leading-relaxed">
-                  Las tres declaraciones son obligatorias para registrar al
-                  participante en el equipo.
-                </p>
-              </div>
-            </Section>
-
             {/* ── Footer info ────────────────────────────────────────── */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
               <Info className="size-3.5" />
               <p>
-                El participante se agregará a la lista de borradores del equipo.
-                Pulsa <span className="font-semibold text-foreground">"Agregar al equipo"</span> para
-                guardarlo en la inscripción.
+                El participante quedará en el pool de la inscripción, sin
+                equipo. Si hay cupo pagado disponible se le asigna
+                automáticamente; después podrás ubicarlo en un equipo con el
+                selector del equipo.
               </p>
             </div>
           </div>
@@ -616,9 +453,7 @@ function NotasTextarea({ value, onChange, error }: NotasTextareaProps) {
           error && "border-rose-400 ring-1 ring-rose-300",
         )}
       />
-      {error && (
-        <p className="text-xs text-rose-600 font-medium">{error}</p>
-      )}
+      {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
       <p className="text-[11px] text-muted-foreground leading-snug">
         Solo lo verá el comité organizador y el delegado del equipo.
       </p>

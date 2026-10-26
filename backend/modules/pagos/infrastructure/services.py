@@ -4,6 +4,9 @@ Izipay infrastructure — concrete Izipay Perú Web Core 2.0 HTTP client.
 Uses httpx for async-capable HTTP calls against the Izipay Perú REST API.
 Settings read from django.conf.settings — fails clearly if credentials are absent.
 """
+import base64
+import hashlib
+import hmac
 import logging
 import re
 import unicodedata
@@ -83,7 +86,6 @@ def _is_safe_key(key: str) -> bool:
 
 
 # ── Izipay Perú Web Core 2.0 API client ───────────────────────────────────────
-
 class IzipayClient:
     """
     Async-capable Izipay Perú Web Core 2.0 REST API client using httpx.
@@ -253,3 +255,71 @@ class IzipayClient:
             )
 
         return data
+
+
+# ── Provider signature verification ─────────────────────────────────────────
+
+class VerificadorFirmaIzipay:
+    """
+    Verifies the Izipay Perú HMAC-SHA256 signature of a provider payload.
+
+    Izipay Perú signs the raw `payloadHttp` string with the merchant
+    `keyHash` (HMAC-SHA256, Base64 encoded). The signature travels next to
+    the payload in the browser callback and in the server-to-server
+    notification.
+
+    The `keyHash` is a merchant SECRET: it is read from settings, it never
+    leaves the server and it is never written to a log. Without the key the
+    verification is simply NOT AVAILABLE — there is no fallback that turns an
+    unverifiable payload into a verified one.
+    """
+
+    def __init__(self, key_hash: str | None = None):
+        self._key_hash = key_hash
+
+    @property
+    def key_hash(self) -> str:
+        """
+        The merchant key.
+
+        When no key was injected explicitly it is read from settings on every
+        access: the controller graph is built once at import time, so the
+        secret must never be captured in a stale instance.
+        """
+        if self._key_hash is not None:
+            return self._key_hash
+        return getattr(settings, "IZIPAY_KEY_HASH", "") or ""
+
+    @property
+    def disponible(self) -> bool:
+        """True when the merchant key is configured."""
+        return bool(self.key_hash)
+
+    def calcular_firma(self, payload_http: str) -> str:
+        """
+        Compute the expected Base64 HMAC-SHA256 signature of a raw payload.
+
+        The payload MUST be the raw string received — re-serializing the JSON
+        changes the bytes and breaks the signature.
+        """
+        digest = hmac.new(
+            self.key_hash.encode("utf-8"),
+            payload_http.encode("utf-8"),
+            hashlib.sha256,
+        ).digest()
+        return base64.b64encode(digest).decode("ascii")
+
+    def verificar(self, payload_http: str, signature: str) -> bool:
+        """
+        Compare the received signature with the expected one.
+
+        The comparison is constant-time so it does not leak information about
+        the expected signature.
+        """
+        if not self.disponible or not payload_http or not signature:
+            return False
+        esperado = self.calcular_firma(payload_http)
+        return hmac.compare_digest(
+            esperado.encode("utf-8"),
+            signature.encode("utf-8"),
+        )

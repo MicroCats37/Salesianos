@@ -1,0 +1,18 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Salesianos FEST//Festival 2026//ES
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:salesianosfest-20261121@salesianosfest.pe
+DTSTAMP:20261025T190000Z
+DTSTART:20261121T130000Z
+DTEND:20261122T080000Z
+SUMMARY:Salesianos FEST 2026
+LOCATION:Asociación Okinawense del Perú\, Av. Asturias s/n\, Ate\, Lima
+DESCRIPTION:Bienvenida 8:00 a. m. Inauguración 8:30 a. m. Partidos 9:00 a.
+  m.Fiesta 6:00 p. m. Premiación 9:00 p. m. Cierre 3:00 a. m. del 22 de no
+ viembre.
+URL:https://salesianosfest.pe/
+END:VEVENT
+END:VCALENDAR

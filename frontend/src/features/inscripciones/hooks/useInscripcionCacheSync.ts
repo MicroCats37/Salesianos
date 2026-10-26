@@ -6,7 +6,9 @@ import type {
   InscripcionDetalleOut,
   ParticipanteOut,
 } from "../services/inscripcion.service";
+import { inscripcionElegiblesPrefixKey } from "./useElegiblesEquipo";
 import { inscripcionDetalleKey } from "./useInscripcionDetalle";
+import { inscripcionPoolKey, inscripcionSaldoKey } from "./useInscripcionPool";
 
 /**
  * Pure helpers for in-place cache updates of an `InscripcionDetalleOut`.
@@ -92,58 +94,6 @@ export const inscripcionCacheHelpers = {
       })),
     };
   },
-
-  /**
-   * Move a participante from its current equipo to another.
-   * No-op if source or target equipo is missing.
-   */
-  moveParticipante(
-    data: InscripcionDetalleOut | undefined,
-    participanteId: string,
-    targetEquipoId: string,
-    movedParticipante?: ParticipanteOut,
-  ): InscripcionDetalleOut | null {
-    if (!data) return null;
-    const sourceEquipo = data.equipos.find((e) =>
-      e.participantes.some((p) => p.id === participanteId),
-    );
-    if (!sourceEquipo) return data;
-    const targetEquipo = data.equipos.find((e) => e.id === targetEquipoId);
-    if (!targetEquipo) return data;
-    if (sourceEquipo.id === targetEquipo.id) return data;
-
-    const original = sourceEquipo.participantes.find(
-      (p) => p.id === participanteId,
-    );
-    const participanteFinal: ParticipanteOut = movedParticipante ?? {
-      ...(original as ParticipanteOut),
-      equipo_id: targetEquipoId,
-    };
-
-    return {
-      ...data,
-      equipos: data.equipos.map((e) => {
-        if (e.id === sourceEquipo.id) {
-          return {
-            ...e,
-            participantes: e.participantes.filter(
-              (p) => p.id !== participanteId,
-            ),
-          };
-        }
-        if (e.id === targetEquipo.id) {
-          if (e.participantes.some((p) => p.id === participanteFinal.id)) {
-            return e;
-          }
-          return {
-            ...e,
-            participantes: [...e.participantes, participanteFinal],
-          };
-        }
-        return e;
-      }),
-    };
-  },
 };
 
 /**
@@ -205,35 +155,36 @@ export function useInscripcionCacheSync(inscripcionId: string) {
     [read, write],
   );
 
-  const moveParticipante = useCallback(
-    (
-      participanteId: string,
-      targetEquipoId: string,
-      moved?: ParticipanteOut,
-    ) => {
-      const current = read();
-      const next = inscripcionCacheHelpers.moveParticipante(
-        current,
-        participanteId,
-        targetEquipoId,
-        moved,
-      );
-      if (next && next !== current) write(next);
-    },
-    [read, write],
-  );
-
-  const invalidate = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: key }),
-    [queryClient, key],
-  );
+  /**
+   * Invalidate every authoritative query of this inscripcion.
+   *
+   * The detail alone is not enough: a settled payment also changes the
+   * participant pool (who has a paid cup), the cupo saldo (how many paid
+   * slots are left) and the candidate list of EVERY team (one cup opens the
+   * person in all the contracted disciplines, so an assignment changes the
+   * verdict of the other teams too). Leaving them cached would show a stale
+   * commercial state for up to the staleTime of the query.
+   */
+  const invalidate = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: key }),
+      queryClient.invalidateQueries({
+        queryKey: inscripcionPoolKey(inscripcionId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: inscripcionSaldoKey(inscripcionId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: inscripcionElegiblesPrefixKey(inscripcionId),
+      }),
+    ]);
+  }, [queryClient, key, inscripcionId]);
 
   return {
     read,
     addParticipante,
     removeParticipante,
     updateParticipante,
-    moveParticipante,
     invalidate,
   };
 }

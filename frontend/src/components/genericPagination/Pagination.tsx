@@ -64,6 +64,14 @@ interface PaginationProps {
   totalItems?: number;
   pageSize?: number;
   className?: string;
+  /**
+   * Page sizes offered by the selector.
+   *
+   * The default matches the real page size of the administration lists (25,
+   * with a maximum of 100), so the trigger never falls back to its
+   * placeholder.
+   */
+  opcionesTamanoPagina?: number[];
 }
 
 export function Pagination({
@@ -74,6 +82,7 @@ export function Pagination({
   totalItems,
   pageSize,
   className = "",
+  opcionesTamanoPagina = [25, 50, 100],
 }: PaginationProps) {
   if (totalPages === 0 && (!totalItems || totalItems === 0)) return null;
 
@@ -84,7 +93,7 @@ export function Pagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-4 ${className}`}
+      className={`flex min-w-0 flex-col sm:flex-row items-center justify-between gap-4 py-4 ${className}`}
     >
       <div className="flex items-center gap-4 order-2 sm:order-1">
         <div className="text-sm text-muted-foreground">
@@ -114,16 +123,23 @@ export function Pagination({
                 <SelectValue placeholder={pageSize.toString()} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
+                {opcionesTamanoPagina.map((opcion) => (
+                  <SelectItem key={opcion} value={String(opcion)}>
+                    {opcion}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         )}
       </div>
 
-      <div className="flex items-center space-x-2 order-1 sm:order-2">
+      {/*
+        The cluster of pages scrolls INSIDE its own container: with nine or
+        more pages the row does not fit on a phone and the PAGE must never
+        scroll horizontally.
+      */}
+      <div className="order-1 flex max-w-full items-center gap-1 overflow-x-auto pb-1 sm:order-2 sm:gap-2">
         <Button
           variant="outline"
           size="icon"

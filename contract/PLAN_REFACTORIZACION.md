@@ -47,12 +47,19 @@ async def listar_imagenes(self, bungalow_id: str, request):
 ---
 
 ### B. El Manejo de Excepciones Globales
-Si el controlador no puede retornar errores, ¿quién lo hace? **El Orquestador o el Flujo/Core mediante `raise`.**
-Tu archivo `backend/core/exceptions.py` captura `HttpError` automáticamente.
+Si el controlador no puede retornar errores, ¿quién lo hace? **El Orquestador, Flujo o Core mediante `raise` de una excepción de dominio tipada.**
+`backend/core/exceptions.py` captura las excepciones y es el único lugar que las convierte en una respuesta HTTP pública.
 
-#### ✅ EN EL ORQUESTADOR O CORE:
+#### ✅ EN EL ORQUESTADOR, FLUJO O CORE:
 ```python
-from ninja.errors import HttpError
+from modules.alojamiento.domain.exceptions import BungalowNotFoundError
+
+
+class BungalowNotFoundError(NotFoundError):
+    code = "BUNGALOW_NOT_FOUND"
+
+    def __init__(self):
+        super().__init__(resource="Alojamiento", code=self.code)
 
 class BungalowOrchestrator:
     async def listar_imagenes_proceso(self, bungalow_id: str):
@@ -60,10 +67,27 @@ class BungalowOrchestrator:
         
         # ✅ Aquí va la validación. Se LANZA el error, no se retorna.
         if not bungalow:
-            raise HttpError(404, f"Bungalow '{bungalow_id}' no encontrado")
+            # Sin UUID, ID interno ni texto público interpolado.
+            raise BungalowNotFoundError()
             
         return await sync_to_async(self.core.get_imagenes)(bungalow)
 ```
+
+#### ✅ EN `core/exceptions.py`
+```python
+PUBLIC_ERROR_MESSAGES = {
+    "BUNGALOW_NOT_FOUND": "No se encontró el alojamiento solicitado.",
+}
+
+# El handler selecciona status + mensaje desde el código, registra el
+# detalle técnico internamente y nunca devuelve el texto original de la excepción.
+```
+
+#### Mensajes Públicos
+- El controller puede declarar solo un mensaje de éxito fijo y contextual mediante `success_response(..., message="...")`.
+- Los errores públicos los construyen exclusivamente los exception handlers desde un catálogo de códigos estables.
+- Está prohibido devolver UUIDs, IDs internos, request IDs, constraints SQL, trazas, rutas, payloads de proveedores, secretos o `str(exc)`.
+- El detalle técnico se registra en logs estructurados; la respuesta inesperada usa un mensaje genérico y seguro.
 
 ---
 

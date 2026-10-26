@@ -1,8 +1,8 @@
 "use client";
 
+import { Loader2, Search } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Search, Loader2 } from "lucide-react";
-import { useFormContext, useWatch, Controller } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ export function DocumentoLookupSmartField() {
   // Escuchamos los campos relevantes
   const tipoDocumento = useWatch({ control, name: "tipoDocumento" }) ?? "DNI";
   const numeroDocumento = useWatch({ control, name: "numeroDocumento" }) ?? "";
-  
+
   // Como estamos en un GenericForm, los errores pueden ser cualquier cosa. Forzamos a string
   const rawError = errors.numeroDocumento?.message;
   const error = typeof rawError === "string" ? rawError : undefined;
@@ -58,7 +58,7 @@ export function DocumentoLookupSmartField() {
   async function handleLookup() {
     const valid = await trigger("numeroDocumento");
     if (!valid || !canLookup) return;
-    
+
     try {
       const result = await documentoLookup.mutateAsync(numStr);
       if (result) {
@@ -66,9 +66,21 @@ export function DocumentoLookupSmartField() {
           toast.error("La respuesta no contiene nombres completos");
           return;
         }
-        setValue("numeroDocumento", result.numero_documento, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
-        setValue("apellidos", result.apellidos, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
-        setValue("nombres", result.nombres, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+        setValue("numeroDocumento", result.numero_documento, {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+        setValue("apellidos", result.apellidos, {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+        setValue("nombres", result.nombres, {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
         await trigger(["numeroDocumento", "nombres", "apellidos"]);
         toast.success("Datos del documento cargados");
       }
@@ -79,10 +91,7 @@ export function DocumentoLookupSmartField() {
 
   return (
     <div className="space-y-2 col-span-12 sm:col-span-8">
-      <Label
-        htmlFor="numeroDocumento"
-        className={cn("text-sm font-medium")}
-      >
+      <Label htmlFor="numeroDocumento" className={cn("text-sm font-medium")}>
         Número de Documento <span className="text-destructive ml-1">*</span>
       </Label>
 
@@ -136,9 +145,7 @@ export function DocumentoLookupSmartField() {
         )}
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive font-medium">{error}</p>
-      )}
+      {error && <p className="text-sm text-destructive font-medium">{error}</p>}
     </div>
   );
 }

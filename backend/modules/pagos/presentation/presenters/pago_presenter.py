@@ -3,19 +3,20 @@ IzipayPresenter — transforms domain result objects into HTTP schemas.
 
 Transforms only — presenter does NOT query the DB.
 """
-from modules.pagos.domain.models import IzipayTransaccion
+from modules.pagos.domain.models import OrdenPago, TransaccionPago
 from modules.pagos.domain.schemas.result import IzipayPrepareResult, IzipayConfirmResult
 from modules.pagos.presentation.schemas.pago_schema import (
     IzipayPrepareOut,
     IzipayConfirmOut,
-    IzipayTransaccionOut,
+    OrdenPagoOut,
+    TransaccionPagoOut,
 )
 
 
 class IzipayPresenter:
     """Transforms Izipay Perú domain results and models into HTTP output schemas."""
 
-    # ── Prepare ────────────────────────────────────────────────────────────────
+    # ── Prepare ───────────────────────────────────────────────────────────────
 
     @staticmethod
     def present_prepare(result: IzipayPrepareResult) -> IzipayPrepareOut:
@@ -48,20 +49,40 @@ class IzipayPresenter:
             transaction_id=result.transaction_id,
             success=result.success,
             status=result.status,
+            orden_pago_id=result.orden_pago_id,
             response_code=result.response_code,
             response_message=result.response_message,
             metodo_pago=result.metodo_pago,
             already_confirmed=result.already_confirmed,
+            settlement_status=result.settlement_status,
+        )
+
+    # ── OrdenPago ───────────────────────────────────────────────────────────
+
+    @staticmethod
+    def present_orden_pago(orden_pago: OrdenPago) -> OrdenPagoOut:
+        """Transform an OrdenPago model instance into OrdenPagoOut."""
+        return OrdenPagoOut(
+            id=str(orden_pago.id),
+            numero=orden_pago.numero,
+            monto_total=orden_pago.monto_total,
+            moneda=orden_pago.moneda,
+            estado=orden_pago.estado,
+            pagada_en=orden_pago.pagada_en.isoformat() if orden_pago.pagada_en else None,
+            expires_at=orden_pago.expires_at.isoformat() if orden_pago.expires_at else None,
+            descripcion=orden_pago.descripcion,
+            referencia_externa=orden_pago.referencia_externa,
+            created_at=orden_pago.created_at.isoformat(),
         )
 
     # ── Transaccion ─────────────────────────────────────────────────────────
 
     @staticmethod
-    def present_transaccion(tx: IzipayTransaccion) -> IzipayTransaccionOut:
-        """Transform an IzipayTransaccion model instance into IzipayTransaccionOut."""
-        return IzipayTransaccionOut(
+    def present_transaccion(tx: TransaccionPago) -> TransaccionPagoOut:
+        """Transform a TransaccionPago model instance into TransaccionPagoOut."""
+        return TransaccionPagoOut(
             id=str(tx.id),
-            inscripcion_id=str(tx.inscripcion_id),
+            orden_pago_id=str(tx.orden_pago_id),
             transaction_id=tx.transaction_id,
             order_number=tx.order_number,
             amount=tx.amount,

@@ -2,7 +2,8 @@
 Integration tests for IzipayCoreService.
 
 Tests:
-- test_crear_transaccion_genera_transaction_id_unico
+- test_crear_orden_pago_crea_orden_pendiente
+- test_crear_transaccion_guarda_orden_pago FK
 - test_crear_transaccion_guarda_amount_snapshot
 - test_actualizar_estado_exito_cambia_status
 - test_actualizar_estado_fallido_cambia_status
@@ -14,10 +15,17 @@ import pytest
 from decimal import Decimal
 from asgiref.sync import sync_to_async
 
-from modules.pagos.domain.models import IzipayTransaccion
-from modules.pagos.domain.constants import IzipayStatus
+from modules.pagos.domain.models import OrdenPago, TransaccionPago
+from modules.pagos.domain.constants import IzipayStatus, OrdenPagoStatus
 from modules.pagos.domain.services.core.izipay_core_service import IzipayCoreService
+from modules.pagos.domain.services.core.verificacion_pago_service import (
+    VerificacionPagoService,
+)
 from modules.pagos.domain.exceptions import TransaccionDuplicadaError
+from modules.pagos.infrastructure import VerificadorFirmaIzipay
+
+# The authenticated caller of the browser relay.
+PERSONA_PROPIETARIA = "11111111-1111-4111-8111-111111111111"
 
 
 @pytest.fixture
@@ -26,17 +34,52 @@ def izipay_core_service():
     return IzipayCoreService()
 
 
-def _crear_inscripcion(base_setup, usuario):
-    """Helper to create an Inscripcion from base_setup (sync)."""
-    from modules.inscripciones.domain.models import Inscripcion
-    from modules.inscripciones.domain.constants import EstadoInscripcionChoices
-    return Inscripcion.objects.create(
-        evento=base_setup["evento"],
-        responsable=usuario.persona_fk,
-        paquete=base_setup["paquete"],
-        promocion=base_setup["promocion"],
-        estado=EstadoInscripcionChoices.PAGO_PENDIENTE,
+def _flujo(izipay_core_service, confirmador_orden_pago, propietario_orden_pago):
+    """Build the flow with the test doubles for the trust dependencies."""
+    from unittest.mock import AsyncMock
+    from modules.pagos.domain.services.flujos.registrar_pago_izipay_flujo import (
+        RegistrarPagoIzipayFlujo,
     )
+
+    return RegistrarPagoIzipayFlujo(
+        izipay_core=izipay_core_service,
+        izipay_client=AsyncMock(),
+        confirmador_orden_pago=confirmador_orden_pago,
+        propietario_orden_pago=propietario_orden_pago,
+        verificador_firma=VerificadorFirmaIzipay(key_hash=""),
+        verificacion_pago=VerificacionPagoService(),
+    )
+
+
+def _crear_orden_pago(izipay_core_service):
+    """Helper to create an OrdenPago (sync)."""
+    numero = izipay_core_service.generar_numero_orden()
+    return izipay_core_service.crear_orden_pago(
+        numero=numero,
+        monto_total=Decimal("100.00"),
+        moneda="PEN",
+    )
+
+
+# ── OrdenPago tests ─────────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_crear_orden_pago_crea_orden_pendiente(izipay_core_service):
+    """
+    GIVEN: A generated order number
+    WHEN: crear_orden_pago is called
+    THEN: An OrdenPago is created with estado=PENDIENTE.
+    """
+    numero = izipay_core_service.generar_numero_orden()
+    orden = izipay_core_service.crear_orden_pago(
+        numero=numero,
+        monto_total=Decimal("100.00"),
+        moneda="PEN",
+    )
+    assert orden.estado == OrdenPagoStatus.PENDIENTE
+    assert orden.monto_total == Decimal("100.00")
+    assert orden.moneda == "PEN"
+    assert orden.numero == numero
 
 
 # ── Core service tests (sync) ─────────────────────────────────────────────────
@@ -44,65 +87,74 @@ def _crear_inscripcion(base_setup, usuario):
 @pytest.mark.django_db
 def test_crear_transaccion_genera_transaction_id_14_digitos(
     izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
 ):
     """
-    GIVEN: A valid inscription
+    GIVEN: A valid OrdenPago
     WHEN: generar_transaction_id is called
     THEN: A 14-digit string is returned.
     """
-    inscripcion = _crear_inscripcion(base_inscripcion_setup, usuario_con_persona)
+    _crear_orden_pago(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     assert len(tx_id) == 14
     assert tx_id.isdigit()
 
 
 @pytest.mark.django_db
-def test_crear_transaccion_guarda_amount_snapshot(
+def test_crear_transaccion_guarda_orden_pago_fk(
     izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
 ):
     """
-    GIVEN: A valid inscription with a paquete (precio_regular set)
-    WHEN: crear_transaccion is called with precio_promocional (if set) or precio_regular
-    THEN: The amount is stored as a snapshot on IzipayTransaccion.
+    GIVEN: A valid OrdenPago
+    WHEN: crear_transaccion is called
+    THEN: The TransaccionPago is linked to the OrdenPago.
     """
-    inscripcion = _crear_inscripcion(base_inscripcion_setup, usuario_con_persona)
-    paquete = base_inscripcion_setup["paquete"]
-    precio_a_cobrar = (
-        paquete.precio_promocional
-        if paquete.precio_promocional is not None
-        else paquete.precio_regular
-    )
+    orden = _crear_orden_pago(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     tx = izipay_core_service.crear_transaccion(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         transaction_id=tx_id,
         order_number="ORDER003",
-        amount=precio_a_cobrar,
+        amount=Decimal("100.00"),
         currency="PEN",
     )
-    assert tx.amount == precio_a_cobrar
+    assert str(tx.orden_pago_id) == str(orden.id)
+
+
+@pytest.mark.django_db
+def test_crear_transaccion_guarda_amount_snapshot(
+    izipay_core_service,
+):
+    """
+    GIVEN: A valid OrdenPago
+    WHEN: crear_transaccion is called
+    THEN: The amount is stored as a snapshot on TransaccionPago.
+    """
+    orden = _crear_orden_pago(izipay_core_service)
+    tx_id = izipay_core_service.generar_transaction_id()
+    tx = izipay_core_service.crear_transaccion(
+        orden_pago_id=str(orden.id),
+        transaction_id=tx_id,
+        order_number="ORDER003",
+        amount=Decimal("100.00"),
+        currency="PEN",
+    )
+    assert tx.amount == Decimal("100.00")
     assert tx.currency == "PEN"
 
 
 @pytest.mark.django_db
 def test_crear_transaccion_duplicada_raises(
     izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
 ):
     """
     GIVEN: An existing transaction with transaction_id
     WHEN: crear_transaccion is called again with the same transaction_id
     THEN: TransaccionDuplicadaError is raised.
     """
-    inscripcion = _crear_inscripcion(base_inscripcion_setup, usuario_con_persona)
+    orden = _crear_orden_pago(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     izipay_core_service.crear_transaccion(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         transaction_id=tx_id,
         order_number="ORDER004",
         amount=Decimal("100.00"),
@@ -110,7 +162,7 @@ def test_crear_transaccion_duplicada_raises(
     )
     with pytest.raises(TransaccionDuplicadaError):
         izipay_core_service.crear_transaccion(
-            inscripcion_id=str(inscripcion.id),
+            orden_pago_id=str(orden.id),
             transaction_id=tx_id,
             order_number="ORDER005",
             amount=Decimal("100.00"),
@@ -121,18 +173,16 @@ def test_crear_transaccion_duplicada_raises(
 @pytest.mark.django_db
 def test_actualizar_estado_exito_cambia_status(
     izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
 ):
     """
     GIVEN: A PENDIENTE transaction
-    WHEN: actualizar_estado is called with status=EXITO and response_code=00
+    WHEN: actualizar_estado is called with status=EXITO
     THEN: The transaction status is updated to EXITO.
     """
-    inscripcion = _crear_inscripcion(base_inscripcion_setup, usuario_con_persona)
+    orden = _crear_orden_pago(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     izipay_core_service.crear_transaccion(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         transaction_id=tx_id,
         order_number="ORDER006",
         amount=Decimal("100.00"),
@@ -155,18 +205,16 @@ def test_actualizar_estado_exito_cambia_status(
 @pytest.mark.django_db
 def test_actualizar_estado_fallido_cambia_status(
     izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
 ):
     """
     GIVEN: A PENDIENTE transaction
-    WHEN: actualizar_estado is called with status=FALLIDO and a non-00 code
+    WHEN: actualizar_estado is called with status=FALLIDO
     THEN: The transaction status is updated to FALLIDO.
     """
-    inscripcion = _crear_inscripcion(base_inscripcion_setup, usuario_con_persona)
+    orden = _crear_orden_pago(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     izipay_core_service.crear_transaccion(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         transaction_id=tx_id,
         order_number="ORDER007",
         amount=Decimal("100.00"),
@@ -188,18 +236,16 @@ def test_actualizar_estado_fallido_cambia_status(
 @pytest.mark.django_db
 def test_actualizar_estado_cancelado_cambia_status(
     izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
 ):
     """
     GIVEN: A PENDIENTE transaction
-    WHEN: actualizar_estado is called with status=CANCELADO (code 111)
+    WHEN: actualizar_estado is called with status=CANCELADO
     THEN: The transaction status is updated to CANCELADO.
     """
-    inscripcion = _crear_inscripcion(base_inscripcion_setup, usuario_con_persona)
+    orden = _crear_orden_pago(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     izipay_core_service.crear_transaccion(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         transaction_id=tx_id,
         order_number="ORDER007B",
         amount=Decimal("100.00"),
@@ -221,22 +267,20 @@ def test_actualizar_estado_cancelado_cambia_status(
 @pytest.mark.django_db
 def test_actualizar_estado_metadata_none_no_falla(
     izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
 ):
     """
     GIVEN: A PENDIENTE transaction
-    WHEN: actualizar_estado is called with metadata=None (explicit None)
-    THEN: The update succeeds — None is safely converted to {} (JSONField null=False guard).
+    WHEN: actualizar_estado is called with metadata=None
+    THEN: The update succeeds — None is safely converted to {}.
 
-    This is a regression test for the defect where IzipayCoreService.actualizar_estado
+    This is a regression test for the defect where actualizar_estado
     passed metadata=None directly to Django's ORM .update(), which would fail when
     the JSONField has null=False (enforced by Django's model definition).
     """
-    inscripcion = _crear_inscripcion(base_inscripcion_setup, usuario_con_persona)
+    orden = _crear_orden_pago(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     izipay_core_service.crear_transaccion(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         transaction_id=tx_id,
         order_number="ORDER014",
         amount=Decimal("100.00"),
@@ -259,18 +303,16 @@ def test_actualizar_estado_metadata_none_no_falla(
 @pytest.mark.django_db
 def test_es_duplicada_retorna_true_cuando_existe(
     izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
 ):
     """
     GIVEN: An existing transaction with transaction_id=X
     WHEN: es_duplicada is called with X
     THEN: True is returned.
     """
-    inscripcion = _crear_inscripcion(base_inscripcion_setup, usuario_con_persona)
+    orden = _crear_orden_pago(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     izipay_core_service.crear_transaccion(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         transaction_id=tx_id,
         order_number="ORDER008",
         amount=Decimal("100.00"),
@@ -291,21 +333,45 @@ def test_es_duplicada_retorna_false_cuando_no_existe(
     assert izipay_core_service.es_duplicada("NONEXISTENT12345") is False
 
 
-# ── Izipay Perú flujo integration tests (async) ─────────────────────────────────
+# ── Marcar orden pagada ───────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_marcar_orden_pagada_cambia_estado(izipay_core_service):
+    """
+    GIVEN: A PENDIENTE OrdenPago
+    WHEN: marcar_orden_pagada is called
+    THEN: The orden estado is updated to PAGADA and pagada_en is set.
+    """
+    orden = _crear_orden_pago(izipay_core_service)
+    assert orden.estado == OrdenPagoStatus.PENDIENTE
+
+    updated = izipay_core_service.marcar_orden_pagada(orden)
+    assert updated.estado == OrdenPagoStatus.PAGADA
+    assert updated.pagada_en is not None
+
+
+@pytest.mark.django_db
+def test_cancelar_orden_pago_cambia_estado(izipay_core_service):
+    """
+    GIVEN: A PENDIENTE OrdenPago
+    WHEN: cancelar_orden_pago is called
+    THEN: The orden estado is updated to CANCELADA.
+    """
+    orden = _crear_orden_pago(izipay_core_service)
+    updated = izipay_core_service.cancelar_orden_pago(orden)
+    assert updated.estado == OrdenPagoStatus.CANCELADA
+
+
+# ── Izipay flujo integration tests (async) ─────────────────────────────────
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
-async def test_prepare_guarda_transaccion_pendiente(
-    izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
-):
-    """GIVEN: inscription. WHEN: _preparar_pago called. THEN: PENDIENTE tx persisted."""
+async def test_prepare_guarda_transaccion_pendiente(izipay_core_service, confirmador_orden_pago, propietario_orden_pago):
+    """GIVEN: OrdenPago. WHEN: _preparar_pago called. THEN: PENDIENTE tx persisted."""
     from unittest.mock import AsyncMock
     from modules.pagos.domain.services.flujos.registrar_pago_izipay_flujo import RegistrarPagoIzipayFlujo
-    from modules.inscripciones.domain.services.core.inscripcion_service import InscripcionService
 
-    inscripcion = await sync_to_async(_crear_inscripcion)(base_inscripcion_setup, usuario_con_persona)
+    orden = await sync_to_async(_crear_orden_pago)(izipay_core_service)
 
     mock_client = AsyncMock()
     mock_client.shop_id = "SHOP123"
@@ -316,85 +382,69 @@ async def test_prepare_guarda_transaccion_pendiente(
 
     flujo = RegistrarPagoIzipayFlujo(
         izipay_core=izipay_core_service,
-        inscripcion_svc=InscripcionService(),
         izipay_client=mock_client,
+        confirmador_orden_pago=confirmador_orden_pago,
+        propietario_orden_pago=propietario_orden_pago,
+        verificador_firma=VerificadorFirmaIzipay(key_hash=""),
+        verificacion_pago=VerificacionPagoService(),
     )
 
     result = await flujo._preparar_pago(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         buyer_email="test@example.com",
         buyer_name="Juan",
         buyer_surname="Perez",
     )
 
-    tx = await sync_to_async(IzipayTransaccion.objects.get)(transaction_id=result.transaction_id)
+    tx = await sync_to_async(TransaccionPago.objects.get)(transaction_id=result.transaction_id)
     assert tx.status == IzipayStatus.PENDIENTE
-    assert tx.inscripcion_id == inscripcion.id
+    assert tx.orden_pago_id == orden.id
     assert result.token == "test-jwt-token-abc123"
     assert result.merchant_code == "SHOP123"
 
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
-async def test_confirm_codigo_00_transiciona_a_exito(
-    izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
-):
-    """GIVEN: PENDIENTE tx. WHEN: kr_answer code=00. THEN: tx EXITO, inscripcion PAGADA."""
-    from unittest.mock import AsyncMock
-    from modules.pagos.domain.services.flujos.registrar_pago_izipay_flujo import RegistrarPagoIzipayFlujo
-    from modules.inscripciones.domain.services.core.inscripcion_service import InscripcionService
-    from modules.inscripciones.domain.constants import EstadoInscripcionChoices
-    from modules.inscripciones.domain.models import Inscripcion
+async def test_confirm_codigo_00_transiciona_a_exito_y_orden_pagada(izipay_core_service, confirmador_orden_pago, propietario_orden_pago):
+    """GIVEN: PENDIENTE tx. WHEN: kr_answer code=00. THEN: tx EXITO, orden PAGADA."""
 
-    inscripcion = await sync_to_async(_crear_inscripcion)(base_inscripcion_setup, usuario_con_persona)
+    orden = await sync_to_async(_crear_orden_pago)(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     await sync_to_async(izipay_core_service.crear_transaccion)(
-        inscripcion_id=str(inscripcion.id),
+        orden_pago_id=str(orden.id),
         transaction_id=tx_id,
         order_number="ORDER009",
         amount=Decimal("100.00"),
         currency="PEN",
     )
 
-    flujo = RegistrarPagoIzipayFlujo(
-        izipay_core=izipay_core_service,
-        inscripcion_svc=InscripcionService(),
-        izipay_client=AsyncMock(),
-    )
+    flujo = _flujo(izipay_core_service, confirmador_orden_pago, propietario_orden_pago)
 
     kr_answer = {
         "code": "00", "message": "Operación exitosa", "transactionId": tx_id,
         "response": {"payMethod": "CARD", "order": [{"orderNumber": "ORDER009", "amount": "100.00"}]}
     }
 
-    result = await flujo._confirmar_pago(kr_answer=kr_answer)
+    result = await flujo._confirmar_pago(persona_id=PERSONA_PROPIETARIA, kr_answer=kr_answer)
 
     assert result.success is True
     assert result.status == IzipayStatus.EXITO
     assert result.response_code == "00"
 
-    inscripcion_updated = await sync_to_async(Inscripcion.objects.get)(id=inscripcion.id)
-    assert inscripcion_updated.estado == EstadoInscripcionChoices.PAGADA
+    # Verify orden is now PAGADA
+    orden_updated = await sync_to_async(OrdenPago.objects.get)(id=orden.id)
+    assert orden_updated.estado == OrdenPagoStatus.PAGADA
 
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
-async def test_confirm_idempotente_no_duplica(
-    izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
-):
+async def test_confirm_idempotente_no_duplica(izipay_core_service, confirmador_orden_pago, propietario_orden_pago):
     """GIVEN: EXITO tx. WHEN: _confirmar_pago called again. THEN: already_confirmed=True."""
-    from unittest.mock import AsyncMock
-    from modules.pagos.domain.services.flujos.registrar_pago_izipay_flujo import RegistrarPagoIzipayFlujo
-    from modules.inscripciones.domain.services.core.inscripcion_service import InscripcionService
 
-    inscripcion = await sync_to_async(_crear_inscripcion)(base_inscripcion_setup, usuario_con_persona)
+    orden = await sync_to_async(_crear_orden_pago)(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     await sync_to_async(izipay_core_service.crear_transaccion)(
-        inscripcion_id=str(inscripcion.id), transaction_id=tx_id,
+        orden_pago_id=str(orden.id), transaction_id=tx_id,
         order_number="ORDER010", amount=Decimal("100.00"), currency="PEN",
     )
     await sync_to_async(izipay_core_service.actualizar_estado)(
@@ -402,13 +452,9 @@ async def test_confirm_idempotente_no_duplica(
         response_code="00", response_message="OK", metodo_pago="CARD", metadata={},
     )
 
-    flujo = RegistrarPagoIzipayFlujo(
-        izipay_core=izipay_core_service,
-        inscripcion_svc=InscripcionService(),
-        izipay_client=AsyncMock(),
-    )
+    flujo = _flujo(izipay_core_service, confirmador_orden_pago, propietario_orden_pago)
 
-    result = await flujo._confirmar_pago(kr_answer={"code": "00", "message": "OK", "transactionId": tx_id})
+    result = await flujo._confirmar_pago(persona_id=PERSONA_PROPIETARIA, kr_answer={"code": "00", "message": "OK", "transactionId": tx_id})
 
     assert result.already_confirmed is True
     assert result.success is True
@@ -416,89 +462,55 @@ async def test_confirm_idempotente_no_duplica(
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
-async def test_confirm_codigo_no_00_es_fallido(
-    izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
-):
-    """GIVEN: PENDIENTE tx. WHEN: kr_answer code=05. THEN: tx FALLIDO, inscripcion unchanged."""
-    from unittest.mock import AsyncMock
-    from modules.pagos.domain.services.flujos.registrar_pago_izipay_flujo import RegistrarPagoIzipayFlujo
-    from modules.inscripciones.domain.services.core.inscripcion_service import InscripcionService
-    from modules.inscripciones.domain.constants import EstadoInscripcionChoices
-    from modules.inscripciones.domain.models import Inscripcion
+async def test_confirm_codigo_no_00_es_fallido(izipay_core_service, confirmador_orden_pago, propietario_orden_pago):
+    """GIVEN: PENDIENTE tx. WHEN: kr_answer code=05. THEN: tx FALLIDO, orden unchanged."""
 
-    inscripcion = await sync_to_async(_crear_inscripcion)(base_inscripcion_setup, usuario_con_persona)
+    orden = await sync_to_async(_crear_orden_pago)(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     await sync_to_async(izipay_core_service.crear_transaccion)(
-        inscripcion_id=str(inscripcion.id), transaction_id=tx_id,
+        orden_pago_id=str(orden.id), transaction_id=tx_id,
         order_number="ORDER011", amount=Decimal("100.00"), currency="PEN",
     )
 
-    flujo = RegistrarPagoIzipayFlujo(
-        izipay_core=izipay_core_service,
-        inscripcion_svc=InscripcionService(),
-        izipay_client=AsyncMock(),
-    )
+    flujo = _flujo(izipay_core_service, confirmador_orden_pago, propietario_orden_pago)
 
-    result = await flujo._confirmar_pago(kr_answer={"code": "05", "message": "Card declined", "transactionId": tx_id})
+    result = await flujo._confirmar_pago(persona_id=PERSONA_PROPIETARIA, kr_answer={"code": "05", "message": "Card declined", "transactionId": tx_id})
 
     assert result.success is False
     assert result.status == IzipayStatus.FALLIDO
 
-    inscripcion_updated = await sync_to_async(Inscripcion.objects.get)(id=inscripcion.id)
-    assert inscripcion_updated.estado == EstadoInscripcionChoices.PAGO_PENDIENTE
+    # Verify orden is still PENDIENTE
+    orden_updated = await sync_to_async(OrdenPago.objects.get)(id=orden.id)
+    assert orden_updated.estado == OrdenPagoStatus.PENDIENTE
 
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
-async def test_confirm_transactionid_no_existente_raises(
-    izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
-):
-    """GIVEN: no tx. WHEN: kr_answer with unknown transactionId. THEN: IzipayError."""
-    from unittest.mock import AsyncMock
-    from modules.pagos.domain.services.flujos.registrar_pago_izipay_flujo import RegistrarPagoIzipayFlujo
-    from modules.inscripciones.domain.services.core.inscripcion_service import InscripcionService
-    from modules.pagos.domain.exceptions import IzipayError
+async def test_confirm_transactionid_no_existente_raises(izipay_core_service, confirmador_orden_pago, propietario_orden_pago):
+    """GIVEN: no tx. WHEN: kr_answer with unknown transactionId. THEN: 404 error."""
+    from modules.pagos.domain.exceptions import TransaccionPagoNoEncontradaError
 
-    await sync_to_async(_crear_inscripcion)(base_inscripcion_setup, usuario_con_persona)
+    await sync_to_async(_crear_orden_pago)(izipay_core_service)
 
-    flujo = RegistrarPagoIzipayFlujo(
-        izipay_core=izipay_core_service,
-        inscripcion_svc=InscripcionService(),
-        izipay_client=AsyncMock(),
-    )
+    flujo = _flujo(izipay_core_service, confirmador_orden_pago, propietario_orden_pago)
 
-    with pytest.raises(IzipayError, match="not found"):
-        await flujo._confirmar_pago(kr_answer={"code": "00", "transactionId": "99999999999999"})
+    with pytest.raises(TransaccionPagoNoEncontradaError):
+        await flujo._confirmar_pago(persona_id=PERSONA_PROPIETARIA, kr_answer={"code": "00", "transactionId": "99999999999999"})
 
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
-async def test_confirm_sanitiza_metadata(
-    izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
-):
+async def test_confirm_sanitiza_metadata(izipay_core_service, confirmador_orden_pago, propietario_orden_pago):
     """GIVEN: PENDIENTE tx. WHEN: kr_answer has sensitive fields. THEN: metadata stripped."""
-    from unittest.mock import AsyncMock
-    from modules.pagos.domain.services.flujos.registrar_pago_izipay_flujo import RegistrarPagoIzipayFlujo
-    from modules.inscripciones.domain.services.core.inscripcion_service import InscripcionService
 
-    inscripcion = await sync_to_async(_crear_inscripcion)(base_inscripcion_setup, usuario_con_persona)
+    orden = await sync_to_async(_crear_orden_pago)(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     await sync_to_async(izipay_core_service.crear_transaccion)(
-        inscripcion_id=str(inscripcion.id), transaction_id=tx_id,
+        orden_pago_id=str(orden.id), transaction_id=tx_id,
         order_number="ORDER012", amount=Decimal("100.00"), currency="PEN",
     )
 
-    flujo = RegistrarPagoIzipayFlujo(
-        izipay_core=izipay_core_service,
-        inscripcion_svc=InscripcionService(),
-        izipay_client=AsyncMock(),
-    )
+    flujo = _flujo(izipay_core_service, confirmador_orden_pago, propietario_orden_pago)
 
     kr_answer = {
         "code": "00", "message": "OK", "transactionId": tx_id,
@@ -507,9 +519,9 @@ async def test_confirm_sanitiza_metadata(
         "payMethod": "CARD", "response": {"cardScheme": "VISA"},
     }
 
-    await flujo._confirmar_pago(kr_answer=kr_answer)
+    await flujo._confirmar_pago(persona_id=PERSONA_PROPIETARIA, kr_answer=kr_answer)
 
-    tx = await sync_to_async(IzipayTransaccion.objects.get)(transaction_id=tx_id)
+    tx = await sync_to_async(TransaccionPago.objects.get)(transaction_id=tx_id)
     metadata = tx.metadata
 
     assert "pan" not in metadata
@@ -521,28 +533,17 @@ async def test_confirm_sanitiza_metadata(
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
-async def test_metadata_no_contiene_izipayshopid_ni_secret(
-    izipay_core_service,
-    base_inscripcion_setup,
-    usuario_con_persona,
-):
+async def test_metadata_no_contiene_izipayshopid_ni_secret(izipay_core_service, confirmador_orden_pago, propietario_orden_pago):
     """GIVEN: kr_answer with credential fields. WHEN: processed. THEN: stripped from metadata."""
-    from unittest.mock import AsyncMock
-    from modules.pagos.domain.services.flujos.registrar_pago_izipay_flujo import RegistrarPagoIzipayFlujo
-    from modules.inscripciones.domain.services.core.inscripcion_service import InscripcionService
 
-    inscripcion = await sync_to_async(_crear_inscripcion)(base_inscripcion_setup, usuario_con_persona)
+    orden = await sync_to_async(_crear_orden_pago)(izipay_core_service)
     tx_id = izipay_core_service.generar_transaction_id()
     await sync_to_async(izipay_core_service.crear_transaccion)(
-        inscripcion_id=str(inscripcion.id), transaction_id=tx_id,
+        orden_pago_id=str(orden.id), transaction_id=tx_id,
         order_number="ORDER013", amount=Decimal("100.00"), currency="PEN",
     )
 
-    flujo = RegistrarPagoIzipayFlujo(
-        izipay_core=izipay_core_service,
-        inscripcion_svc=InscripcionService(),
-        izipay_client=AsyncMock(),
-    )
+    flujo = _flujo(izipay_core_service, confirmador_orden_pago, propietario_orden_pago)
 
     kr_answer = {
         "code": "00", "message": "OK", "transactionId": tx_id,
@@ -550,9 +551,9 @@ async def test_metadata_no_contiene_izipayshopid_ni_secret(
         "secretKey": "sk_test_456", "apiKey": "api_test_789",
     }
 
-    await flujo._confirmar_pago(kr_answer=kr_answer)
+    await flujo._confirmar_pago(persona_id=PERSONA_PROPIETARIA, kr_answer=kr_answer)
 
-    tx = await sync_to_async(IzipayTransaccion.objects.get)(transaction_id=tx_id)
+    tx = await sync_to_async(TransaccionPago.objects.get)(transaction_id=tx_id)
     assert "izipayKey" not in tx.metadata
     assert "shopId" not in tx.metadata
     assert "secretKey" not in tx.metadata

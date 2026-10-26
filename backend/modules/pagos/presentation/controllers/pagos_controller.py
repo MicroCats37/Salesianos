@@ -2,11 +2,18 @@
 PagosController — Izipay Perú payment endpoints.
 
 Thin async controller — only delegates to PagosOrchestrator.
-Authentication required; ownership validated server-side.
 
 Routes:
-  GET  /api/pagos/izipay/preparar/{inscripcion_id}
-  POST /api/pagos/izipay/confirmar
+  POST /pagos/izipay/confirmar    - Browser relay of the provider payload
+  POST /pagos/izipay/notificacion - Server-to-server provider notification
+  GET  /pagos/transacciones/{transaction_id} - Get transaction status
+  GET  /pagos/ordenes/{orden_id} - Get order status
+
+SECURITY:
+- The browser relay requires an authenticated caller that owns the order.
+- The provider notification is public (the provider is not a session) but it
+  is accepted ONLY when the merchant signature verifies.
+- Reading a transaction or an order requires ownership or administration.
 """
 from ninja_extra import api_controller, route
 from ninja_extra.permissions import AllowAny, IsAuthenticated
@@ -14,139 +21,213 @@ from injector import inject
 
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
-from core.exceptions import BusinessError, NotFoundError
+from modules.pagos.domain.constants import SettlementStatus
+from modules.pagos.domain.exceptions import PagoNoAutorizadoError
 from modules.pagos.domain.services.orchestrators.pagos_orchestrator import PagosOrchestrator
+from modules.pagos.domain.schemas.result import IzipayConfirmResult
 from modules.pagos.presentation.schemas.pago_schema import (
-    IzipayPrepareOut,
     IzipayConfirmIn,
     IzipayConfirmOut,
+    IzipayNotificacionIn,
+    OrdenPagoOut,
+    TransaccionPagoOut,
 )
 from modules.pagos.presentation.presenters.pago_presenter import IzipayPresenter
 
 
-def _get_authenticated_persona_id(request) -> str:
+# Fixed, user-facing messages. They never interpolate technical values.
+_MENSAJE_PAGO_CONFIRMADO = "Pago confirmado correctamente."
+_MENSAJE_ACTIVACION_PENDIENTE = (
+    "Pago confirmado. La activación comercial está pendiente."
+)
+_MENSAJE_PAGO_NO_COMPLETADO = "El pago no se completó."
+
+
+def _mensaje_confirmacion(result: IzipayConfirmResult) -> str:
     """
-    Extract persona_id from the authenticated request.
+    Pick the fixed public message for a confirmation result.
 
-    The request must have a valid JWT with an authenticated Usuario.
-    Uses request.user.persona_fk_id (Usuario -> Persona FK).
+    The message reflects the authoritative state: a successful payment whose
+    commercial settlement did not complete says so explicitly, so the client
+    never reads a paid-but-not-activated order as a finished one.
+    """
+    if not result.success:
+        return _MENSAJE_PAGO_NO_COMPLETADO
+    if result.settlement_status == SettlementStatus.SETTLED:
+        return _MENSAJE_PAGO_CONFIRMADO
+    return _MENSAJE_ACTIVACION_PENDIENTE
 
-    Raises BusinessError if user has no Persona linked.
+
+def _actor(request) -> tuple[str | None, bool]:
+    """
+    Resolve who is performing a payment operation.
+
+    Returns (persona_id, es_admin). Administrators act on any order; every
+    other caller must be the owner of the order they touch.
+
+    Raises:
+        PagoNoAutorizadoError: the caller has no linked persona and no
+            administrative authority.
     """
     user = request.user
+    if getattr(user, "is_superuser", False) or getattr(user, "is_staff", False):
+        return None, True
+
     persona_id = getattr(user, "persona_fk_id", None)
     if not persona_id:
-        raise BusinessError("Usuario sin persona vinculada. Complete su registro.")
-    return str(persona_id)
+        raise PagoNoAutorizadoError()
+
+    return str(persona_id), False
 
 
-@api_controller("/pagos", tags=["Pagos"], permissions=[AllowAny])
+@api_controller("/pagos", tags=["Pagos"], permissions=[IsAuthenticated])
 class PagosController:
     """
     Controller for Izipay Perú payment operations.
 
-    All endpoints require JWT authentication.
-    Buyer data for prepare is derived server-side from the authenticated Persona.
-
-    Rutas:
-      GET  /pagos/izipay/preparar/{inscripcion_id} -> preparar_pago
-      POST /pagos/izipay/confirmar                 -> confirmar_pago
+    Every endpoint requires an authenticated caller, except the server-to-server
+    provider notification, which is authenticated by the merchant signature.
+    Ownership validation happens in the flow, so the browser relay and the
+    reads share the same rule.
     """
 
     @inject
-    def __init__(self, orchestrator: PagosOrchestrator):
+    def __init__(
+        self,
+        orchestrator: PagosOrchestrator,
+    ):
         self.orchestrator = orchestrator
-
-    @route.get(
-        "/izipay/preparar/{inscripcion_id}",
-        response={200: ApiResponse[IzipayPrepareOut]},
-        auth=JWTAuth(),
-        permissions=[IsAuthenticated],
-    )
-    async def preparar_pago(self, request, inscripcion_id: str):
-        """
-        Prepare an Izipay Perú payment session for an inscription.
-
-        Route: GET /api/pagos/izipay/preparar/{inscripcion_id}
-        No request body. All buyer/amount/order data is derived server-side.
-
-        The inscription ownership is validated server-side: only the responsible
-        person (authenticated via JWT) can prepare a payment for their inscription.
-
-        Buyer data (email, name, surname, document, phone) is derived from
-        the authenticated user's Persona record via the InscripcionSelector.
-        The client CANNOT choose identity, amount, order, or merchant data.
-
-        Raises:
-            BusinessError: if user has no Persona or is not the inscription owner.
-            NotFoundError: if inscription not found.
-            IzipayError: if inscription is not payable or provider call fails.
-        """
-        from asgiref.sync import sync_to_async
-        from modules.inscripciones.domain.selectors.inscripcion_selector import InscripcionSelector
-
-        responsable_id = _get_authenticated_persona_id(request)
-
-        # Verify inscription ownership via selector (includes select_related responsable)
-        selector = InscripcionSelector()
-        inscripcion = await sync_to_async(selector.obtener_inscripcion)(inscripcion_id)
-
-        if not inscripcion:
-            raise NotFoundError(
-                f"Inscripción {inscripcion_id} no encontrada.",
-                code="INSCRIPCION_NOT_FOUND",
-            )
-
-        if str(inscripcion.responsable_id) != responsable_id:
-            raise BusinessError(
-                "No tienes permiso para preparar el pago de esta inscripción."
-            )
-
-        # Buyer data is derived server-side from inscripcion.responsable (Persona).
-        # The orchestrator forwards to flujo which derives buyer fields from the
-        # Persona record linked to the inscription's responsable.
-        result = await self.orchestrator.preparar_pago_izipay(
-            inscripcion_id=inscripcion_id,
-        )
-
-        return success_response(
-            IzipayPresenter.present_prepare(result),
-            message="Sesión de pago preparada correctamente.",
-        )
 
     @route.post(
         "/izipay/confirmar",
         response={200: ApiResponse[IzipayConfirmOut]},
         auth=JWTAuth(),
-        permissions=[IsAuthenticated],
     )
     async def confirmar_pago(self, request, payload: IzipayConfirmIn):
         """
-        Confirm an Izipay Perú payment from the frontend callback (kr_answer).
+        Confirm an Izipay Perú payment from the browser relay (kr_answer).
 
-        The frontend SDK sends kr_answer directly to this endpoint after the
-        popup closes. This is NOT a server-to-server retrieval.
+        Route: POST /api/pagos/izipay/confirmar
 
-        Before processing, validates that the transaction belongs to an inscription
-        owned by the authenticated user (prevents one user from confirming another's
-        transaction).
+        The frontend SDK relays the provider payload after the popup closes.
+        The caller must be authenticated and must own the order; the payload
+        is cross-checked against the persisted transaction. A forged, stale or
+        foreign payload changes nothing.
 
-        Idempotent: if the transaction is already confirmed (EXITO), returns
-        immediately with already_confirmed=True.
+        Idempotent: if the transaction is already confirmed (EXITO), the
+        commercial settlement is re-driven (it is idempotent) and the response
+        reports already_confirmed=True.
+
+        The purchase linked to the order is settled by the backend — the
+        browser never sends a commercial-confirmation request.
 
         Raises:
-            BusinessError: if user has no Persona or transaction doesn't belong
-                           to their inscription.
-            IzipayError: if transaction not found or validation fails.
+            TransaccionPagoNoEncontradaError: unknown transaction.
+            PagoNoAutorizadoError: the caller does not own the order.
+            PagoDatosInconsistentesError: the payload contradicts the order.
+            PagoFirmaInvalidaError: the provider signature does not verify.
         """
-        responsable_id = _get_authenticated_persona_id(request)
+        persona_id, es_admin = _actor(request)
 
         result = await self.orchestrator.confirmar_pago_izipay(
-            kr_answer=payload.kr_answer,
-            authenticated_persona_id=responsable_id,
+            kr_answer=payload.kr_answer.model_dump(),
+            persona_id=persona_id,
+            es_admin=es_admin,
         )
 
         return success_response(
             IzipayPresenter.present_confirm(result),
-            message="Pago confirmado correctamente.",
+            message=_mensaje_confirmacion(result),
+        )
+
+    @route.post(
+        "/izipay/notificacion",
+        response={200: ApiResponse[IzipayConfirmOut]},
+        auth=None,
+        permissions=[AllowAny],
+    )
+    async def recibir_notificacion(self, payload: IzipayNotificacionIn):
+        """
+        Receive the server-to-server notification from Izipay Perú.
+
+        Route: POST /api/pagos/izipay/notificacion
+
+        The provider calls this endpoint directly with the raw signed payload.
+        It is accepted ONLY when the merchant key is configured and the
+        signature verifies — there is no fallback. The confirmation is
+        idempotent, so a provider retry converges instead of duplicating.
+
+        Raises:
+            PagoNotificacionNoVerificableError: the merchant key is missing.
+            PagoFirmaInvalidaError: the signature does not verify.
+        """
+        result = await self.orchestrator.confirmar_pago_por_notificacion(
+            payload_http=payload.payloadHttp,
+            signature=payload.signature,
+            transaction_id=payload.transactionId,
+        )
+
+        return success_response(
+            IzipayPresenter.present_confirm(result),
+            message=_mensaje_confirmacion(result),
+        )
+
+    @route.get(
+        "/transacciones/{transaction_id}",
+        response={200: ApiResponse[TransaccionPagoOut]},
+        auth=JWTAuth(),
+    )
+    async def obtener_transaccion(self, request, transaction_id: str):
+        """
+        Get a transaction by its transaction_id.
+
+        Route: GET /api/pagos/transacciones/{transaction_id}
+
+        Restricted to the owner of the order (or an administrator).
+
+        Raises:
+            TransaccionPagoNoEncontradaError: transaction not found.
+            PagoNoAutorizadoError: the caller does not own the order.
+        """
+        persona_id, es_admin = _actor(request)
+
+        tx = await self.orchestrator.obtener_transaccion(
+            transaction_id=transaction_id,
+            persona_id=persona_id,
+            es_admin=es_admin,
+        )
+
+        return success_response(
+            IzipayPresenter.present_transaccion(tx),
+            message="Transaccion encontrada.",
+        )
+
+    @route.get(
+        "/ordenes/{orden_id}",
+        response={200: ApiResponse[OrdenPagoOut]},
+        auth=JWTAuth(),
+    )
+    async def obtener_orden(self, request, orden_id: str):
+        """
+        Get an OrdenPago by its ID.
+
+        Route: GET /api/pagos/ordenes/{orden_id}
+
+        Restricted to the owner of the order (or an administrator).
+
+        Raises:
+            OrdenPagoNoEncontradaError: order not found.
+            PagoNoAutorizadoError: the caller does not own the order.
+        """
+        persona_id, es_admin = _actor(request)
+
+        orden = await self.orchestrator.obtener_orden(
+            orden_id=orden_id,
+            persona_id=persona_id,
+            es_admin=es_admin,
+        )
+
+        return success_response(
+            IzipayPresenter.present_orden_pago(orden),
+            message="Orden encontrada.",
         )

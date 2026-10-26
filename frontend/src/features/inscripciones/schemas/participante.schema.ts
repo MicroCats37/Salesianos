@@ -19,10 +19,10 @@ const emptyToUndefined = (v: unknown) =>
  *   para mantener la intención de cross-field y mensajes claros.
  * - `telefono` y `whatsapp` son OPCIONALES: si están vacíos, no se validan;
  *   si tienen valor, deben ser exactamente 9 dígitos.
- * - `talle_camiseta` opcional.
+ * - `talla_camiseta` opcional (backend field name).
  * - `aseguradora_nombre` y `aseguradora_numero_poliza` opcionales.
  * - `notas` opcional, hasta 500 caracteres (alergias, observaciones, etc.).
- * - `acepto_bases`, `acepto_aptitud_fisica`, `acepto_imagen` son obligatorios y deben ser true.
+ * - `rol` default "J" (backend uses single-char values: J=Jugador, D=Delegado).
  */
 export const NOTAS_MAX_LENGTH = 500;
 export const ASEGURADORAS_PERU = [
@@ -57,15 +57,9 @@ export const ParticipanteSchema = z
         .regex(PHONE_REGEX, "WhatsApp debe tener exactamente 9 dígitos")
         .optional(),
     ),
-    rol: z.string().default("JUGADOR"),
-    talle_camiseta: z.preprocess(
-      emptyToUndefined,
-      z.string().optional(),
-    ),
-    aseguradora_nombre: z.preprocess(
-      emptyToUndefined,
-      z.string().optional(),
-    ),
+    rol: z.string().default("J"),
+    talla_camiseta: z.preprocess(emptyToUndefined, z.string().optional()),
+    aseguradora_nombre: z.preprocess(emptyToUndefined, z.string().optional()),
     aseguradora_numero_poliza: z.preprocess(
       emptyToUndefined,
       z.string().optional(),
@@ -80,9 +74,6 @@ export const ParticipanteSchema = z
         )
         .optional(),
     ),
-    acepto_bases: z.boolean().default(false),
-    acepto_aptitud_fisica: z.boolean().default(false),
-    acepto_imagen: z.boolean().default(false),
   })
   .superRefine((data, ctx) => {
     // ── Document number format by doc type ─────────────────────────────
@@ -124,29 +115,6 @@ export const ParticipanteSchema = z
       ctx.addIssue({
         path: ["whatsapp"],
         message: "WhatsApp debe tener exactamente 9 dígitos",
-        code: "custom",
-      });
-    }
-
-    // ── Mandatory acceptances ─────────────────────────────────────────────
-    if (!data.acepto_bases) {
-      ctx.addIssue({
-        path: ["acepto_bases"],
-        message: "Debe aceptar las bases del evento",
-        code: "custom",
-      });
-    }
-    if (!data.acepto_aptitud_fisica) {
-      ctx.addIssue({
-        path: ["acepto_aptitud_fisica"],
-        message: "Debe aceptar el certificado de aptitud física",
-        code: "custom",
-      });
-    }
-    if (!data.acepto_imagen) {
-      ctx.addIssue({
-        path: ["acepto_imagen"],
-        message: "Debe aceptar el uso de imagen",
         code: "custom",
       });
     }

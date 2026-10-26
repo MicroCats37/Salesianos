@@ -1,6 +1,6 @@
 """
 Pagos module — re-exports models from domain/models/.
 """
-from .domain.models import IzipayTransaccion
+from .domain.models import OrdenPago, TransaccionPago
 
-__all__ = ["IzipayTransaccion"]
+__all__ = ["OrdenPago", "TransaccionPago"]

@@ -25,6 +25,11 @@ interface RegistrationStepsCardProps {
   onScrollToTeams?: () => void;
   onOpenPayment?: () => void;
   className?: string;
+  /**
+   * `compact` adapts the guide to a narrow sidebar: tighter spacing and a
+   * shorter footer. The steps, their states and their actions stay the same.
+   */
+  variant?: "default" | "compact";
 }
 
 type StepState = "done" | "active" | "pending" | "blocked";
@@ -43,11 +48,13 @@ interface StepDescriptor {
 const IZIPAY_ENABLED = process.env.NEXT_PUBLIC_IZIPAY_ENABLED === "true";
 
 const STATUS_LABELS: Record<string, string> = {
+  BORRADOR: "Borrador",
   RECIBIDA: "Recibida",
-  PENDIENTE: "Pendiente",
-  PAGO_PENDIENTE: "Pago pendiente",
-  PAGADA: "Pagada",
+  EN_REVISION: "En revision",
+  OBSERVADA: "Observada",
+  VALIDADA: "Validada",
   CONFIRMADA: "Confirmada",
+  RECHAZADA: "Rechazada",
   CANCELADA: "Cancelada",
 };
 
@@ -62,10 +69,20 @@ export function RegistrationStepsCard({
   onScrollToTeams,
   onOpenPayment,
   className,
+  variant = "default",
 }: RegistrationStepsCardProps) {
-  const [expanded, setExpanded] = useState(true);
+  // The guide is secondary information: in the compact (sidebar) variant it
+  // starts collapsed so the mobile flow reaches the roster faster.
+  const [expanded, setExpanded] = useState(variant !== "compact");
+  const compact = variant === "compact";
 
-  // ── Compute step states ───────────────────────────────────────────────
+  // ── Compute step states from presenter data ───────────────────────────
+  // Payment step state derives from resumen_pago (backend presenter), NOT from
+  // Inscripcion.estado inference. This ensures the step reflects actual
+  // commercial activity regardless of the inscription's administrative state.
+  const resumenPago = inscripcion.resumen_pago;
+  const resumenEquipos = inscripcion.resumen_equipos;
+
   const equipos = inscripcion.equipos;
   const totalEquipos = equipos.length;
   const equiposConJugadores = equipos.filter(
@@ -76,12 +93,23 @@ export function RegistrationStepsCard({
     0,
   );
 
+  // Roster display only — does NOT block commercial actions.
   const jugadoresCompletos =
-    equiposConJugadores === totalEquipos && totalEquipos > 0;
+    resumenEquipos.completos === totalEquipos && totalEquipos > 0;
+
+  // Payment state from presenter — never inferred from Inscripcion.estado.
+  // estado_mensaje values: "Sin actividades de pago" | "Pago pendiente" |
+  // "Pago parcial" | "Pago confirmado"
+  const pagoEstadoMensaje =
+    resumenPago.estado_mensaje ?? "Sin actividades de pago";
+  const pagoHecho = pagoEstadoMensaje === "Pago confirmado";
+  const pagoParcial = pagoEstadoMensaje === "Pago parcial";
+  const pagoPendiente = pagoEstadoMensaje === "Pago pendiente";
+  const sinActividadPago = pagoEstadoMensaje === "Sin actividades de pago";
+
+  // Administrative estado still governs confirmation step and payment blocking.
   const estado = inscripcion.estado;
-  const pagoBloqueado = estado === "CANCELADA";
-  const pagoHecho = estado === "PAGADA" || estado === "CONFIRMADA";
-  const pagoEnCurso = estado === "PAGO_PENDIENTE";
+  const pagoBloqueado = estado === "CANCELADA" || estado === "RECHAZADA";
   const confirmada = estado === "CONFIRMADA";
 
   const steps: StepDescriptor[] = [
@@ -113,36 +141,40 @@ export function RegistrationStepsCard({
       id: "pago",
       title: pagoHecho
         ? "Pago completado"
-        : pagoEnCurso
-          ? "Pago en proceso"
+        : pagoParcial
+          ? "Pago parcial"
           : "Completa el pago",
       description: pagoHecho
         ? "El comité recibió la confirmación del pago."
-        : pagoEnCurso
-          ? "Tu pago está siendo procesado por Izipay."
-          : IZIPAY_ENABLED
-            ? "Paga con tarjeta o Yape desde Izipay para que el comité valide tu inscripción."
-            : "Coordina el pago con el comité organizador.",
+        : pagoParcial
+          ? "Has cubierto parte de tu inscripción. Completa el pago restante."
+          : sinActividadPago
+            ? "Registra tu primera compra para activar el proceso de pago."
+            : IZIPAY_ENABLED
+              ? "Paga con tarjeta o Yape desde Izipay para que el comité valide tu inscripción."
+              : "Coordina el pago con el comité organizador.",
       icon: CreditCard,
+      // Payment step is blocked only by inscription cancellation/rejection.
+      // Roster completeness (INCOMPLETO) NEVER blocks payment — confirmed in Phase 7.
       state: pagoHecho
         ? "done"
         : pagoBloqueado
           ? "blocked"
-          : jugadoresCompletos
-            ? pagoEnCurso
-              ? "active"
-              : "active"
-            : "pending",
+          : pagoPendiente || pagoParcial
+            ? "active"
+            : sinActividadPago
+              ? "pending"
+              : "pending",
       hint:
-        !pagoHecho && jugadoresCompletos && IZIPAY_ENABLED
-          ? "Tip: el botón 'Proceder al Pago' aparece arriba cuando los equipos están listos."
+        !pagoHecho && !pagoBloqueado && IZIPAY_ENABLED
+          ? "Tip: el botón 'Proceder al Pago' aparece arriba."
           : undefined,
       actionLabel:
-        !pagoHecho && jugadoresCompletos && IZIPAY_ENABLED && onOpenPayment
+        !pagoHecho && !pagoBloqueado && IZIPAY_ENABLED && onOpenPayment
           ? "Pagar ahora"
           : undefined,
       onAction:
-        !pagoHecho && jugadoresCompletos && IZIPAY_ENABLED
+        !pagoHecho && !pagoBloqueado && IZIPAY_ENABLED
           ? onOpenPayment
           : undefined,
     },
@@ -167,21 +199,36 @@ export function RegistrationStepsCard({
         className,
       )}
     >
-      <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-sky-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-violet-300/30 blur-3xl" />
+      <div className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-sky-300/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-12 -left-12 size-40 rounded-full bg-violet-300/30 blur-3xl" />
 
       <div className="relative">
         {/* Header */}
-        <header className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-violet-500 text-white shadow-md">
-              <ListChecks className="size-5" />
+        <header
+          className={cn(
+            "flex items-center justify-between gap-3",
+            compact ? "px-4 py-3" : "px-5 py-4 sm:px-6",
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-violet-500 text-white shadow-md",
+                compact ? "size-9" : "size-11",
+              )}
+            >
+              <ListChecks className={compact ? "size-4" : "size-5"} />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-700">
-                Guía
+                Guia
               </p>
-              <h3 className="text-base font-black tracking-tight text-slate-900 truncate">
+              <h3
+                className={cn(
+                  "truncate font-black tracking-tight text-slate-900",
+                  compact ? "text-sm" : "text-base",
+                )}
+              >
                 Cómo completar tu inscripción
               </h3>
             </div>
@@ -192,13 +239,14 @@ export function RegistrationStepsCard({
             size="sm"
             onClick={() => setExpanded((v) => !v)}
             className="shrink-0 rounded-full text-xs font-bold uppercase tracking-wider text-slate-600"
+            aria-expanded={expanded}
           >
             {expanded ? "Ocultar" : "Ver"}
           </Button>
         </header>
 
         {/* Progress bar */}
-        <div className="px-5 sm:px-6 pb-2">
+        <div className={cn("pb-2", compact ? "px-4" : "px-5 sm:px-6")}>
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="font-semibold text-slate-600">
               {completedCount} de {steps.length} pasos completos
@@ -207,7 +255,17 @@ export function RegistrationStepsCard({
               {progressPct}%
             </span>
           </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200/70">
+          <div
+            className={cn(
+              "mt-2 w-full overflow-hidden rounded-full bg-slate-200/70",
+              compact ? "h-1.5" : "h-2",
+            )}
+            role="progressbar"
+            aria-valuenow={completedCount}
+            aria-valuemin={0}
+            aria-valuemax={steps.length}
+            aria-label="Pasos completados"
+          >
             <div
               className="h-full rounded-full bg-gradient-to-r from-sky-500 via-violet-500 to-emerald-500 transition-all duration-700"
               style={{ width: `${progressPct}%` }}
@@ -217,12 +275,18 @@ export function RegistrationStepsCard({
 
         {/* Steps body */}
         {expanded && (
-          <ol className="space-y-1 px-3 pb-4 sm:px-4">
+          <ol
+            className={cn(
+              "space-y-1",
+              compact ? "px-2 pb-3" : "px-3 pb-4 sm:px-4",
+            )}
+          >
             {steps.map((step, idx) => (
               <StepRow
                 key={step.id}
                 step={step}
                 isLast={idx === steps.length - 1}
+                compact={compact}
               />
             ))}
           </ol>
@@ -230,18 +294,39 @@ export function RegistrationStepsCard({
 
         {/* Footer info */}
         {expanded && (
-          <footer className="mx-5 mb-5 sm:mx-6 flex items-start gap-2 rounded-2xl border border-slate-200/70 bg-white/60 p-3 text-xs text-slate-600">
-            <Info className="size-4 shrink-0 mt-0.5 text-sky-600" />
+          <footer
+            className={cn(
+              "mx-4 mb-4 flex items-start gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-xs text-slate-600",
+              compact ? "p-2.5" : "p-3",
+            )}
+          >
+            <Info className="mt-0.5 size-4 shrink-0 text-sky-600" />
             <p className="leading-relaxed">
-              ¿Tienes dudas? Revisa las{" "}
-              <span className="font-semibold text-slate-900">
-                bases del evento
-              </span>{" "}
-              o contacta al comité organizador. Estado actual:{" "}
-              <span className="font-bold uppercase tracking-wide text-slate-900">
-                {STATUS_LABELS[estado] ?? estado}
-              </span>
-              .
+              {compact ? (
+                <>
+                  Revisa las{" "}
+                  <span className="font-semibold text-slate-900">
+                    bases del evento
+                  </span>{" "}
+                  o contacta al comité organizador. Estado actual:{" "}
+                  <span className="font-bold uppercase tracking-wide text-slate-900">
+                    {STATUS_LABELS[estado] ?? estado}
+                  </span>
+                  .
+                </>
+              ) : (
+                <>
+                  ¿Tienes dudas? Revisa las{" "}
+                  <span className="font-semibold text-slate-900">
+                    bases del evento
+                  </span>{" "}
+                  o contacta al comité organizador. Estado actual:{" "}
+                  <span className="font-bold uppercase tracking-wide text-slate-900">
+                    {STATUS_LABELS[estado] ?? estado}
+                  </span>
+                  .
+                </>
+              )}
             </p>
           </footer>
         )}
@@ -253,11 +338,14 @@ export function RegistrationStepsCard({
 interface StepRowProps {
   step: StepDescriptor;
   isLast: boolean;
+  compact?: boolean;
 }
 
-function StepRow({ step, isLast }: StepRowProps) {
+function StepRow({ step, isLast, compact = false }: StepRowProps) {
   const Icon = step.icon;
   const stateStyle = STATE_STYLES[step.state];
+  const markerSize = compact ? "size-8" : "size-9";
+  const markerOffset = compact ? "left-[15px] top-8" : "left-[18px] top-9";
 
   return (
     <li className="relative flex gap-3 pl-1">
@@ -265,7 +353,9 @@ function StepRow({ step, isLast }: StepRowProps) {
       {!isLast && (
         <span
           className={cn(
-            "absolute left-[18px] top-9 bottom-0 w-px",
+            "absolute w-px",
+            markerOffset,
+            "bottom-0",
             step.state === "done"
               ? "bg-gradient-to-b from-emerald-300 to-emerald-200"
               : "bg-slate-200",
@@ -276,7 +366,8 @@ function StepRow({ step, isLast }: StepRowProps) {
 
       <div
         className={cn(
-          "relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm transition-all",
+          "relative z-10 flex shrink-0 items-center justify-center rounded-full shadow-sm transition-all",
+          markerSize,
           stateStyle.iconBg,
         )}
       >
@@ -289,12 +380,13 @@ function StepRow({ step, isLast }: StepRowProps) {
         )}
       </div>
 
-      <div className="flex-1 min-w-0 pt-1 pb-3">
+      <div className="min-w-0 flex-1 pt-0.5 pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p
               className={cn(
-                "text-sm font-bold leading-tight",
+                "font-bold leading-tight",
+                compact ? "text-xs" : "text-sm",
                 stateStyle.titleColor,
               )}
             >
@@ -302,28 +394,27 @@ function StepRow({ step, isLast }: StepRowProps) {
             </p>
             <p
               className={cn(
-                "text-xs mt-0.5 leading-snug",
+                "mt-0.5 leading-snug",
+                compact ? "text-xs" : "text-sm",
                 stateStyle.descColor,
               )}
             >
               {step.description}
             </p>
             {step.hint && (
-              <p className="text-[11px] mt-1 text-sky-700 leading-snug italic">
+              <p className="mt-1 text-xs leading-snug italic text-sky-700">
                 {step.hint}
               </p>
             )}
           </div>
           {step.actionLabel && step.onAction && (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={step.onAction}
-              className="shrink-0 rounded-full text-xs font-bold uppercase tracking-wider border-sky-300 text-sky-700 hover:bg-sky-50"
+              className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-sky-700 underline underline-offset-4 transition-colors hover:text-sky-900"
             >
               {step.actionLabel}
-            </Button>
+            </button>
           )}
         </div>
       </div>
@@ -356,7 +447,7 @@ const STATE_STYLES: Record<
     iconBg: "bg-slate-200",
     iconColor: "text-slate-400",
     titleColor: "text-slate-500",
-    descColor: "text-slate-400",
+    descColor: "text-slate-500",
   },
   blocked: {
     iconBg: "bg-gradient-to-br from-rose-400 to-rose-600",

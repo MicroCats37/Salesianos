@@ -350,6 +350,8 @@ class EntidadesConfig(AppConfig):
 6. Usar `success_response()` del `core.responses` para wrapping estándar.
 7. Params de query con `Query[...]` de Ninja.
 8. Path params con `Path[...]` de Ninja.
+9. El controller puede declarar un mensaje fijo y contextual de éxito en `success_response()`, sin interpolar IDs, UUIDs ni valores técnicos.
+10. El controller nunca construye respuestas de error. Los handlers globales traducen códigos estables de excepciones de dominio a mensajes públicos seguros.
 
 ---
 
@@ -460,7 +462,9 @@ class AuthFlujo:
 - Usar las excepciones de `core/exceptions.py`: `NotFoundError`, `ConflictError`, `BusinessError`, `CipNotFoundError`.
 - Agregar excepciones específicas del módulo en `domain/exceptions.py`.
 - **No usar excepciones genéricas** (`Exception`, `ValueError`) como mecanismo de control — solo para errores realmente excepcionales.
-- Los handlers en `core/exceptions.py` (`register_exception_handlers`) transforman excepciones en respuestas HTTP estandarizadas.
+- Las excepciones de dominio comunican un `code` estable y contexto técnico interno; no construyen prosa para usuarios ni interpolan UUIDs, IDs, restricciones SQL, payloads externos o secretos.
+- Los handlers en `core/exceptions.py` (`register_exception_handlers`) son el único lugar que transforma esos códigos en respuestas HTTP estandarizadas y mensajes públicos en español.
+- Los handlers registran el detalle técnico y la correlación de soporte exclusivamente en logs. Las respuestas públicas nunca exponen UUIDs, IDs internos, request IDs, trazas, rutas, restricciones SQL, texto crudo de excepciones ni secretos.
 
 ---
 

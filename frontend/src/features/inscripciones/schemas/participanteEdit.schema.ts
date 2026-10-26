@@ -3,10 +3,12 @@ import { z } from "zod";
 /**
  * Schema de edición de un participante dentro de una inscripción.
  *
- * Permite editar: rol, talle_camiseta, seguro y notas.
+ * Permite editar: rol, talla_camiseta, seguro y notas.
  * NO permite editar identidad ni declaraciones de aceptaciones.
+ *
+ * NOTE: Backend uses single-char rol values (J, D) and talla_camiseta (correct spelling).
  */
-export const ROLES_PERMITIDOS = ["JUGADOR", "CAPITAN", "DELEGADO"] as const;
+export const ROLES_PERMITIDOS = ["J", "D"] as const;
 export const TALLES_PERMITIDOS = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 export const NOTAS_MAX_LENGTH = 500;
 
@@ -17,13 +19,14 @@ export const EditarParticipanteSchema = z
   .object({
     rol: z.preprocess(
       emptyToUndefined,
-      z
-        .string({ error: "Rol requerido" })
-        .min(1, "Rol requerido"),
+      z.string({ error: "Rol requerido" }).min(1, "Rol requerido"),
     ),
-    talle_camiseta: z.preprocess(emptyToUndefined, z.string().optional()),
+    talla_camiseta: z.preprocess(emptyToUndefined, z.string().optional()),
     aseguradora_nombre: z.preprocess(emptyToUndefined, z.string().optional()),
-    aseguradora_numero_poliza: z.preprocess(emptyToUndefined, z.string().optional()),
+    aseguradora_numero_poliza: z.preprocess(
+      emptyToUndefined,
+      z.string().optional(),
+    ),
     notas: z.preprocess(
       emptyToUndefined,
       z
@@ -36,7 +39,9 @@ export const EditarParticipanteSchema = z
     ),
   })
   .superRefine((data, ctx) => {
-    if (!ROLES_PERMITIDOS.includes(data.rol as (typeof ROLES_PERMITIDOS)[number])) {
+    if (
+      !ROLES_PERMITIDOS.includes(data.rol as (typeof ROLES_PERMITIDOS)[number])
+    ) {
       ctx.addIssue({
         path: ["rol"],
         message: `Rol debe ser uno de: ${ROLES_PERMITIDOS.join(", ")}`,
@@ -44,15 +49,19 @@ export const EditarParticipanteSchema = z
       });
     }
     if (
-      data.talle_camiseta &&
-      !TALLES_PERMITIDOS.includes(data.talle_camiseta as (typeof TALLES_PERMITIDOS)[number])
+      data.talla_camiseta &&
+      !TALLES_PERMITIDOS.includes(
+        data.talla_camiseta as (typeof TALLES_PERMITIDOS)[number],
+      )
     ) {
       ctx.addIssue({
-        path: ["talle_camiseta"],
+        path: ["talla_camiseta"],
         message: `Talle inválido. Use uno de: ${TALLES_PERMITIDOS.join(", ")}`,
         code: "custom",
       });
     }
   });
 
-export type EditarParticipanteFormData = z.infer<typeof EditarParticipanteSchema>;
+export type EditarParticipanteFormData = z.infer<
+  typeof EditarParticipanteSchema
+>;

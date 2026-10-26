@@ -171,13 +171,12 @@
 }
 
 @utility bg-auth-deep-gradient {
-  background-image:
-    linear-gradient(
-      160deg,
-      var(--brand-deep-blue) 0%,
-      var(--brand-deep-blue-mid) 45%,
-      var(--brand-deep-night) 100%
-    );
+  background-image: linear-gradient(
+    160deg,
+    var(--brand-deep-blue) 0%,
+    var(--brand-deep-blue-mid) 45%,
+    var(--brand-deep-night) 100%
+  );
 }
 
 @utility text-brand-cyan {
@@ -203,6 +202,23 @@
 @utility surface-form-amber {
   background-color: var(--surface-form-amber);
   border-color: var(--surface-form-amber-border);
+}
+
+@utility surface-page-gradient {
+  background-image: linear-gradient(
+    180deg,
+    #f6f4ee 0%,
+    #ffffff 30%,
+    #ffffff 100%
+  );
+}
+
+@utility text-eyebrow-brand {
+  font-size: 0.625rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: var(--primary);
 }
 
 @layer base {
@@ -387,6 +403,25 @@
   animation: orb-float-slow 30s ease-in-out infinite;
 }
 
+@keyframes festival-ribbon-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@utility animate-festival-ribbon {
+  animation: festival-ribbon-marquee 20s linear infinite;
+}
+
+@media (max-width: 640px) {
+  .animate-festival-ribbon {
+    animation-duration: 18s;
+  }
+}
+
 /* === FADE UP === */
 @keyframes fade-up {
   from {
@@ -501,6 +536,16 @@ html {
   scroll-behavior: smooth;
 }
 
+/* === PORTADA: MARQUEE === */
+@keyframes portada-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 /* === SCROLLBAR === */
 ::-webkit-scrollbar {
   width: 10px;
@@ -557,7 +602,8 @@ html {
   .animate-fade-up-delay-2,
   .animate-fade-up-delay-3,
   .animate-pulse-slow,
-  .animate-hero-reveal {
+  .animate-hero-reveal,
+  .animate-festival-ribbon {
     animation: none;
   }
 }
@@ -596,8 +642,8 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class*="animate-[goldPulse"] ,
-  [class*="animate-[cyanPulse"]  {
+  [class*="animate-[goldPulse"],
+  [class*="animate-[cyanPulse"] {
     animation: none !important;
   }
 }
@@ -746,11 +792,7 @@ html {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .btn-login:hover:not(:disabled) {
-    background: linear-gradient(
-      135deg,
-      #25236f 0%,
-      #1a1857 100%
-    );
+    background: linear-gradient(135deg, #25236f 0%, #1a1857 100%);
     box-shadow:
       0 8px 24px var(--btn-login-shadow-hover),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);

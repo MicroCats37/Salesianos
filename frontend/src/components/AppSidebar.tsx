@@ -7,8 +7,8 @@ import {
   Package,
   ScrollText,
 } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -27,34 +27,57 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { useEsAdmin } from "@/features/admin/hooks/useAdminSession";
+import {
+  ADMIN_SECCIONES,
+  type AdminSeccion,
+  adminSeccionActiva,
+} from "@/features/admin/utils/admin.secciones";
 import { useAuthStore } from "@/features/auth/store/auth.store";
+import { cn } from "@/lib/utils";
 
-const dashboardMenu = [
+const dashboardMenu: AdminSeccion[] = [
   {
+    id: "mis-inscripciones",
     title: "Mis Inscripciones",
     icon: Package,
     href: "/dashboard",
     description: "Resumen y estado actual",
   },
   {
+    id: "crear-inscripcion",
     title: "Crear Inscripcion",
     icon: FilePlus2,
     href: "/inscripcion",
     description: "Promocion, paquete y equipos",
   },
   {
+    id: "historial",
     title: "Historial",
     icon: ScrollText,
     href: "/dashboard",
     description: "Tu actividad reciente",
   },
   {
+    id: "evento",
     title: "Evento",
     icon: CalendarDays,
     href: "/",
     description: "Programa del festival",
   },
 ];
+
+/**
+ * Administration section of the navigation.
+ *
+ * The entry is rendered ONLY when the backend confirms `es_admin` on
+ * `GET /auth/me`. The client-side session is never used as authority, so a
+ * non-administrator never even sees the entry.
+ *
+ * The seven sections come from `ADMIN_SECCIONES`: the sidebar and the
+ * navigation of the area read the SAME list, so a section can never exist in
+ * one place and be missing in the other.
+ */
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -64,6 +87,9 @@ export function AppSidebar() {
   const user = useAuthStore((s) => s.user);
   const clearStore = useAuthStore((s) => s.logout);
 
+  // The administration entry appears only when the backend confirms the flag.
+  const esAdmin = useEsAdmin();
+
   const fullName =
     [user?.nombres, user?.apellidos].filter(Boolean).join(" ") ||
     user?.email ||
@@ -72,8 +98,7 @@ export function AppSidebar() {
     [user?.nombres?.[0], user?.apellidos?.[0]]
       .filter(Boolean)
       .join("")
-      .toUpperCase() ||
-    (user?.email?.[0] ?? "S").toUpperCase();
+      .toUpperCase() || (user?.email?.[0] ?? "S").toUpperCase();
 
   async function handleLogout() {
     try {
@@ -126,46 +151,20 @@ export function AppSidebar() {
             Navegacion
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {dashboardMenu.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/" &&
-                    pathname.startsWith(`${item.href}/`));
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.title}
-                      className="group h-auto flex-col items-start gap-0.5 rounded-xl px-3 py-2.5 transition-all hover:translate-x-0.5"
-                    >
-                      <Link
-                        href={item.href}
-                        className="flex w-full items-start gap-3"
-                      >
-                        <item.icon
-                          className={cn(
-                            "size-4 mt-0.5 transition-transform group-hover:scale-110",
-                            isActive && "text-amber-300",
-                          )}
-                        />
-                        <span className="flex flex-col gap-0">
-                          <span className="text-xs font-black uppercase tracking-wider">
-                            {item.title}
-                          </span>
-                          <span className="text-[10px] font-medium normal-case tracking-normal text-white/60">
-                            {item.description}
-                          </span>
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            <MenuItems items={dashboardMenu} pathname={pathname} />
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {esAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300/80">
+              Administracion
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <MenuItems items={ADMIN_SECCIONES} pathname={pathname} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-white/10 p-3">
@@ -214,6 +213,56 @@ export function AppSidebar() {
   );
 }
 
-function cn(...classes: Array<string | false | undefined | null>) {
-  return classes.filter(Boolean).join(" ");
+/**
+ * Renders a navigation group.
+ *
+ * The active state is derived from the pathname with the SAME rule the
+ * navigation of the administration area uses: an entry is active when the
+ * current route is the entry itself or one of its descendants, and when
+ * several entries match only the MOST SPECIFIC one is highlighted.
+ */
+function MenuItems({
+  items,
+  pathname,
+}: {
+  items: AdminSeccion[];
+  pathname: string;
+}) {
+  const activa = adminSeccionActiva(pathname, items);
+
+  return (
+    <SidebarMenu className="gap-1">
+      {items.map((item) => {
+        const isActive = activa?.id === item.id;
+
+        return (
+          <SidebarMenuItem key={item.id}>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive}
+              tooltip={item.title}
+              className="group h-auto flex-col items-start gap-0.5 rounded-xl px-3 py-2.5 transition-all hover:translate-x-0.5"
+            >
+              <Link href={item.href} className="flex w-full items-start gap-3">
+                <item.icon
+                  className={cn(
+                    "size-4 mt-0.5 transition-transform group-hover:scale-110",
+                    isActive && "text-amber-300",
+                  )}
+                />
+                <span className="flex flex-col gap-0">
+                  <span className="text-xs font-black uppercase tracking-wider">
+                    {item.title}
+                  </span>
+                  <span className="text-[10px] font-medium normal-case tracking-normal text-white/60">
+                    {item.description}
+                  </span>
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
+  );
 }

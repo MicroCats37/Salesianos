@@ -1,8 +1,8 @@
 "use client";
 
 // SmartEquipoField — manages an array of equipos for one inscription.
-// - Disciplinas limited to paquete_disciplinas
-// - Auto-creates N equipos based on paquete.cantidad_disciplinas_requeridas
+// - Disciplinas limited to paquete.cantidad_disciplinas
+// - Auto-creates N equipos based on paquete.cantidad_disciplinas (canonical)
 // - One equipo per disciplina (no duplicates)
 // - Categoria is null for now (backend already accepts null)
 // - Layout responsive: desktop 2-col grid; mobile vertical stack
@@ -34,13 +34,10 @@ import type { PaqueteDisciplina } from "../../services/catalog.service";
 interface EquipoCardProps {
   index: number;
   paqueteId: string;
-  paqueteDisciplinas:
-    | PaqueteDisciplina[]
-    | undefined;
+  paqueteDisciplinas: PaqueteDisciplina[] | undefined;
   locked: boolean;
   permiteDuplicados: boolean;
 }
-
 
 function EquipoCard({
   index,
@@ -106,7 +103,9 @@ function EquipoCard({
 
       <div className="space-y-1.5">
         <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-          Disciplina {locked && <span className="text-emerald-600">(bloqueado)</span>} <span className="text-amber-600">*</span>
+          Disciplina{" "}
+          {locked && <span className="text-emerald-600">(bloqueado)</span>}{" "}
+          <span className="text-amber-600">*</span>
         </Label>
         {locked ? (
           <Controller
@@ -181,14 +180,13 @@ function EquipoCard({
           <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">
             Participantes
           </Label>
-          <span className="text-xs font-semibold text-slate-400">
-            0
-          </span>
+          <span className="text-xs font-semibold text-slate-400">0</span>
         </div>
         <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center">
           <User className="size-6 text-slate-300 mx-auto mb-1" />
           <p className="text-xs text-slate-500">
-            Los participantes se agregan desde el detalle de la inscripción, después de crearla.
+            Los participantes se agregan desde el detalle de la inscripción,
+            después de crearla.
           </p>
         </div>
       </div>
@@ -201,12 +199,19 @@ function EquipoCard({
 interface SmartEquipoFieldProps {
   fieldName: "equipos";
   paqueteIdFieldName: "paquete_id";
+  /**
+   * Canonical paquete shape derived from `PaqueteListContract`.
+   *
+   * Uses `cantidad_disciplinas` (canonical) — NOT legacy
+   * `cantidad_disciplinas_requeridas`. Uses `cantidad_minima_compra`
+   * (canonical) — NOT legacy `cantidad_maxima_participantes`.
+   */
   paqueteActual?: {
     id: string;
-    cantidad_disciplinas_requeridas: number;
+    cantidad_disciplinas: number;
+    cantidad_minima_compra: number;
     cantidad_maxima_equipos: number;
-    cantidad_maxima_participantes: number;
-    modo_disciplinas: string;
+    modo_disciplinas: "FIJO" | "ELEGIBLE";
     disciplinas: PaqueteDisciplina[];
   };
 }
@@ -317,21 +322,22 @@ export function SmartEquipoField({
 
   // Compute error state for FIJO mode misconfiguration
   const isFIJO = paqueteActual?.modo_disciplinas === "FIJO";
+  const cantidadDisciplinasRequerida = paqueteActual?.cantidad_disciplinas ?? 1;
   const hasError =
     isFIJO &&
     paqueteDisciplinas != null &&
     paqueteDisciplinas.length > 0 &&
-    paqueteDisciplinas.length !== (paqueteActual?.cantidad_disciplinas_requeridas ?? 1);
+    paqueteDisciplinas.length !== cantidadDisciplinasRequerida;
 
   const errorMessage =
     isFIJO && paqueteDisciplinas?.length === 0
       ? "Este paquete no tiene disciplinas configuradas"
       : isFIJO && hasError
-        ? `Configuración inválida: el paquete permite ${paqueteDisciplinas?.length} disciplinas pero requiere ${paqueteActual?.cantidad_disciplinas_requeridas}`
+        ? `Configuración inválida: el paquete permite ${paqueteDisciplinas?.length} disciplinas pero requiere ${cantidadDisciplinasRequerida}`
         : !isFIJO &&
-          paqueteDisciplinas != null &&
-          paqueteDisciplinas.length < (paqueteActual?.cantidad_disciplinas_requeridas ?? 1)
-          ? `Este paquete permite ${paqueteDisciplinas?.length} disciplinas pero requiere ${paqueteActual?.cantidad_disciplinas_requeridas}`
+            paqueteDisciplinas != null &&
+            paqueteDisciplinas.length < cantidadDisciplinasRequerida
+          ? `Este paquete permite ${paqueteDisciplinas?.length} disciplinas pero requiere ${cantidadDisciplinasRequerida}`
           : null;
 
   // Auto-fill disciplines whenever the package can determine every slot.
@@ -349,10 +355,13 @@ export function SmartEquipoField({
     if (paqueteActual.id !== lastPaqueteIdRef.current) return;
 
     const modo = paqueteActual.modo_disciplinas;
-    const required = paqueteActual.cantidad_disciplinas_requeridas ?? 1;
+    const required = paqueteActual.cantidad_disciplinas ?? 1;
     const disponibles = paqueteDisciplinas.length;
 
-    const targetCount = Math.max(paqueteActual.cantidad_maxima_equipos ?? required, 1);
+    const targetCount = Math.max(
+      paqueteActual.cantidad_maxima_equipos ?? required,
+      1,
+    );
     const currentEquipos = getValues(fieldName) ?? [];
     const baseEquipos = Array.from({ length: targetCount }, (_, i) => {
       const prev = currentEquipos[i];
@@ -367,11 +376,14 @@ export function SmartEquipoField({
     });
 
     const disciplinaIds = paqueteDisciplinas.map((d) => d.disciplina_id);
-    const currentIds = baseEquipos.map((eq) => eq.disciplina_id).filter(Boolean);
+    const currentIds = baseEquipos
+      .map((eq) => eq.disciplina_id)
+      .filter(Boolean);
     const allCurrentIdsBelongToPackage = currentIds.every((id) =>
       disciplinaIds.includes(id),
     );
-    const hasDistinctCurrentIds = new Set(currentIds).size === currentIds.length;
+    const hasDistinctCurrentIds =
+      new Set(currentIds).size === currentIds.length;
     const hasCompleteValidSelection =
       currentIds.length === targetCount &&
       allCurrentIdsBelongToPackage &&
@@ -412,7 +424,9 @@ export function SmartEquipoField({
       const previousSnapshot = currentEquipos.map((eq) => ({
         disciplina_id: eq.disciplina_id,
       }));
-      const nextSnapshot = next.map((eq) => ({ disciplina_id: eq.disciplina_id }));
+      const nextSnapshot = next.map((eq) => ({
+        disciplina_id: eq.disciplina_id,
+      }));
       const changed =
         previousSnapshot.length !== nextSnapshot.length ||
         previousSnapshot.some(
@@ -422,7 +436,13 @@ export function SmartEquipoField({
         replace(next);
       }
     }
-  }, [paqueteDisciplinas, paqueteActual?.id, paqueteId, equipos.length, equiposActuales]);
+  }, [
+    paqueteDisciplinas,
+    paqueteActual?.id,
+    paqueteId,
+    equipos.length,
+    equiposActuales,
+  ]);
 
   // Compute locked state per slot.
   // FIJO with available === required: all slots locked.
@@ -431,7 +451,7 @@ export function SmartEquipoField({
     isFIJO &&
     paqueteDisciplinas != null &&
     paqueteDisciplinas.length > 0 &&
-    paqueteDisciplinas.length === (paqueteActual?.cantidad_disciplinas_requeridas ?? 1) &&
+    paqueteDisciplinas.length === (paqueteActual?.cantidad_disciplinas ?? 1) &&
     equiposActuales.length === paqueteDisciplinas.length &&
     equiposActuales.every((equipo) => Boolean(equipo.disciplina_id));
 

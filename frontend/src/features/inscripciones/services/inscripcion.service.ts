@@ -47,6 +47,63 @@ export async function createInscripcion(
   return data;
 }
 
+// ── Atomic Inscription + Purchase + Teams ────────────────────────────────────────
+
+export interface EquipoParaCrearOut {
+  id: string;
+  inscripcion_id: string;
+  disciplina: DisciplinaResumen;
+  categoria: CategoriaResumen | null;
+  nombre: string;
+  estado: string;
+  created_at: string;
+}
+
+export interface InscripcionCompletaOut {
+  inscripcion_id: string;
+  inscripcion_estado: string;
+  compra_id: string;
+  orden_pago_id: string;
+  compra_estado: string;
+  cantidad: number;
+  precio_unitario: number;
+  total: number;
+  equipos: EquipoParaCrearOut[];
+}
+
+/**
+ * Payload for atomic inscription + compra + equipos creation.
+ * Uses POST /inscripciones/completa/
+ */
+export interface InscripcionCompletaPayload {
+  evento_id: string;
+  paquete_id: string;
+  promocion_id: string;
+  fusion_promocion_id?: string | null;
+  delegado_id?: string | null;
+  cantidad: number; // Must be >= paquete.minimo_compra_inicial
+  equipos: Array<{
+    disciplina_id: string;
+    categoria_id?: string | null;
+    nombre: string;
+  }>;
+  estado?: string;
+  observacion?: string;
+  precio_unitario_cotizado?: number | null; // Optional: triggers server-side price revalidation
+  /** Quotation version — metadata, not validated server-side yet. */
+  cotizacion_version?: number | null;
+}
+
+export async function createInscripcionCompleta(
+  payload: InscripcionCompletaPayload,
+): Promise<ApiResponse<InscripcionCompletaOut>> {
+  const { data } = await api.post<ApiResponse<InscripcionCompletaOut>>(
+    "/inscripciones/completa/",
+    payload,
+  );
+  return data;
+}
+
 export async function getMisInscripciones(): Promise<
   ApiResponse<InscripcionOut[]>
 > {
@@ -81,15 +138,17 @@ export interface CategoriaResumen {
 
 export interface ParticipanteOut {
   id: string;
-  participacion_id: string;
+  inscripcion_persona_id: string;
   equipo_id: string;
-  rol: string;
-  talle_camiseta: string | null;
-  notas: string | null;
+  equipo_nombre: string;
+  evento_id: string;
+  disciplina: DisciplinaResumen;
   persona: PersonaResumen;
-  acepto_bases: boolean;
-  acepto_aptitud_fisica: boolean;
-  acepto_imagen: boolean;
+  rol: string;
+  talla_camiseta: string | null;
+  notas: string | null;
+  estado: string;
+  created_at: string;
 }
 
 export interface ParticipacionOut {
@@ -110,6 +169,18 @@ export interface EquipoDetalleOut {
   nombre: string;
   disciplina: DisciplinaResumen;
   categoria: CategoriaResumen | null;
+  /** Persisted EQUIPO_ACTIVO / EQUIPO_CANCELADO — backward-compat raw value. */
+  estado: string;
+  /** Persisted team state (alias of ``estado``, explicit name for Phase 2+). */
+  estado_equipo: string;
+  /** Derived/read-only roster state — "COMPLETO" | "INCOMPLETO", computed by presenter. */
+  estado_roster: "COMPLETO" | "INCOMPLETO";
+  /** Count of ACTIVA participaciones only. */
+  jugadores_registrados: number;
+  /** Disciplina.min_jugadores threshold. */
+  minimo_deportivo: number;
+  /** max(0, minimo_deportivo - jugadores_registrados). */
+  faltantes: number;
   participantes: ParticipanteOut[];
 }
 
@@ -120,10 +191,13 @@ export interface PromocionResumenOut {
 }
 
 export interface DelegadoOut {
+  /** ID of the inscripcion. */
   id: string;
-  inscripcion_id: string;
+  /** ID of the delegated person. */
   persona_id: string;
+  /** Full name of the delegated person (flat field from backend). */
   persona_nombre: string | null;
+  /** Document number of the delegated person. */
   persona_numero_documento: string | null;
 }
 
@@ -137,88 +211,130 @@ export interface PaqueteResumenOut {
   nombre: string;
 }
 
+export interface PersonaResumen {
+  id: string;
+  nombre: string;
+  numero_documento: string;
+}
+
+export interface InscripcionPersonaSummaryOut {
+  id: string;
+  persona: PersonaResumen;
+  estado: string;
+}
+
+// ── Phase 2: Summary Types ─────────────────────────────────────────────────────
+
+/** Payment-order summary — mirrors backend `OrdenPagoResumenSchema`. */
+export interface OrdenPagoResumenOut {
+  id: string;
+  numero: string;
+  estado: string;
+  pagada_en: string | null;
+}
+
+/** Commercial purchase summary — mirrors backend `CompraResumenSchema`. */
+export interface CompraResumenOut {
+  id: string;
+  tipo: string; // INICIAL | AMPLIACION
+  cantidad: number;
+  precio_unitario: number;
+  total: number;
+  estado: string; // PENDIENTE | PAGADA | CANCELADA
+  orden_pago: OrdenPagoResumenOut | null;
+}
+
+/** Aggregate payment/commercial summary — mirrors backend `ResumenPagoSchema`. */
+export interface ResumenPagoOut {
+  total_compras: number;
+  total_contratado: number;
+  total_pagado: number;
+  total_pagado_cantidad: number;
+  compras_pendientes: number;
+  compras_pagadas: number;
+  compras_canceladas: number;
+  disponible_pagado: number;
+  estado_mensaje: string;
+  compras: CompraResumenOut[];
+}
+
+/** Aggregate team-roster summary — mirrors backend `ResumenEquiposSchema`. */
+export interface ResumenEquiposOut {
+  total: number;
+  completos: number;
+  incompletos: number;
+}
+
+/**
+ * Distinct people vs roster rows — mirrors backend `ResumenParticipantesSchema`.
+ *
+ * One paid cup authorises a person in EVERY contracted discipline, so the two
+ * numbers differ by design and must never be mixed:
+ *
+ * - `participaciones` — the ACTIVE roster rows.
+ * - `personas` — the DISTINCT people (the ones comparable with the cupos).
+ */
+export interface ResumenParticipantesOut {
+  participaciones: number;
+  personas: number;
+}
+
 export interface InscripcionDetalleOut {
   id: string;
   evento_id: string;
+  evento_nombre: string;
   responsable_id: string;
+  responsable_nombre: string;
   paquete_id: string;
-  promocion: PromocionResumenOut;
-  fusion_promocion: PromocionResumenOut | null;
+  paquete_nombre: string;
+  promocion_id: string;
+  promocion_nombre: string;
+  fusion_promocion_id: string | null;
+  /** Delegado ID (null if no delegate set). */
+  delegado_id: string | null;
+  /** Delegado full name (flat field from backend, not DelegadoOut). */
+  delegado_nombre: string | null;
   estado: string;
   observacion: string | null;
   created_at: string;
-  evento: EventoResumenOut;
-  paquete: PaqueteResumenOut;
   equipos: EquipoDetalleOut[];
-  delegado: DelegadoOut | null;
-  responsable_acepto_bases: boolean;
-  responsable_acepto_aptitud_fisica: boolean;
-  responsable_acepto_imagen: boolean;
+  /** Roster members — persons registered to this inscription (not per-team). */
+  personas: InscripcionPersonaSummaryOut[];
+  // Phase 2: aggregate team roster summary
+  resumen_equipos: ResumenEquiposOut;
+  // Phase 2: aggregate payment/commercial summary
+  resumen_pago: ResumenPagoOut;
+  // Distinct people vs roster rows — one cup authorises several disciplines.
+  resumen_participantes: ResumenParticipantesOut;
 }
 
 export async function getInscripcionDetalle(
   id: string,
 ): Promise<ApiResponse<InscripcionDetalleOut>> {
   const { data } = await api.get<ApiResponse<InscripcionDetalleOut>>(
-    `/inscripciones/${id}`,
+    `/inscripciones/${id}/detalle`,
   );
   return data;
 }
 
-// ── Add Participants to Existing Equipo ────────────────────────────────────────
+// ── Pool preregistration ──────────────────────────────────────────────────────
+//
+// The ONLY way to register a participant. It lives in `pool.service.ts`
+// (`preregistrarEnPool()`) because the preregistration is submitted WITHOUT
+// `equipo_id`: the backend creates only the `InscripcionPersona` and claims the
+// paid cup when there is free capacity.
+//
+// Placing a participant in a team is a different operation:
+// `POST /inscripciones/{id}/pool/asignar` (`asignarPoolAEquipo()`).
 
-export interface AgregarParticipantesPayload {
-  participantes: Array<{
-    tipoDocumento?: "DNI" | "CE" | "PAS";
-    numeroDocumento?: string;
-    nombres?: string;
-    apellidos?: string;
-    genero?: "M" | "F";
-    telefono?: string | null;
-    whatsapp?: string | null;
-    persona_id?: string;
-    rol?: string;
-    talle_camiseta?: string | null;
-    aseguradora_nombre?: string | null;
-    aseguradora_numero_poliza?: string | null;
-    notas?: string | null;
-    acepto_bases?: boolean;
-    acepto_aptitud_fisica?: boolean;
-    acepto_imagen?: boolean;
-  }>;
-}
-
-export interface AgregarParticipantesRespuesta {
-  participantes: ParticipanteOut[];
-}
-
-export interface AgregarParticipanteRespuesta {
-  participante: ParticipanteOut;
-}
-
-export async function agregarParticipantesAEquipo(
-  inscripcionId: string,
-  equipoId: string,
-  payload: AgregarParticipantesPayload,
-): Promise<ApiResponse<AgregarParticipantesRespuesta>> {
-  const { data } = await api.patch<ApiResponse<AgregarParticipantesRespuesta>>(
-    `/inscripciones/${inscripcionId}/equipos/${equipoId}/participantes`,
-    payload,
-  );
-  return data;
-}
-
-// ── Edit / Delete / Move participant ────────────────────────────────────────────
+// ── Edit / Delete participant ─────────────────────────────────────────────────
 
 export interface EditarParticipantePayload {
   rol?: string;
-  talle_camiseta?: string | null;
+  talla_camiseta?: string | null;
   aseguradora_nombre?: string | null;
   aseguradora_numero_poliza?: string | null;
   notas?: string | null;
-  acepto_bases?: boolean;
-  acepto_aptitud_fisica?: boolean;
-  acepto_imagen?: boolean;
 }
 
 export async function editarParticipante(
@@ -226,8 +342,9 @@ export async function editarParticipante(
   participanteId: string,
   payload: EditarParticipantePayload,
 ): Promise<ApiResponse<ParticipanteOut>> {
+  // Backend endpoint: PATCH /participaciones/{participacion_id}
   const { data } = await api.patch<ApiResponse<ParticipanteOut>>(
-    `/inscripciones/${inscripcionId}/participantes/${participanteId}`,
+    `/participaciones/${participanteId}`,
     payload,
   );
   return data;
@@ -237,24 +354,10 @@ export async function eliminarParticipante(
   inscripcionId: string,
   participanteId: string,
 ): Promise<ApiResponse<{ participante_id: string }>> {
-  const { data } = await api.delete<ApiResponse<{ participante_id: string }>>(
-    `/inscripciones/${inscripcionId}/participantes/${participanteId}`,
-  );
-  return data;
-}
-
-export interface MoverParticipantePayload {
-  equipo_destino_id: string;
-}
-
-export async function moverParticipante(
-  inscripcionId: string,
-  participanteId: string,
-  payload: MoverParticipantePayload,
-): Promise<ApiResponse<ParticipanteOut>> {
-  const { data } = await api.patch<ApiResponse<ParticipanteOut>>(
-    `/inscripciones/${inscripcionId}/participantes/${participanteId}/mover`,
-    payload,
+  // Backend endpoint: PATCH /participaciones/{participacion_id}/retirar
+  // (No hard delete — retiro sets estado to R)
+  const { data } = await api.patch<ApiResponse<{ participante_id: string }>>(
+    `/participaciones/${participanteId}/retirar`,
   );
   return data;
 }

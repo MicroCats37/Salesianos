@@ -1,47 +1,57 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { PaqueteDetailContract } from "../schemas/paquete.schema";
 import {
   type Categoria,
   type Disciplina,
-  type Evento,
   getCategorias,
   getDisciplinas,
-  getEventos,
   getPaqueteDisciplinas,
   getPaquetes,
   getPromociones,
   type Paquete,
   type Promocion,
 } from "../services/catalog.service";
+import {
+  fetchPaqueteDetail,
+  fetchPaqueteList,
+  paqueteQueryKeys,
+} from "../services/paquete.service";
 
-// ── Evento Hook ───────────────────────────────────────────────────────────────
+// ── Paquete Detail Hook ───────────────────────────────────────────────────────
 
-export function useEventos() {
+/**
+ * Fetch full package detail including prices, benefits, and disciplines.
+ * Used when a package is selected to configure team creation.
+ */
+export function usePaqueteDetail(paqueteId: string | null) {
   return useQuery({
-    queryKey: ["inscripcion", "eventos"],
-    queryFn: async () => {
-      const response = await getEventos();
-      if (!response.success || !response.data) {
-        throw new Error(response.error?.message ?? "Error al cargar eventos");
+    queryKey: paqueteQueryKeys.detail(paqueteId ?? ""),
+    queryFn: async (): Promise<PaqueteDetailContract> => {
+      if (!paqueteId) {
+        throw new Error("paqueteId is required");
       }
-      return response.data as Evento[];
+      return fetchPaqueteDetail(paqueteId);
     },
+    enabled: Boolean(paqueteId),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
-// ── Paquetes Hook ──────────────────────────────────────────────────────────────
+// ── Paquetes Hook (NEW — typed with Zod validation) ───────────────────────────
 
+/**
+ * Fetch package list with Zod-validated contract types.
+ * Uses canonical query keys for cache management.
+ */
 export function usePaquetes() {
   return useQuery({
-    queryKey: ["inscripcion", "paquetes"],
-    queryFn: async () => {
-      const response = await getPaquetes();
-      if (!response.success || !response.data) {
-        throw new Error(response.error?.message ?? "Error al cargar paquetes");
-      }
-      return response.data as Paquete[];
-    },
+    queryKey: paqueteQueryKeys.list(),
+    queryFn: fetchPaqueteList,
+    staleTime: 5 * 60 * 1000, // 5 min — catalog changes are admin-driven
+    gcTime: 30 * 60 * 1000, // 30 min
   });
 }
 
@@ -81,14 +91,13 @@ export function useDisciplinas() {
   });
 }
 
-// ── Categorias Hook ────────────────────────────────────────────────────────────
+// ── Categorias Hook ───────────────────────────────────────────────────────────
 
-export function useCategorias(disciplinaId: string | null) {
+export function useCategorias() {
   return useQuery({
-    queryKey: ["inscripcion", "categorias", disciplinaId],
+    queryKey: ["inscripcion", "categorias"],
     queryFn: async () => {
-      if (!disciplinaId) return [];
-      const response = await getCategorias(disciplinaId);
+      const response = await getCategorias();
       if (!response.success || !response.data) {
         throw new Error(
           response.error?.message ?? "Error al cargar categorías",
@@ -96,7 +105,6 @@ export function useCategorias(disciplinaId: string | null) {
       }
       return response.data as Categoria[];
     },
-    enabled: Boolean(disciplinaId),
   });
 }
 

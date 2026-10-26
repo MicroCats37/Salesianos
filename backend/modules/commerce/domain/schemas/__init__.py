@@ -1,0 +1,1 @@
+"""commerce domain schemas package."""

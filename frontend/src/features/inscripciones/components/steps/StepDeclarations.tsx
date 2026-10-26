@@ -1,11 +1,26 @@
 "use client";
 
 import { gsap } from "gsap";
-import { FileText, Heart, ImageIcon, Package, ShieldCheck, Users } from "lucide-react";
+import {
+  FileText,
+  Heart,
+  ImageIcon,
+  Package,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Controller, useFormContext } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import { usePaquetes } from "../../hooks/useInscripcionCatalogs";
 import type { InscripcionFormData } from "../../schemas/inscripcion.schema";
+
+// ── Consents Shape (local wizard state) ───────────────────────────────────────
+
+export interface WizardConsents {
+  bases: boolean;
+  aptitudFisica: boolean;
+  imagen: boolean;
+}
 
 // ── Summary Item ─────────────────────────────────────────────────────────────
 
@@ -13,17 +28,28 @@ interface SummaryItemProps {
   label: string;
   value: string | undefined;
   highlight?: boolean;
+  large?: boolean;
 }
 
-function SummaryItem({ label, value, highlight }: SummaryItemProps) {
+function SummaryItem({ label, value, highlight, large }: SummaryItemProps) {
   return (
     <div className="flex items-center justify-between border-b border-slate-100 py-2 last:border-b-0">
-      <span className="text-sm font-medium text-slate-500">{label}</span>
       <span
         className={
-          highlight
-            ? "text-sm font-bold text-amber-700"
-            : "text-sm font-semibold text-slate-900"
+          large
+            ? "text-sm font-bold uppercase tracking-wider text-slate-700"
+            : "text-sm font-medium text-slate-500"
+        }
+      >
+        {label}
+      </span>
+      <span
+        className={
+          large
+            ? "text-2xl font-black text-emerald-700"
+            : highlight
+              ? "text-sm font-bold text-amber-700"
+              : "text-sm font-semibold text-slate-900"
         }
       >
         {value ?? "—"}
@@ -109,11 +135,23 @@ function DeclarationCheckbox({
 
 // ── Step Component ─────────────────────────────────────────────────────────────
 
-export function StepDeclarations() {
-  const { control, watch } = useFormContext<InscripcionFormData>();
+interface StepDeclarationsProps {
+  /** Local wizard state — consents are NOT in the form schema. */
+  consents: WizardConsents;
+  setConsents: React.Dispatch<React.SetStateAction<WizardConsents>>;
+}
+
+export function StepDeclarations({
+  consents,
+  setConsents,
+}: StepDeclarationsProps) {
+  const { watch } = useFormContext<InscripcionFormData>();
 
   const selectedPaqueteId = watch("paquete_id");
   const equipos = watch("equipos") ?? [];
+  // Cantidad y precio cotizado seleccionados en step 1 (persistidos en el form).
+  const cantidadSeleccionada = watch("cantidad");
+  const precioUnitarioCotizado = watch("precio_unitario_cotizado");
 
   const { data: paquetes } = usePaquetes();
 
@@ -148,6 +186,26 @@ export function StepDeclarations() {
       acc + ((eq as { participantes?: unknown[] }).participantes?.length ?? 0),
     0,
   );
+
+  // Precio unitario de referencia: el cotizado (si lo hay) o el del catálogo.
+  // Se usa SOLO para mostrar la referencia "X c/u" en el total — no es el dato
+  // principal del step 3.
+  const precioUnitarioRef =
+    precioUnitarioCotizado ??
+    selectedPaquete?.precio_preventa ??
+    selectedPaquete?.precio_regular ??
+    0;
+
+  // Total que el usuario va a pagar (snapshot de lo que se enviará al backend).
+  // Si hay cotización persistida, ese es el dato autoritativo; si no, se
+  // calcula localmente con la cantidad del form y el precio del catálogo.
+  const cantidadFinal = cantidadSeleccionada ?? 0;
+  const totalFinal = precioUnitarioCotizado
+    ? precioUnitarioCotizado * cantidadFinal
+    : precioUnitarioRef * cantidadFinal;
+
+  const setConsent = (key: keyof WizardConsents, val: boolean) =>
+    setConsents((prev) => ({ ...prev, [key]: val }));
 
   return (
     <div ref={containerRef} className="space-y-6">
@@ -186,21 +244,32 @@ export function StepDeclarations() {
             value={`${equipos.length} equipo${equipos.length !== 1 ? "s" : ""}`}
           />
           <SummaryItem
-            label="Participantes"
+            label="Participantes agregados"
             value={`${totalParticipantes} jugador${totalParticipantes !== 1 ? "es" : ""}`}
           />
-          {selectedPaquete?.precio_promocional && (
+          <SummaryItem
+            label="Cantidad"
+            value={
+              cantidadFinal > 0
+                ? `${cantidadFinal} jugador${cantidadFinal !== 1 ? "es" : ""}`
+                : "—"
+            }
+          />
+          {/* Total a pagar — el dato PRINCIPAL del resumen, no el unitario. */}
+          <SummaryItem
+            label="Total a pagar"
+            value={
+              cantidadFinal > 0
+                ? `S/${totalFinal.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : "—"
+            }
+            large
+          />
+          {/* Precio unitario (referencia secundaria) */}
+          {cantidadFinal > 0 && precioUnitarioRef > 0 && (
             <SummaryItem
-              label="Precio"
-              value={`S/${selectedPaquete.precio_promocional.toFixed(2)}`}
-              highlight
-            />
-          )}
-          {selectedPaquete && !selectedPaquete.precio_promocional && (
-            <SummaryItem
-              label="Precio"
-              value={`S/${selectedPaquete.precio_regular.toFixed(2)}`}
-              highlight
+              label="Precio por persona"
+              value={`S/${precioUnitarioRef.toFixed(2)}`}
             />
           )}
         </div>
@@ -218,56 +287,35 @@ export function StepDeclarations() {
         </div>
 
         <div className="declaration-item">
-          <Controller
-            name="acceptedBases"
-            control={control}
-            render={({ field }) => (
-              <DeclarationCheckbox
-                id="acceptedBases"
-                label="Acepto las bases del evento"
-                description="He leído y acepto las bases oficiales del evento Salesianos FEST 2026."
-                icon={FileText}
-                checked={field.value === true}
-                onChange={(val) => field.onChange(!!val)}
-                error={undefined}
-              />
-            )}
+          <DeclarationCheckbox
+            id="acceptedBases"
+            label="Acepto las bases del evento"
+            description="He leído y acepto las bases oficiales del evento Salesianos FEST 2026."
+            icon={FileText}
+            checked={consents.bases}
+            onChange={(val) => setConsent("bases", val)}
           />
         </div>
 
         <div className="declaration-item">
-          <Controller
-            name="fitnessDeclaration"
-            control={control}
-            render={({ field }) => (
-              <DeclarationCheckbox
-                id="fitnessDeclaration"
-                label="Declaro estar apta/o físicamente"
-                description="Declaro que me encuentro en condiciones físicas adecuadas para participar en las disciplinas seleccionadas."
-                icon={Heart}
-                checked={field.value === true}
-                onChange={(val) => field.onChange(!!val)}
-                error={undefined}
-              />
-            )}
+          <DeclarationCheckbox
+            id="fitnessDeclaration"
+            label="Declaro estar apta/o físicamente"
+            description="Declaro que me encuentro en condiciones físicas adecuadas para participar en las disciplinas seleccionadas."
+            icon={Heart}
+            checked={consents.aptitudFisica}
+            onChange={(val) => setConsent("aptitudFisica", val)}
           />
         </div>
 
         <div className="declaration-item">
-          <Controller
-            name="imageConsent"
-            control={control}
-            render={({ field }) => (
-              <DeclarationCheckbox
-                id="imageConsent"
-                label="Autorizo el uso de mi imagen"
-                description="Autorizo a los organizadores a utilizar fotografías y videos de mi participación para fines promocionales."
-                icon={ImageIcon}
-                checked={field.value === true}
-                onChange={(val) => field.onChange(!!val)}
-                error={undefined}
-              />
-            )}
+          <DeclarationCheckbox
+            id="imageConsent"
+            label="Autorizo el uso de mi imagen"
+            description="Autorizo a los organizadores a utilizar fotografías y videos de mi participación para fines promocionales."
+            icon={ImageIcon}
+            checked={consents.imagen}
+            onChange={(val) => setConsent("imagen", val)}
           />
         </div>
       </div>

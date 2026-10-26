@@ -1,34 +1,39 @@
 // Auth feature module barrel
 // UI
-export { LoginClientShell } from "./views";
-export { RegisterClientShell } from "./views";
-export { RegisterForm } from "./components";
 
+export { RegisterForm } from "./components";
+// Constants
+export {
+  GENERO,
+  TIPO_ACEPTACION,
+  TIPO_DOCUMENTO,
+} from "./constants/tipo-aceptacion";
+// Hooks
+export { useLogin, useRegister } from "./hooks";
 // Schemas
 export {
-  LoginUsernameFormSchema,
-  LoginDniFormSchema,
-  LoginEmailFormSchema,
-  RegisterFormSchema,
-  type LoginUsernameFormData,
   type LoginDniFormData,
+  LoginDniFormSchema,
   type LoginEmailFormData,
-  type RegisterFormData,
-  type RegisterResponse,
+  LoginEmailFormSchema,
+  type LoginUsernameFormData,
+  LoginUsernameFormSchema,
   type MeResponse,
+  type RegisterFormData,
+  RegisterFormSchema,
+  type RegisterResponse,
 } from "./schemas";
-
 // Store
 export {
+  type AuthSlice,
+  type AuthUser,
   useAuthStore,
   useAuthUser,
-  type AuthUser,
-  type AuthSlice,
 } from "./store/auth.store";
-
-// Hooks
-export { useLogin } from "./hooks";
-export { useRegister } from "./hooks";
-
-// Constants
-export { TIPO_ACEPTACION, TIPO_DOCUMENTO, GENERO } from "./constants/tipo-aceptacion";
+// Utils
+export {
+  DESTINO_ADMIN,
+  DESTINO_POR_DEFECTO,
+  resolverDeDestino,
+} from "./utils/resolver-destino";
+export { LoginClientShell, RegisterClientShell } from "./views";

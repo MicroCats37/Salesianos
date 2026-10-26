@@ -3,12 +3,14 @@ from .pago_schema import (
     IzipayPrepareOut,
     IzipayConfirmIn,
     IzipayConfirmOut,
-    IzipayTransaccionOut,
+    OrdenPagoOut,
+    TransaccionPagoOut,
 )
 
 __all__ = [
     "IzipayPrepareOut",
     "IzipayConfirmIn",
     "IzipayConfirmOut",
-    "IzipayTransaccionOut",
+    "OrdenPagoOut",
+    "TransaccionPagoOut",
 ]

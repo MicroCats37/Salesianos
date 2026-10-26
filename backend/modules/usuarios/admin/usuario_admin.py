@@ -5,6 +5,7 @@ from django.contrib.auth.admin import UserAdmin
 from simple_history.admin import SimpleHistoryAdmin
 
 from modules.usuarios.domain.models import Usuario, Persona
+from modules.usuarios.forms import PersonaAdminForm
 
 
 # ── Usuario admin ───────────────────────────────────────────────────────────────
@@ -79,6 +80,9 @@ class UsuarioAdmin(SimpleHistoryAdmin, UserAdmin):
 class PersonaAdmin(SimpleHistoryAdmin):
     """Admin for Persona — civil identity data with organized fieldsets."""
 
+    # Guards a `genero` change that would break an ACTIVE participacion.
+    form = PersonaAdminForm
+
     list_display = [
         "numero_documento",
         "tipo_documento",
@@ -86,12 +90,9 @@ class PersonaAdmin(SimpleHistoryAdmin):
         "apellidos",
         "genero",
         "telefono",
-        "acepto_bases",
-        "acepto_aptitud_fisica",
-        "acepto_imagen",
     ]
     search_fields = ["nombres", "apellidos", "numero_documento", "telefono"]
-    list_filter = ["tipo_documento", "genero", "acepto_bases", "acepto_aptitud_fisica", "acepto_imagen"]
+    list_filter = ["tipo_documento", "genero"]
     ordering = ["-created_at"]
     raw_id_fields = []
 
@@ -123,13 +124,7 @@ class PersonaAdmin(SimpleHistoryAdmin):
             },
         ),
         (
-            "Aceptaciones",
-            {
-                "fields": ("acepto_bases", "acepto_aptitud_fisica", "acepto_imagen"),
-            },
-        ),
-        (
-            "Auditoría",
+            "Auditoria",
             {
                 "fields": ("created_at", "updated_at"),
             },

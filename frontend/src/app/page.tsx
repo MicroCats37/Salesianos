@@ -1,154 +1,68 @@
-import { EventBlock } from "@/components/event/EventBlock";
-import { EventFooter } from "@/components/event/EventFooter";
-import { FestivalBanner } from "@/components/event/FestivalBanner";
+import type { Metadata } from "next";
+import { NavbarBrand } from "@/components/branding/NavbarBrand";
+import { Navbar } from "@/components/landing/Navbar";
+import { ChampionshipSection } from "@/components/portada/ChampionshipSection";
+import { ClosingSection } from "@/components/portada/ClosingSection";
+import { ExperienceSection } from "@/components/portada/ExperienceSection";
+import { FamilySection } from "@/components/portada/FamilySection";
+import { FaqSection } from "@/components/portada/FaqSection";
+import { FestivalRibbon } from "@/components/portada/FestivalRibbon";
+import { HeroPortada } from "@/components/portada/HeroPortada";
+import { LiveSection } from "@/components/portada/LiveSection";
+import { MobileTicketBar } from "@/components/portada/MobileTicketBar";
+import { PartyPassSection } from "@/components/portada/PartyPassSection";
+import { PartySection } from "@/components/portada/PartySection";
+import { PortadaFooter } from "@/components/portada/PortadaFooter";
+import { PromotionsSection } from "@/components/portada/PromotionsSection";
+import { RegistrationSteps } from "@/components/portada/RegistrationSteps";
+import { ScheduleSection } from "@/components/portada/ScheduleSection";
+import { SponsorsSection } from "@/components/portada/SponsorsSection";
+import { TicketsSection } from "@/components/portada/TicketsSection";
+import { VenueSection } from "@/components/portada/VenueSection";
+import { NAV_LINKS } from "@/features/portada/config/festival";
 
-export const metadata = {
-  title: "El Festival · Salesianos FEST 2026",
-  description:
-    "Por que un festival, familia y convivencia, infraestructura, comodidad para todos y la fiesta que continua cuando cae la noche.",
+const title = "Salesianos FEST 2026 · Un festival. Toda la familia.";
+const description =
+  "Vuelve a encontrarte con tu promoción. Salesianos FEST 2026: deporte, familia y fiesta el 21 de noviembre en la Asociación Okinawense del Perú, Ate, Lima.";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    type: "website",
+    images: ["/images/portada/og-portada.jpg"],
+  },
 };
 
-export default function EventPage() {
+export default function PortadaPage() {
   return (
-    <main className="w-full">
-      <FestivalBanner />
-
-      <EventBlock
-        id="por-que"
-        eyebrow="Por que un Festival"
-        headline={
-          <>
-            Un festival en un{" "}
-            <span className="text-[#1557b8]">solo lugar</span>
-          </>
-        }
-        pill="Deporte · Familia · Diversion · Musica"
-        paragraph="Reunimos el campeonato deportivo y la fiesta en una sola jornada para que nadie tenga que elegir entre competir y celebrar."
-        bullets={[
-          { icon: "deporte", title: "Campeonato deportivo", description: "Futbol 7, voley y basquet en paralelo." },
-          { icon: "familia", title: "Actividades y juegos para la familia", description: "Espacios para grandes y chicos." },
-          { icon: "carrusel", title: "Patio de juegos para ninos", description: "Zona segura con juegos inflables." },
-          { icon: "comida", title: "Propuesta gastronomica", description: "Food trucks y menu festival todo el dia." },
-        ]}
-        images={[
-          { src: "/images/fulbito-varones.webp", alt: "Futbol 7" },
-          { src: "/images/voley-mixto.webp", alt: "Voley" },
-          { src: "/images/basket-varones.webp", alt: "Basquet" },
-        ]}
-        chips={["Deporte", "Familia", "Musica", "Diversion"]}
-        ribbon="Del campeonato a la fiesta · Sin cambiar de lugar"
+    <>
+      <Navbar
+        navLinks={[...NAV_LINKS]}
+        brandSlot={<NavbarBrand showSubtitle={false} />}
       />
-
-      <EventBlock
-        id="familia"
-        eyebrow="Familia y Convivencia"
-        flipped
-        headline={
-          <>
-            Un festival para{" "}
-            <span className="text-[#ec4899]">disfrutar en familia</span>
-          </>
-        }
-        pill="Mientras la promocion compite, la familia disfruta"
-        paragraph="El festival tambien esta pensado para quienes vienen a compartir y pasar un buen dia."
-        bullets={[
-          { icon: "carrusel", title: "Zona campestre", description: "Para comer, beber, conversar y realizar actividades." },
-          { icon: "comida", title: "Venta de alimentos y bebidas", description: "Food trucks, heladeria y barra." },
-          { icon: "fiesta", title: "Juegos y competencias familiares", description: "Premios y sorpresas para todos." },
-          { icon: "familia", title: "Zona de juegos para ninos", description: "Castillos inflables y actividades guiadas." },
-        ]}
-        images={[
-          { src: "/images/voley-mixto.webp", alt: "Convivencia" },
-          { src: "/images/fulbito-varones.webp", alt: "Familia" },
-          { src: "/images/basket-varones.webp", alt: "Familia 2" },
-        ]}
-        chips={["Convivencia", "Ninos", "Gastronomia", "Familia"]}
-        ribbon="Porque el reencuentro tambien se vive fuera de la cancha"
-      />
-
-      <EventBlock
-        id="infraestructura"
-        eyebrow="Infraestructura"
-        headline={
-          <>
-            Todo lo que necesitamos para{" "}
-            <span className="text-[#1557b8]">competir</span>
-          </>
-        }
-        pill="Un complejo deportivo a la altura del festival"
-        paragraph="Contamos con la infraestructura para desarrollar simultaneamente las diferentes competencias."
-        bullets={[
-          { icon: "cancha", title: "4 canchas de futbol 7", description: "Grass sintetico de ultima generacion." },
-          { icon: "cancha", title: "2 canchas de voley", description: "Con red reglamentaria y demarcacion oficial." },
-          { icon: "cancha", title: "1 cancha de basquet", description: "Techada y al aire libre." },
-          { icon: "bano", title: "Banos, duchas y camerinos equipados", description: "Para deportistas y asistentes." },
-          { icon: "palco", title: "Tribunas techadas", description: "Para disfrutar las competencias con comodidad." },
-        ]}
-        images={[
-          { src: "/images/fulbito-varones.webp", alt: "Canchas" },
-          { src: "/images/basket-varones.webp", alt: "Basquet" },
-          { src: "/images/voley-mixto.webp", alt: "Voley" },
-        ]}
-        chips={["Futbol 7", "Voley", "Basquet", "Camerinos"]}
-        ribbon="Mas canchas · Mas partidos · Mas emocion"
-      />
-
-      <EventBlock
-        id="noche"
-        eyebrow="Y cuando caiga la noche"
-        flipped
-        headline={
-          <>
-            La fiesta{" "}
-            <span className="text-[#22d3ee]">continua en el mismo lugar</span>
-          </>
-        }
-        pill="Nos trasladamos al salon de eventos del complejo"
-        paragraph="Cuando termina el campeonato, el salon ya esta listo para la fiesta. Sin buses, sin traslados, sin perderse nada."
-        bullets={[
-          { icon: "familia", title: "Capacidad para mas de 400 personas", description: "Salon principal climatizado." },
-          { icon: "comida", title: "Barra de bebidas", description: "Cocteleria y barra abierta." },
-          { icon: "musica", title: "DJ + Orquesta", description: "Show en vivo y musica para todos." },
-          { icon: "escenario", title: "Escenario, luces y sonido", description: "Produccion profesional." },
-        ]}
-        images={[
-          { src: "/images/basket-varones.webp", alt: "Salon" },
-          { src: "/images/fulbito-varones.webp", alt: "Noche" },
-          { src: "/images/voley-mixto.webp", alt: "Fiesta" },
-        ]}
-        chips={["Noche", "Musica", "Salon", "Fiesta"]}
-        ribbon="Del campeonato a la fiesta · Sin cambiar de lugar"
-      />
-
-      <EventBlock
-        id="comodidad"
-        eyebrow="Comodidad para todos"
-        headline={
-          <>
-            Todo pensado para que solo te preocupes por{" "}
-            <span className="text-[#1557b8]">disfrutar</span>
-          </>
-        }
-        pill="Llega, estaciona, disfruta y quedate hasta el final"
-        paragraph="La logistica del festival esta cubierta para que asistas tranquilo desde temprano y hasta el cierre."
-        bullets={[
-          { icon: "parking", title: "Amplio estacionamiento", description: "Tarifa plana durante todo el evento." },
-          { icon: "puerta", title: "Servicios higienicos amplios y equipados", description: "Con mantenimiento continuo." },
-          { icon: "bano", title: "Duchas y camerinos", description: "Para deportistas y asistentes." },
-          { icon: "palco", title: "Tribunas techadas", description: "Para ver todas las competencias." },
-          { icon: "escudo", title: "Seguridad permanente", description: "Equipo de seguridad en todo momento." },
-          { icon: "familia", title: "Ambulancia durante el evento", description: "Atencion medica disponible." },
-        ]}
-        images={[
-          { src: "/images/voley-mixto.webp", alt: "Estacionamiento" },
-          { src: "/images/basket-varones.webp", alt: "Tribunas" },
-          { src: "/images/fulbito-varones.webp", alt: "Servicios" },
-        ]}
-        chips={["Estacionamiento", "Seguridad", "Servicios", "Salud"]}
-        ribbon="Llega, estaciona, disfruta y quedate hasta el final"
-      />
-
-      <EventFooter />
-    </main>
+      <main id="contenido" className="w-full overflow-x-hidden pb-20 lg:pb-0">
+        <HeroPortada />
+        <FestivalRibbon />
+        <ExperienceSection />
+        <PromotionsSection />
+        <ChampionshipSection />
+        <ScheduleSection />
+        <FamilySection />
+        <PartySection />
+        <TicketsSection />
+        <PartyPassSection />
+        <RegistrationSteps />
+        <LiveSection />
+        <VenueSection />
+        <SponsorsSection />
+        <FaqSection />
+        <ClosingSection />
+      </main>
+      <PortadaFooter />
+      <MobileTicketBar />
+    </>
   );
 }

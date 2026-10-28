@@ -11,9 +11,13 @@ from core.exceptions import register_exception_handlers
 from modules.usuarios.presentation.controllers.auth_controller import AuthLoginController
 from modules.usuarios.presentation.controllers.registro_controller import RegistroController
 from modules.usuarios.presentation.controllers.persona_busqueda_controller import PersonaBusquedaController
+from modules.usuarios.presentation.controllers.persona_resolucion_controller import (
+    PersonaResolucionController,
+)
 from modules.usuarios.presentation.controllers.me_controller import AuthMeController
 from modules.pagos.presentation.controllers.pagos_controller import PagosController
 from modules.salesianos_fest.presentation.controllers.catalogo_controller import CatalogoController
+from modules.salesianos_fest.presentation.controllers.pase_controller import PaseController
 from modules.salesianos_fest.presentation.controllers.inscripcion_controller import (
     InscripcionController,
     EquipoController,
@@ -37,6 +41,9 @@ from modules.administracion.presentation.controllers.admin_pago_controller impor
 )
 from modules.administracion.presentation.controllers.admin_operacion_controller import (
     AdminOperacionController,
+)
+from modules.administracion.presentation.controllers.admin_pases_controller import (
+    AdminPasesController,
 )
 from modules.administracion.presentation.controllers.admin_usuario_controller import (
     AdminUsuarioController,
@@ -105,6 +112,9 @@ api.register_controllers(RegistroController)
 # ── Persona Busqueda Controller (public document lookup endpoint) ─
 api.register_controllers(PersonaBusquedaController)
 
+# ── Persona Resolucion Controller (exact lookup of an EXISTING persona) ─
+api.register_controllers(PersonaResolucionController)
+
 # ── Auth Me Controller (revalidar sesión tras reload) ─
 api.register_controllers(AuthMeController)
 
@@ -113,6 +123,9 @@ api.register_controllers(PagosController)
 
 # ── Salesianos FEST Controller (Catálogo público — Fase 2) ─────
 api.register_controllers(CatalogoController)
+
+# ── Salesianos FEST Controller (Pases de fiesta — catálogo independiente) ─────
+api.register_controllers(PaseController)
 
 # ── Salesianos FEST Controllers (Inscripción deportiva — Fase 3) ─────
 api.register_controllers(InscripcionController)
@@ -139,6 +152,7 @@ api.register_controllers(AdminResumenController)
 api.register_controllers(AdminInscripcionController)
 api.register_controllers(AdminPagoController)
 api.register_controllers(AdminOperacionController)
+api.register_controllers(AdminPasesController)
 api.register_controllers(AdminUsuarioController)
 
 # ── Competencias: superficie administrativa (RequireAdmin) ─────

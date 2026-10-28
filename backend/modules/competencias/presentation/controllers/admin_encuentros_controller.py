@@ -5,9 +5,10 @@ Thin async controller: payload → orchestrator → presenter →
 `success_response` (`contract/django-app-architecture-contract.md` §4.8).
 No `if`, no ORM, no manual error response.
 
-Authorization: the whole controller is gated by `RequireAdmin`
-(admin = `is_staff OR is_superuser`): anonymous → 401, authenticated
-non-admin → 403, admin → 200/201/204.
+Authorization: the whole controller is gated by `RequireCompetenciasEscribir`
+(the capability `admin.competencias.escribir`, held by the operational staff
+and by the break-glass tier): anonymous → 401, authenticated non-admin → 403,
+admin → 200/201/204.
 
 Every protected mutation (moving a team, scheduling, changing the state,
 linking, the result, the advance and the correction) demands an audited
@@ -31,7 +32,7 @@ Routes:
 from injector import inject
 from ninja_extra import api_controller, route
 
-from core.permissions import RequireAdmin
+from core.permissions import RequireCompetenciasEscribir
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
 from modules.competencias.domain.schemas.competencias_schemas import (
@@ -76,7 +77,7 @@ from modules.competencias.presentation.schemas.competencias_schemas import (
 @api_controller(
     "/administracion/competencias/encuentros",
     tags=["Competencias"],
-    permissions=[RequireAdmin],
+    permissions=[RequireCompetenciasEscribir],
 )
 class AdminEncuentrosController:
     """Controller of the commands of the encounters."""

@@ -1,8 +1,12 @@
 """
 HTTP wrappers of the accounts (A13, A14).
 
-The wrapper is READ-ONLY and declares NO credential: no password, no hash, no
-token, and no `is_superuser`. The break-glass tier is never surfaced here.
+The wrapper is READ-ONLY and declares NO credential: no password, no hash and
+no token.
+
+The tier of the account IS published (`is_staff`, `is_superuser`, `nivel`): an
+account administrator must be able to see who holds the break-glass tier.
+The surface stays read-only — it never promotes, demotes nor deactivates.
 """
 from datetime import datetime
 from typing import Optional
@@ -11,7 +15,7 @@ from core.types import BaseSchema
 
 
 class AdminUsuarioListItemOut(BaseSchema):
-    """An account with its civil identity and its admin flag."""
+    """An account with its civil identity and its admin tier."""
 
     id: str
     username: str
@@ -21,6 +25,9 @@ class AdminUsuarioListItemOut(BaseSchema):
     persona_id: str
     persona_documento: str
     es_admin: bool
+    is_staff: bool = False
+    is_superuser: bool = False
+    nivel: str = "usuario"
     is_active: bool
     last_login: Optional[datetime] = None
     created_at: datetime

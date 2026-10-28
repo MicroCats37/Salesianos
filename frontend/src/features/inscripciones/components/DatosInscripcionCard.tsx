@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, GraduationCap, Package, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { InscripcionDetalleOut } from "../services/inscripcion.service";
 
@@ -10,8 +10,11 @@ interface DatosInscripcionCardProps {
 }
 
 /**
- * Administrative data of the inscription: who signs for it, which package was
- * contracted and when it was created.
+ * People responsible for the inscription.
+ *
+ * It only lists the delegated person and the responsable: the package, the
+ * promotion and the creation date already live in `InscripcionHero`, so
+ * repeating them here would be noise.
  */
 export function DatosInscripcionCard({
   inscripcion,
@@ -28,36 +31,21 @@ export function DatosInscripcionCard({
       label: "Responsable",
       value: inscripcion.responsable_nombre || "—",
     },
-    {
-      icon: Package,
-      label: "Paquete",
-      value: inscripcion.paquete_nombre || "—",
-    },
-    {
-      icon: GraduationCap,
-      label: "Promocion",
-      value: inscripcion.promocion_nombre || "—",
-    },
-    {
-      icon: CalendarDays,
-      label: "Fecha de inscripcion",
-      value: new Date(inscripcion.created_at).toLocaleDateString("es-PE", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-    },
   ];
 
   return (
     <section
+      aria-labelledby="datos-inscripcion-titulo"
       className={cn(
         "rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70",
         className,
       )}
     >
-      <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#312e8e]">
-        Datos de la inscripcion
+      <h3
+        id="datos-inscripcion-titulo"
+        className="text-[10px] font-black uppercase tracking-[0.3em] text-[#312e8e]"
+      >
+        Responsables
       </h3>
 
       <dl className="mt-3 space-y-3">

@@ -53,6 +53,9 @@ from modules.salesianos_fest.infrastructure.services import ConfirmadorOrdenPago
 from modules.commerce.domain.models import Compra
 from modules.pagos.domain.constants import IzipayStatus, OrdenPagoStatus
 from modules.pagos.domain.models import OrdenPago, TransaccionPago
+from modules.pagos.domain.services.core.evidencia_pago_service import (
+    EvidenciaPagoService,
+)
 
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -185,6 +188,7 @@ def adaptador(db):
         confirmar_pago_flujo=ConfirmarPagoFlujo(
             asignacion_core=AsignacionCoreService(),
             acreditacion_core=AcreditacionCoreService(),
+            evidencia_pago=EvidenciaPagoService(),
         )
     )
 

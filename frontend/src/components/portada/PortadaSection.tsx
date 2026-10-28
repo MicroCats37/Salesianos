@@ -21,6 +21,14 @@ export interface PortadaSectionProps {
   className?: string;
   /** Fondo de la sección. */
   fondo?: "pagina" | "marca" | "inverso";
+  /**
+   * Altura de la sección.
+   *
+   * `viewport` (por defecto) la hace ocupar al menos una pantalla y la ancla
+   * al scroll: la portada avanza sección a sección en vez de dejar el texto
+   * disperso. `auto` la deja a su altura natural (para el cierre y el pie).
+   */
+  altura?: "viewport" | "auto";
   /** Clase extra del contenedor interno. */
   contenidoClassName?: string;
 }
@@ -41,6 +49,7 @@ export function PortadaSection({
   children,
   className,
   fondo = "pagina",
+  altura = "viewport",
   contenidoClassName,
 }: PortadaSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -117,6 +126,8 @@ export function PortadaSection({
       ref={sectionRef}
       className={cn(
         "scroll-mt-20 py-16 sm:py-20 lg:py-24",
+        altura === "viewport" &&
+          "flex min-h-svh snap-start flex-col justify-center",
         fondoClases[fondo],
         className,
       )}

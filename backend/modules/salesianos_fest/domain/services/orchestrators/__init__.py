@@ -5,6 +5,7 @@ from .participacion_orchestrator import ParticipacionOrchestrator
 from .compra_orchestrator import CompraOrchestrator
 from .asignacion_orchestrator import AsignacionOrchestrator
 from .acreditacion_orchestrator import AcreditacionOrchestrator
+from .pase_orchestrator import PaseOrchestrator
 
 __all__ = [
     "InscripcionOrchestrator",
@@ -13,4 +14,5 @@ __all__ = [
     "CompraOrchestrator",
     "AsignacionOrchestrator",
     "AcreditacionOrchestrator",
+    "PaseOrchestrator",
 ]

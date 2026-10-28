@@ -35,8 +35,17 @@ import pytest
 from modules.commerce.domain.constants import EstadoCompraChoices
 from modules.commerce.domain.models import Compra
 from modules.eventos.domain.models import Evento
-from modules.pagos.domain.constants import IzipayStatus, OrdenPagoStatus
-from modules.pagos.domain.models import OrdenPago, TransaccionPago
+from modules.pagos.domain.constants import (
+    CanalPagoManual,
+    EstadoAprobacionPagoManual,
+    IzipayStatus,
+    OrdenPagoStatus,
+)
+from modules.pagos.domain.models import (
+    AprobacionPagoManual,
+    OrdenPago,
+    TransaccionPago,
+)
 from modules.salesianos_fest.domain.constants import (
     AutorizacionFiestaChoices,
     EstadoAcreditacionChoices,
@@ -44,7 +53,9 @@ from modules.salesianos_fest.domain.constants import (
     EstadoEquipoChoices,
     EstadoInscripcionChoices,
     EstadoInscripcionPersonaChoices,
+    EstadoPaseBeneficiarioChoices,
     EstadoParticipacionChoices,
+    EtapaChoices,
     MedioAceptacionChoices,
     ModalidadChoices,
     ModoDisciplinasChoices,
@@ -60,11 +71,15 @@ from modules.salesianos_fest.domain.models import (
     AsignacionCupo,
     Categoria,
     CompraInscripcion,
+    CompraPase,
     ControlAcceso,
     Disciplina,
     Equipo,
     Inscripcion,
     InscripcionPersona,
+    Pase,
+    PaseBeneficiario,
+    PasePrecio,
     Participacion,
     Paquete,
     Promocion,
@@ -776,3 +791,215 @@ def escenario_operativo(db, evento):
             },
         },
     }
+
+
+@pytest.fixture
+def escenario_pases(db, evento):
+    """
+    Build the party-pass scenario of the active event.
+
+    It is INDEPENDENT from `escenario_operativo`: the exact sports metrics of
+    the overview must not drift when this scenario is added.
+
+    What it proves:
+
+    - the pass purchases appear in the payments table as `tipo=PASE` with
+      `pase_id` and NO `inscripcion_id`,
+    - the payment origin is DERIVED (IZIPAY / MANUAL / SIN_PAGO),
+    - the pass metrics live in their OWN block of the overview,
+    - the pass revenue NEVER contaminates the sports metrics.
+
+    Expected numbers (active event):
+
+    | Block  | Value                                                        |
+    |--------|--------------------------------------------------------------|
+    | pases  | 6 vendidos · 3 pagados · 75.00 pagados · 2 activos         |
+    """
+    pase = Pase.objects.create(
+        evento=evento,
+        nombre="Pase de Fiesta",
+        descripcion="Acceso nominativo a la fiesta",
+        cantidad_maxima=0,
+        activo=True,
+    )
+    PasePrecio.objects.create(
+        pase=pase,
+        etapa=EtapaChoices.PREVENTA,
+        precio_unitario=Decimal("25.00"),
+        vigente_desde=date(2026, 1, 1),
+        vigente_hasta=None,
+        activo=True,
+    )
+
+    comprador = _crear_persona("Carla", "Pases", "12345678")
+    beneficiaria = _crear_persona("Ana", "Beneficiaria", "87654321")
+
+    def _compra_pase(marca, cantidad, estado_compra, estado_orden, monto):
+        numero = f"ORD-PASE-{marca}"
+        orden = OrdenPago.objects.create(
+            numero=numero,
+            monto_total=monto,
+            moneda="PEN",
+            estado=estado_orden,
+            pagada_en=(
+                "2026-10-01T12:00:00Z" if estado_orden == OrdenPagoStatus.PAGADA else None
+            ),
+        )
+        compra = Compra.objects.create(
+            responsable=comprador,
+            descripcion=f"Compra de pases {marca}",
+            total=monto,
+            estado=estado_compra,
+            orden_pago=orden,
+        )
+        CompraPase.objects.create(
+            compra=compra,
+            pase=pase,
+            evento=evento,
+            cantidad=cantidad,
+            precio_unitario=Decimal("25.00"),
+            total=monto,
+        )
+        return compra, orden
+
+    # 1. PENDING pass purchase — no evidence at all (SIN_PAGO).
+    compra_pendiente, orden_pendiente = _compra_pase(
+        "PEND", 3, EstadoCompraChoices.PENDIENTE, OrdenPagoStatus.PENDIENTE,
+        Decimal("75.00"),
+    )
+
+    # 2. PAID pass purchase with a correlated provider transaction (IZIPAY).
+    compra_izipay, orden_izipay = _compra_pase(
+        "IZIP", 2, EstadoCompraChoices.PAGADA, OrdenPagoStatus.PAGADA,
+        Decimal("50.00"),
+    )
+    TransaccionPago.objects.create(
+        orden_pago=orden_izipay,
+        transaction_id="TXN-PASE-0001",
+        order_number=orden_izipay.numero,
+        amount=Decimal("50.00"),
+        currency="PEN",
+        status=IzipayStatus.EXITO,
+        response_code="0000",
+        response_message="Operacion aprobada por el proveedor",
+        metodo_pago="TARJETA",
+        metadata={"token_sesion": "sesion-secreta-pase"},
+    )
+
+    # 3. PAID pass purchase with an ACTIVE manual approval (MANUAL) and rights.
+    compra_manual, orden_manual = _compra_pase(
+        "MANU", 1, EstadoCompraChoices.PAGADA, OrdenPagoStatus.PAGADA,
+        Decimal("25.00"),
+    )
+    AprobacionPagoManual.objects.create(
+        orden_pago=orden_manual,
+        actor=_crear_usuario_admin(),
+        canal=CanalPagoManual.TRANSFERENCIA_BANCARIA,
+        referencia="OP-PASE-MANU",
+        monto=Decimal("25.00"),
+        moneda="PEN",
+        motivo="Abono verificado",
+        estado=EstadoAprobacionPagoManual.APROBADA,
+    )
+    linea_manual = CompraPase.objects.get(compra=compra_manual)
+    PaseBeneficiario.objects.create(
+        compra_pase=linea_manual,
+        evento=evento,
+        persona=beneficiaria,
+        slot=1,
+        estado=EstadoPaseBeneficiarioChoices.ACTIVA,
+        asignado_por=_crear_usuario_admin(),
+    )
+    revocada = _crear_persona("Rita", "Revocada", "12121212")
+    PaseBeneficiario.objects.create(
+        compra_pase=linea_manual,
+        evento=evento,
+        persona=revocada,
+        slot=2,
+        estado=EstadoPaseBeneficiarioChoices.REVOCADA,
+        asignado_por=_crear_usuario_admin(),
+        revocado_por=_crear_usuario_admin(),
+        motivo_revocacion="La persona se retractó",
+    )
+
+    # 4. A pass purchase of ANOTHER edition — it must NEVER be counted.
+    evento_anterior = Evento.objects.create(
+        nombre="Edición Anterior de Pases",
+        fecha_inicio=date(2025, 11, 1),
+        fecha_fin=date(2025, 11, 5),
+        esta_activo=False,
+    )
+    pase_anterior = Pase.objects.create(
+        evento=evento_anterior,
+        nombre="Pase de la Edición Anterior",
+        descripcion="Pase de otra edición",
+        cantidad_maxima=0,
+        activo=True,
+    )
+    orden_fuera = OrdenPago.objects.create(
+        numero="ORD-PASE-FUERA",
+        monto_total=Decimal("500.00"),
+        moneda="PEN",
+        estado=OrdenPagoStatus.PAGADA,
+    )
+    compra_fuera = Compra.objects.create(
+        responsable=_crear_persona("Otra", "Pases", "13131313"),
+        descripcion="Compra de pases de otra edición",
+        total=Decimal("500.00"),
+        estado=EstadoCompraChoices.PAGADA,
+        orden_pago=orden_fuera,
+    )
+    CompraPase.objects.create(
+        compra=compra_fuera,
+        pase=pase_anterior,
+        evento=evento_anterior,
+        cantidad=50,
+        precio_unitario=Decimal("10.00"),
+        total=Decimal("500.00"),
+    )
+
+    return {
+        "evento": evento,
+        "pase": pase,
+        "comprador": comprador,
+        "beneficiaria": beneficiaria,
+        "compra_pendiente": compra_pendiente,
+        "orden_pendiente": orden_pendiente,
+        "compra_izipay": compra_izipay,
+        "orden_izipay": orden_izipay,
+        "compra_manual": compra_manual,
+        "orden_manual": orden_manual,
+        "compra_fuera": compra_fuera,
+        "esperado": {
+            "pases": {
+                "pases_vendidos": 6,
+                "pases_pagados": 3,
+                "monto_pases_pagado": 75.00,
+                "beneficiarios_activos": 1,
+            },
+        },
+    }
+
+
+def _crear_usuario_admin():
+    """Create an administrator account (the actor of the audit trail)."""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    marca = uuid.uuid4().hex[:8]
+    persona = Persona.objects.create(
+        nombres="Admin",
+        apellidos="Pases",
+        tipo_documento="DNI",
+        numero_documento=f"{uuid.uuid4().int % 100000000:08d}",
+        genero="M",
+    )
+    usuario = User.objects.create_user(
+        username=f"admin_pases_{marca}",
+        email=f"admin_pases_{marca}@example.com",
+        password="testpass123",
+        persona_fk=persona,
+    )
+    usuario.is_staff = True
+    usuario.save(update_fields=["is_staff"])
+    return usuario

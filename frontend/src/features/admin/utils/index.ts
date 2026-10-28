@@ -1,4 +1,11 @@
 export {
+  ADMIN_CAPACIDADES,
+  ADMIN_NIVELES,
+  type AdminCapacidad,
+  type AdminNivel,
+  adminTieneCapacidad,
+} from "./admin.capacidades";
+export {
   type AdminTone,
   autorizacionFiestaLabel,
   autorizacionFiestaTone,
@@ -81,6 +88,12 @@ export {
   resumenAlertas,
   resumenKpis,
 } from "./admin.resumen.utils";
+export {
+  ADMIN_SECCIONES,
+  type AdminSeccion,
+  adminSeccionActiva,
+  adminSeccionesVisibles,
+} from "./admin.secciones";
 export {
   type AdminToneClasses,
   toneClasses,

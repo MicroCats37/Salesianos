@@ -23,6 +23,32 @@ from modules.salesianos_fest.tests.fixtures.genero_participacion_fixtures import
     usuario_responsable_genero,
 )
 
+# Catálogo independiente de pases de fiesta (Apply 1), su compra (Apply 2), su
+# liquidación (Apply 3) y sus derechos nominativos (Apply 4).
+from modules.salesianos_fest.tests.fixtures.pase_fixtures import (  # noqa: F401
+    compra_pase_pagada,
+    compra_pase_pagada_otro_lote,
+    compra_pase_pendiente,
+    evento_no_activo,
+    pase_con_inventario_limitado,
+    pase_de_edicion_inactiva,
+    pase_fiesta,
+    pase_inactivo,
+    pase_precios_fuera_de_ventana,
+    pase_sin_precio,
+    persona_ajena,
+    persona_beneficiaria_1,
+    persona_beneficiaria_2,
+    persona_beneficiaria_3,
+    persona_beneficiaria_4,
+    persona_beneficiaria_5,
+    persona_comprador,
+    persona_con_beneficio_deportivo,
+    usuario_admin_pases,
+    usuario_ajeno,
+    usuario_comprador,
+)
+
 from django.test import Client
 
 from modules.eventos.domain.models import Evento

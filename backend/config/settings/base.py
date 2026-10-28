@@ -225,3 +225,41 @@ IZIPAY_CALLBACK_URL = env(
     "IZIPAY_CALLBACK_URL",
     default="https://salesianos.example.com/api/pagos/izipay/callback"
 )
+
+# ---------------------------------------------------------------------------
+# Aprobación manual de pagos (administrador)
+#
+# Interruptor de despliegue de la capacidad "aprobación manual de pago".
+#
+# El modelo, la auditoría y la verificación de pagos se despliegan PRIMERO
+# (migraciones aditivas, sin backfill) y la acción se habilita DESPUÉS: de
+# ese modo el rollback es desactivar este flag — la auditoría nunca se
+# borra.
+#
+# Deshabilitado por defecto: la superficie de escritura sólo existe cuando
+# la organización la habilita de forma explícita.
+# ---------------------------------------------------------------------------
+
+PAGO_MANUAL_APROBACION_ENABLED = env(
+    "PAGO_MANUAL_APROBACION_ENABLED",
+    default=False,
+)
+
+# ---------------------------------------------------------------------------
+# Pases de fiesta (catálogo independiente)
+#
+# Interruptor de despliegue de la capacidad "pases de fiesta".
+#
+# El modelo (`Pase` / `PasePrecio`) y el catálogo público se despliegan
+# PRIMERO (migraciones aditivas, sin backfill) y la capacidad se habilita
+# DESPUÉS: de ese modo el rollback es desactivar este flag — las tablas nunca
+# se borran porque conservan la auditoría de venta.
+#
+# Deshabilitado por defecto: la superficie de compra sólo existe cuando la
+# organización la habilita de forma explícita.
+# ---------------------------------------------------------------------------
+
+PASES_FIESTA_ENABLED = env(
+    "PASES_FIESTA_ENABLED",
+    default=False,
+)

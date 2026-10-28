@@ -17,6 +17,9 @@ from modules.commerce.domain.models import Compra
 from modules.eventos.domain.models import Evento
 from modules.pagos.domain.constants import IzipayStatus, OrdenPagoStatus
 from modules.pagos.domain.models import OrdenPago, TransaccionPago
+from modules.pagos.domain.services.core.evidencia_pago_service import (
+    EvidenciaPagoService,
+)
 from modules.pagos.domain.services.core.izipay_core_service import IzipayCoreService
 from modules.salesianos_fest.domain.constants import (
     EstadoAsignacionCupoChoices,
@@ -178,6 +181,7 @@ def flujo_reconciliacion(db):
         confirmar_pago_flujo=ConfirmarPagoFlujo(
             asignacion_core=AsignacionCoreService(),
             acreditacion_core=AcreditacionCoreService(),
+            evidencia_pago=EvidenciaPagoService(),
         ),
     )
 

@@ -68,8 +68,8 @@ export function ResumenPagoCard({
   const activacionPendiente = hayActivacionPendiente(resumen);
 
   // ── Colour palette per state ───────────────────────────────────────────────
-  // Mirrors the amber/emerald/slate language used by ResumenEquiposBadge and
-  // EquipoCard roster badges so the page feels cohesive.
+  // Mirrors the amber/emerald/slate language used by `EstadoProgresoCard` and
+  // the roster badges of `EquipoCard` so the page feels cohesive.
   const stateColor =
     allPaid && !allCancelled
       ? "border-emerald-200 bg-emerald-50/60"

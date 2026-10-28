@@ -10,6 +10,7 @@ factories here build the QUERY payloads and the test helpers, not bodies.
 - `make_auth_header(user)` — the Authorization header of an actor.
 - `make_list_query(...)` — the canonical query string of a list endpoint.
 - `make_forbidden_keys()` — the keys that must NEVER travel in a response.
+- `make_forbidden_keys_de_cuentas()` — the same, for the accounts surface.
 """
 from ninja_jwt.tokens import AccessToken
 
@@ -63,4 +64,16 @@ def make_forbidden_keys() -> tuple:
         "transaction_id",
         "response_message",
         "is_superuser",
+    )
+
+
+def make_forbidden_keys_de_cuentas() -> tuple:
+    """Return the keys that must NEVER travel in the ACCOUNTS response.
+
+    Same as `make_forbidden_keys` minus `is_superuser`: the tier of an
+    account IS published (A13/A14) so an account administrator can see who
+    holds the break-glass tier. The credential NEVER travels.
+    """
+    return tuple(
+        clave for clave in make_forbidden_keys() if clave != "is_superuser"
     )

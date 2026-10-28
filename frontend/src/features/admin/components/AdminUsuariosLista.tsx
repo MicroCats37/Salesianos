@@ -24,6 +24,7 @@ import {
   useAdminUsuarios,
 } from "../hooks/useAdminUsuarios";
 import type { AdminUsuarioListItem } from "../schemas";
+import { adminNivelLabel } from "../utils/admin.capacidades";
 import { adminOpcionesOrdering } from "../utils/admin.lista.utils";
 import {
   ORDEN_POR_DEFECTO_USUARIOS,
@@ -49,8 +50,12 @@ import { AdminPageHeader } from "./AdminPageHeader";
  * AdminUsuariosLista — the accounts table (A13) and its drilldown (A14).
  *
  * The surface is READ-ONLY: it never manages a password, it never exposes a
- * hash or a token, and it never surfaces the break-glass tier. The `es_admin`
- * flag is the one the backend computes with `is_staff OR is_superuser`.
+ * hash or a token, and it never promotes, demotes nor deactivates anyone.
+ *
+ * The TIER of every account IS shown (`is_staff`, `is_superuser`, `nivel`):
+ * an account administrator must be able to see who holds the break-glass
+ * tier. The flags come from the backend, which computes them with
+ * `is_staff OR is_superuser`.
  */
 export function AdminUsuariosLista() {
   const control = useAdminControlLista();
@@ -99,11 +104,13 @@ export function AdminUsuariosLista() {
     },
     {
       clave: "rol",
-      etiqueta: "Rol",
+      etiqueta: "Nivel",
       render: (item) => (
         <AdminEstadoBadge
-          etiqueta={item.es_admin ? "Administrador" : "Participante"}
-          tono={item.es_admin ? "brand" : "slate"}
+          etiqueta={adminNivelLabel(item.nivel)}
+          tono={
+            item.is_superuser ? "violet" : item.is_staff ? "brand" : "slate"
+          }
         />
       ),
     },
@@ -209,8 +216,14 @@ export function AdminUsuariosLista() {
                   </span>
                 </div>
                 <AdminEstadoBadge
-                  etiqueta={item.es_admin ? "Administrador" : "Participante"}
-                  tono={item.es_admin ? "brand" : "slate"}
+                  etiqueta={adminNivelLabel(item.nivel)}
+                  tono={
+                    item.is_superuser
+                      ? "violet"
+                      : item.is_staff
+                        ? "brand"
+                        : "slate"
+                  }
                 />
               </div>
               <div className="flex flex-wrap gap-2 text-[11px] text-slate-600">
@@ -290,10 +303,16 @@ export function AdminUsuariosLista() {
                           valor: usuario.persona_documento,
                         },
                         {
-                          etiqueta: "Rol",
-                          valor: usuario.es_admin
-                            ? "Administrador"
-                            : "Participante",
+                          etiqueta: "Nivel",
+                          valor: adminNivelLabel(usuario.nivel),
+                        },
+                        {
+                          etiqueta: "Staff",
+                          valor: usuario.is_staff ? "Sí" : "No",
+                        },
+                        {
+                          etiqueta: "Superusuario",
+                          valor: usuario.is_superuser ? "Sí" : "No",
                         },
                         {
                           etiqueta: "Estado",

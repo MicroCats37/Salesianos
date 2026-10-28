@@ -1,24 +1,33 @@
 """
-Integration tests for the authorization of the manual commercial recovery.
+Integration tests for the CLOSURE of the public self-settlement.
 
-`POST /api/compras/confirmar-pago` is NOT part of the normal checkout: the
-backend settles the purchase right after the payment is verified. The
-endpoint only exists to recover a purchase whose commercial settlement did
-not complete, so it is restricted to the owner of the purchase — the
-responsible of the linked inscription — or a Django administrator.
+`POST /api/compras/confirmar-pago` used to let the OWNER of a purchase
+confirm it. That was a self-settlement surface: the buyer decided that their
+own money had arrived.
 
-A caller without that authority gets 403 and changes nothing: not the
-Compra, not the payment order, not the cup rights.
+It no longer exists. The commercial settlement belongs to the backend (right
+after the payment is verified) or to an administrator (through the audited
+manual approval of the administration area).
+
+This file proves TWO things:
+
+1. the route is gone — nobody, authenticated or not, can reach it, and the
+   purchase stays PENDIENTE;
+2. the settlement obeys the TRUTH PREDICATE: an order without a correlated
+   successful provider transaction does NOT settle its purchase and grants
+   NO right.
 """
 import pytest
 from decimal import Decimal
 
+from asgiref.sync import async_to_sync
 from django.contrib.auth import get_user_model
 from ninja_jwt.tokens import AccessToken
 
 from modules.commerce.domain.models import Compra
-from modules.pagos.domain.constants import OrdenPagoStatus
-from modules.pagos.domain.models import OrdenPago
+from modules.pagos.domain.constants import IzipayStatus, OrdenPagoStatus
+from modules.pagos.domain.exceptions import PagoNoVerificadoError
+from modules.pagos.domain.models import OrdenPago, TransaccionPago
 from modules.salesianos_fest.domain.constants import (
     EstadoAsignacionCupoChoices,
     EstadoCompraChoices,
@@ -31,6 +40,18 @@ from modules.salesianos_fest.domain.models import (
     CompraInscripcion,
     Inscripcion,
     InscripcionPersona,
+)
+from modules.salesianos_fest.domain.services.core.acreditacion_service import (
+    AcreditacionCoreService,
+)
+from modules.salesianos_fest.domain.services.core.asignacion_service import (
+    AsignacionCoreService,
+)
+from modules.salesianos_fest.domain.services.flujos.confirmar_pago_flujo import (
+    ConfirmarPagoFlujo,
+)
+from modules.pagos.domain.services.core.evidencia_pago_service import (
+    EvidenciaPagoService,
 )
 from modules.usuarios.domain.models.persona import Persona
 
@@ -50,18 +71,6 @@ def responsable(db):
 
 
 @pytest.fixture
-def tercero(db):
-    """Persona that does NOT own the inscription."""
-    return Persona.objects.create(
-        nombres="María",
-        apellidos="García",
-        tipo_documento="DNI",
-        numero_documento="87654321",
-        genero="F",
-    )
-
-
-@pytest.fixture
 def usuario_responsable(db, responsable):
     """Authenticated owner of the inscription."""
     User = get_user_model()
@@ -70,31 +79,6 @@ def usuario_responsable(db, responsable):
         email="responsable@example.com",
         password="testpass123",
         persona_fk=responsable,
-    )
-
-
-@pytest.fixture
-def usuario_tercero(db, tercero):
-    """Authenticated caller that does not own the inscription."""
-    User = get_user_model()
-    return User.objects.create_user(
-        username="tercero_user",
-        email="tercero@example.com",
-        password="testpass123",
-        persona_fk=tercero,
-    )
-
-
-@pytest.fixture
-def usuario_admin(db, tercero):
-    """Django admin (is_staff) that does not own the inscription."""
-    User = get_user_model()
-    return User.objects.create_user(
-        username="admin_user",
-        email="admin@example.com",
-        password="testpass123",
-        persona_fk=tercero,
-        is_staff=True,
     )
 
 
@@ -145,12 +129,22 @@ def participante_preregistrado(db, inscripcion_base, responsable):
     """The owner is preregistered in the pool.
 
     A successful settlement WOULD allocate a cupo to this participant, so a
-    denied request that leaves no cupo proves the settlement never ran.
+    refused settlement that leaves no cupo proves it never ran.
     """
     return InscripcionPersona.objects.create(
         inscripcion=inscripcion_base,
         persona=responsable,
         estado=EstadoInscripcionPersonaChoices.ACTIVO,
+    )
+
+
+@pytest.fixture
+def flujo_confirmacion(db):
+    """The internal settlement flow, wired with the truth predicate."""
+    return ConfirmarPagoFlujo(
+        asignacion_core=AsignacionCoreService(),
+        acreditacion_core=AcreditacionCoreService(),
+        evidencia_pago=EvidenciaPagoService(),
     )
 
 
@@ -169,16 +163,17 @@ def _cupos_activos(inscripcion_id):
     ).count()
 
 
-# ── Tests: the owner of the purchase may recover it ───────────────────────────
+# ── Tests: the public self-settlement route no longer exists ──────────────────
 
 @pytest.mark.django_db
-def test_confirmar_pago_por_responsable_es_permitido(
+def test_la_ruta_de_confirmar_pago_no_existe(
     api_client, usuario_responsable, inscripcion_base, compra_pendiente
 ):
     """
-    GIVEN: the authenticated caller is the responsible of the inscription
+    GIVEN: the authenticated owner of a pending purchase
     WHEN:  POST /api/compras/confirmar-pago with the order of the purchase
-    THEN:  200 returned, the Compra is PAGADA and the cupo is allocated.
+    THEN:  405 — the route no longer accepts a settlement and the purchase
+            stays PENDIENTE.
     """
     response = _auth_post(
         api_client,
@@ -186,166 +181,130 @@ def test_confirmar_pago_por_responsable_es_permitido(
         usuario_responsable,
     )
 
-    assert response.status_code == 200, response.content
-    body = response.json()
-    assert body["success"] is True
-    assert body["data"]["success"] is True
-    assert body["data"]["already_confirmed"] is False
-
-    compra_pendiente.refresh_from_db()
-    assert compra_pendiente.estado == EstadoCompraChoices.PAGADA
-
-
-@pytest.mark.django_db
-def test_confirmar_pago_por_responsable_asigna_los_cupos(
-    api_client, usuario_responsable, inscripcion_base, compra_pendiente,
-    participante_preregistrado,
-):
-    """
-    GIVEN: the owner of the purchase with a preregistered participant
-    WHEN:  POST /api/compras/confirmar-pago
-    THEN:  the paid capacity becomes an active cupo.
-    """
-    response = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={compra_pendiente.orden_pago_id}",
-        usuario_responsable,
-    )
-
-    assert response.status_code == 200, response.content
-    assert _cupos_activos(inscripcion_base.id) == 1
-
-
-# ── Tests: a foreign caller is refused and changes nothing ─────────────────────
-
-@pytest.mark.django_db
-def test_confirmar_pago_por_usuario_ajeno_es_rechazado(
-    api_client, usuario_tercero, inscripcion_base, compra_pendiente
-):
-    """
-    GIVEN: an authenticated caller that does NOT own the purchase
-    WHEN:  POST /api/compras/confirmar-pago
-    THEN:  403 returned and the public error exposes no internal identifier.
-    """
-    response = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={compra_pendiente.orden_pago_id}",
-        usuario_tercero,
-    )
-
-    assert response.status_code == 403, response.content
-    body = response.json()
-    assert body["success"] is False
-    assert body["error"]["code"] == "COMPRA_NO_AUTORIZADA"
-    # The public message never interpolates internal identifiers.
-    assert str(compra_pendiente.id) not in response.content.decode()
-    assert str(compra_pendiente.orden_pago_id) not in response.content.decode()
-
-
-@pytest.mark.django_db
-def test_confirmar_pago_por_usuario_ajeno_no_modifica_compra_orden_ni_cupos(
-    api_client, usuario_tercero, inscripcion_base, compra_pendiente,
-    participante_preregistrado,
-):
-    """
-    GIVEN: an authenticated caller that does NOT own the purchase
-    WHEN:  POST /api/compras/confirmar-pago
-    THEN:  the Compra stays PENDIENTE, the order stays PENDIENTE and no cupo
-           is allocated.
-    """
-    response = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={compra_pendiente.orden_pago_id}",
-        usuario_tercero,
-    )
-
-    assert response.status_code == 403, response.content
+    assert response.status_code == 405, response.content
 
     compra_pendiente.refresh_from_db()
     assert compra_pendiente.estado == EstadoCompraChoices.PENDIENTE
 
-    orden_pago = OrdenPago.objects.get(id=compra_pendiente.orden_pago_id)
-    assert orden_pago.estado == OrdenPagoStatus.PENDIENTE
-
-    assert _cupos_activos(inscripcion_base.id) == 0
-
-
-# ── Tests: a Django admin may recover any purchase ────────────────────────────
 
 @pytest.mark.django_db
-def test_confirmar_pago_por_administrador_es_permitido(
-    api_client, usuario_admin, inscripcion_base, compra_pendiente
-):
-    """
-    GIVEN: a Django admin (is_staff) that does not own the purchase
-    WHEN:  POST /api/compras/confirmar-pago
-    THEN:  200 returned and the Compra is PAGADA.
-    """
-    response = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={compra_pendiente.orden_pago_id}",
-        usuario_admin,
-    )
-
-    assert response.status_code == 200, response.content
-    assert response.json()["data"]["success"] is True
-
-    compra_pendiente.refresh_from_db()
-    assert compra_pendiente.estado == EstadoCompraChoices.PAGADA
-
-
-# ── Tests: contractual validation of the query parameter ───────────────────────
-
-@pytest.mark.django_db
-def test_confirmar_pago_con_orden_pago_invalida_es_rechazado(
-    api_client, usuario_responsable, inscripcion_base
-):
-    """
-    GIVEN: a malformed orden_pago_id
-    WHEN:  POST /api/compras/confirmar-pago
-    THEN:  422 returned — the input never reaches the domain.
-    """
-    response = _auth_post(
-        api_client,
-        "/api/compras/confirmar-pago?orden_pago_id=no-es-un-uuid",
-        usuario_responsable,
-    )
-
-    assert response.status_code == 422, response.content
-
-
-@pytest.mark.django_db
-def test_confirmar_pago_sin_orden_pago_es_rechazado(
-    api_client, usuario_responsable, inscripcion_base
-):
-    """
-    GIVEN: a request without the mandatory orden_pago_id
-    WHEN:  POST /api/compras/confirmar-pago
-    THEN:  422 returned — the parameter is required by the contract.
-    """
-    response = _auth_post(
-        api_client,
-        "/api/compras/confirmar-pago",
-        usuario_responsable,
-    )
-
-    assert response.status_code == 422, response.content
-
-
-@pytest.mark.django_db
-def test_confirmar_pago_sin_autenticacion_es_rechazado(
+def test_la_ruta_de_confirmar_pago_no_existe_sin_autenticacion(
     api_client, inscripcion_base, compra_pendiente
 ):
     """
     GIVEN: an anonymous caller
     WHEN:  POST /api/compras/confirmar-pago
-    THEN:  the request is refused and the purchase stays PENDIENTE.
+    THEN:  405 — the route does not accept the settlement, not even as 401.
     """
     response = api_client.post(
         f"/api/compras/confirmar-pago?orden_pago_id={compra_pendiente.orden_pago_id}"
     )
 
-    assert response.status_code == 401, response.content
+    assert response.status_code == 405, response.content
 
     compra_pendiente.refresh_from_db()
     assert compra_pendiente.estado == EstadoCompraChoices.PENDIENTE
+
+
+@pytest.mark.django_db
+def test_la_autoliquidacion_no_concede_derechos(
+    api_client, usuario_responsable, inscripcion_base, compra_pendiente,
+    participante_preregistrado,
+):
+    """
+    GIVEN: the owner of a pending purchase with a preregistered participant
+    WHEN:  the owner tries to self-settle the purchase
+    THEN:  no cupo is allocated and the order stays PENDIENTE.
+    """
+    response = _auth_post(
+        api_client,
+        f"/api/compras/confirmar-pago?orden_pago_id={compra_pendiente.orden_pago_id}",
+        usuario_responsable,
+    )
+
+    assert response.status_code == 405, response.content
+    assert _cupos_activos(inscripcion_base.id) == 0
+
+    orden = OrdenPago.objects.get(id=compra_pendiente.orden_pago_id)
+    assert orden.estado == OrdenPagoStatus.PENDIENTE
+
+
+# ── Tests: the truth predicate ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_una_orden_sin_transaccion_exitosa_no_liquida(
+    flujo_confirmacion, compra_pendiente, inscripcion_base,
+    participante_preregistrado,
+):
+    """
+    GIVEN: a pending purchase whose order has NO successful transaction
+    WHEN:  the internal settlement flow is driven for that order
+    THEN:  it is refused with PAGO_NO_VERIFICADO and no right is granted.
+    """
+    with pytest.raises(PagoNoVerificadoError):
+        async_to_sync(flujo_confirmacion._confirmar_compra)(
+            str(compra_pendiente.orden_pago_id)
+        )
+
+    compra_pendiente.refresh_from_db()
+    assert compra_pendiente.estado == EstadoCompraChoices.PENDIENTE
+    assert _cupos_activos(inscripcion_base.id) == 0
+
+
+@pytest.mark.django_db
+def test_una_orden_con_transaccion_exitosa_correlacionada_liquida(
+    flujo_confirmacion, compra_pendiente, inscripcion_base,
+    participante_preregistrado,
+):
+    """
+    GIVEN: a pending purchase whose order has a CORRELATED successful attempt
+    WHEN:  the internal settlement flow is driven for that order
+    THEN:  the purchase is paid and the right is allocated.
+    """
+    TransaccionPago.objects.create(
+        orden_pago_id=compra_pendiente.orden_pago_id,
+        transaction_id="AUTHTX001",
+        order_number="AUTHTN001",
+        amount=Decimal("50.00"),
+        currency="PEN",
+        status=IzipayStatus.EXITO,
+    )
+
+    async_to_sync(flujo_confirmacion._confirmar_compra)(
+        str(compra_pendiente.orden_pago_id)
+    )
+
+    compra_pendiente.refresh_from_db()
+    assert compra_pendiente.estado == EstadoCompraChoices.PAGADA
+    assert _cupos_activos(inscripcion_base.id) == 1
+
+
+@pytest.mark.django_db
+def test_una_transaccion_exitosa_no_correlacionada_no_liquida(
+    flujo_confirmacion, compra_pendiente, inscripcion_base,
+    participante_preregistrado,
+):
+    """
+    GIVEN: a pending purchase whose order has a successful attempt of ANOTHER
+           amount
+    WHEN:  the internal settlement flow is driven for that order
+    THEN:  it is refused — a purchase is never paid for an amount the order
+           does not carry.
+    """
+    TransaccionPago.objects.create(
+        orden_pago_id=compra_pendiente.orden_pago_id,
+        transaction_id="AUTHTX002",
+        order_number="AUTHTN002",
+        amount=Decimal("500.00"),
+        currency="PEN",
+        status=IzipayStatus.EXITO,
+    )
+
+    with pytest.raises(PagoNoVerificadoError):
+        async_to_sync(flujo_confirmacion._confirmar_compra)(
+            str(compra_pendiente.orden_pago_id)
+        )
+
+    compra_pendiente.refresh_from_db()
+    assert compra_pendiente.estado == EstadoCompraChoices.PENDIENTE
+    assert _cupos_activos(inscripcion_base.id) == 0

@@ -10,12 +10,14 @@ import { FestivalRibbon } from "@/components/portada/FestivalRibbon";
 import { HeroPortada } from "@/components/portada/HeroPortada";
 import { LiveSection } from "@/components/portada/LiveSection";
 import { MobileTicketBar } from "@/components/portada/MobileTicketBar";
+import { MomentosSection } from "@/components/portada/MomentosSection";
 import { PartyPassSection } from "@/components/portada/PartyPassSection";
 import { PartySection } from "@/components/portada/PartySection";
 import { PortadaFooter } from "@/components/portada/PortadaFooter";
 import { PromotionsSection } from "@/components/portada/PromotionsSection";
 import { RegistrationSteps } from "@/components/portada/RegistrationSteps";
 import { ScheduleSection } from "@/components/portada/ScheduleSection";
+import { ScrollSnapScope } from "@/components/portada/ScrollSnapScope";
 import { SponsorsSection } from "@/components/portada/SponsorsSection";
 import { TicketsSection } from "@/components/portada/TicketsSection";
 import { VenueSection } from "@/components/portada/VenueSection";
@@ -39,6 +41,7 @@ export const metadata: Metadata = {
 export default function PortadaPage() {
   return (
     <>
+      <ScrollSnapScope />
       <Navbar
         navLinks={[...NAV_LINKS]}
         brandSlot={<NavbarBrand showSubtitle={false} />}
@@ -46,6 +49,7 @@ export default function PortadaPage() {
       <main id="contenido" className="w-full overflow-x-hidden pb-20 lg:pb-0">
         <HeroPortada />
         <FestivalRibbon />
+        <MomentosSection />
         <ExperienceSection />
         <PromotionsSection />
         <ChampionshipSection />

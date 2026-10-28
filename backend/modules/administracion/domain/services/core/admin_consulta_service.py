@@ -28,6 +28,7 @@ from modules.administracion.domain.results.admin_resumen_results import (
     AdminEquiposResumenResult,
     AdminInscripcionesResumenResult,
     AdminPagosResumenResult,
+    AdminPasesResumenResult,
     AdminParticipantesResumenResult,
     AdminResumenResult,
     EventoResumenResult,
@@ -93,6 +94,7 @@ class AdminConsultaService:
         inscripciones = self.resumen_selector.contar_inscripciones(evento_id)
         pagos = self.resumen_selector.contar_compras(evento_id)
         cupos = self.resumen_selector.contar_cupos(evento_id)
+        pases = self.resumen_selector.contar_pases(evento_id)
         equipos = self.resumen_selector.contar_equipos(evento_id)
         participantes = self.resumen_selector.contar_participantes(evento_id)
         acreditaciones = self.resumen_selector.contar_acreditaciones(evento_id)
@@ -135,6 +137,12 @@ class AdminConsultaService:
                 inscripciones_con_capacidad_exhaustada=cupos[
                     "inscripciones_con_capacidad_exhaustada"
                 ],
+            ),
+            pases=AdminPasesResumenResult(
+                pases_vendidos=pases["pases_vendidos"],
+                pases_pagados=pases["pases_pagados"],
+                monto_pases_pagado=float(pases["monto_pases_pagado"]),
+                beneficiarios_activos=pases["beneficiarios_activos"],
             ),
             equipos=AdminEquiposResumenResult(
                 total=equipos["total"],

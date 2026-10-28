@@ -2,8 +2,14 @@
 from injector import Module, singleton, Binder
 
 from modules.commerce.domain.services.core.compra_core_service import CompraCoreService
-from modules.commerce.infrastructure.services import PropietarioOrdenPagoAdapter
-from modules.pagos.domain.ports import IPropietarioOrdenPagoService
+from modules.commerce.infrastructure.services import (
+    EstadoCompraOrdenPagoAdapter,
+    PropietarioOrdenPagoAdapter,
+)
+from modules.pagos.domain.ports import (
+    IEstadoCompraOrdenPagoService,
+    IPropietarioOrdenPagoService,
+)
 
 
 class CommerceModule(Module):
@@ -18,5 +24,13 @@ class CommerceModule(Module):
         binder.bind(
             IPropietarioOrdenPagoService,
             to=PropietarioOrdenPagoAdapter,
+            scope=singleton,
+        )
+
+        # Port binding: `pagos` asks for the commercial state of the purchase
+        # that funds an order before it approves a manual payment.
+        binder.bind(
+            IEstadoCompraOrdenPagoService,
+            to=EstadoCompraOrdenPagoAdapter,
             scope=singleton,
         )

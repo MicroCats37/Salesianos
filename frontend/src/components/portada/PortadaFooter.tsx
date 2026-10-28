@@ -49,7 +49,7 @@ export function PortadaFooter() {
   return (
     <footer
       ref={rootRef}
-      className="border-t border-white/10 bg-[#0c0c1f] py-14 text-white"
+      className="snap-none border-t border-white/10 bg-[#0c0c1f] py-14 text-white"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-3">

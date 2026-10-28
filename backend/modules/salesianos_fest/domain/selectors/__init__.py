@@ -3,6 +3,9 @@ from .disciplina_selector import DisciplinaSelector
 from .promocion_selector import PromocionSelector
 from .categoria_selector import CategoriaSelector
 from .paquete_selector import PaqueteSelector
+from .pase_selector import PaseSelector
+from .compra_pase_selector import CompraPaseSelector
+from .pase_beneficiario_selector import PaseBeneficiarioSelector
 from .inscripcion_selector import InscripcionSelector
 from .equipo_selector import EquipoSelector
 from .participacion_selector import ParticipacionSelector
@@ -17,6 +20,8 @@ __all__ = [
     "PromocionSelector",
     "CategoriaSelector",
     "PaqueteSelector",
+    "PaseSelector",
+    "CompraPaseSelector",
     "InscripcionSelector",
     "EquipoSelector",
     "ParticipacionSelector",

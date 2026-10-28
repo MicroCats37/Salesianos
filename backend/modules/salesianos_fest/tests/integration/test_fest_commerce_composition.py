@@ -766,16 +766,21 @@ def test_obtener_compra_con_saldo_disponible_escoge_pagada_con_cupo(
     assert result2.id == compra2.id
 
 
-# ── Tests: ConfirmarPago transitions Compra to PAGADA ───────────────────────────
+# ── Tests: la autoliquidación pública no existe ───────────────────────────────
 
 @pytest.mark.django_db
-def test_confirmar_pago_transitions_compra_to_pagada(
+def test_el_comprador_no_puede_liquidar_su_compra(
     api_client, usuario_con_persona, inscripcion_base
 ):
     """
     GIVEN: Auth user owns the inscripcion; Compra is PENDIENTE
     WHEN:  POST /api/compras/confirmar-pago
-    THEN:  Compra transitions to PAGADA.
+    THEN:  the route does not accept the settlement (405) and the Compra
+           stays PENDIENTE.
+
+    The commercial settlement belongs to the backend (right after the payment
+    is verified) or to an administrator (through the audited manual approval
+    of the administration area).
     """
     # Create Compra via API
     create_payload = {
@@ -797,14 +802,14 @@ def test_confirmar_pago_transitions_compra_to_pagada(
     compra = Compra.objects.get(id=compra_id)
     assert compra.estado == EstadoCompraChoices.PENDIENTE
 
-    # Confirm payment
+    # The buyer tries to self-settle
     confirm_resp = _auth_post(
         api_client,
         f"/api/compras/confirmar-pago?orden_pago_id={orden_pago_id}",
         usuario_con_persona,
     )
-    assert confirm_resp.status_code == 200, f"Expected 200, got {confirm_resp.json()}"
+    assert confirm_resp.status_code == 405, confirm_resp.content
 
-    # Verify Compra is now PAGADA
+    # Verify Compra is still PENDIENTE
     compra.refresh_from_db()
-    assert compra.estado == EstadoCompraChoices.PAGADA
+    assert compra.estado == EstadoCompraChoices.PENDIENTE

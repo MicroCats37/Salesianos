@@ -1,15 +1,18 @@
 import axios from "axios";
 import { getCookie } from "cookies-next";
 import { AUTH_COOKIES } from "./auth";
+import { backendInternalUrl, backendPublicUrl } from "./server/backend-url";
 
 // Browser (client): always same-origin /backend so requests go through Nginx proxy
-// to Django at /api/*. Server-side (SSR, Route Handlers): use NEXT_PUBLIC_API_URL
-// if set (direct backend call from Next.js server to Django), otherwise local Django.
+// to Django at /api/*. Server-side (SSR, Route Handlers): the server is NOT
+// behind the browser proxy, so it reaches Django through `backendInternalUrl()`
+// (BACKEND_INTERNAL_URL, or the internal name of the backend in Docker).
+//
+// The server branch MUST NOT use the browser URL: `/backend` is relative and a
+// Node fetch cannot resolve it.
 export const api = axios.create({
   baseURL:
-    typeof window !== "undefined"
-      ? process.env.NEXT_PUBLIC_API_URL || "/backend"
-      : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
+    typeof window !== "undefined" ? backendPublicUrl() : backendInternalUrl(),
   timeout: 15000,
 });
 

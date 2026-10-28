@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ADMIN_NIVELES } from "../utils/admin.capacidades";
 import { AdminErrorSchema } from "./admin.comun.schema";
 
 /**
@@ -7,8 +8,7 @@ import { AdminErrorSchema } from "./admin.comun.schema";
  *
  * Endpoint: GET /api/auth/me  (A0)
  *
- * `es_admin` is the ONLY authorization flag the client consumes and it is
- * computed on the server with the project rule:
+ * `es_admin` is computed on the server with the project rule:
  *
  *     admin = is_staff OR is_superuser
  *
@@ -17,8 +17,14 @@ import { AdminErrorSchema } from "./admin.comun.schema";
  * session cookie is advisory, the backend re-evaluates the flag on every
  * request (`sdd/administracion-operativa-fest/admin-surface` §6).
  *
- * `is_superuser` is NEVER exposed: the break-glass tier is neither visible
- * nor assignable from the administration UI.
+ * `is_staff`, `is_superuser`, `nivel` and `capacidades` are SELF-SCOPED: the
+ * endpoint publishes the tier of the CALLER, which is the base of the
+ * interface and not a disclosure. The vocabulary is the mirror of
+ * `backend/core/capacidades.py`.
+ *
+ * The new fields are TOLERANT (`default`): against an older backend the
+ * interface degrades to "no capabilities" — it fails closed instead of
+ * breaking the whole session.
  */
 export const AdminMeResponseSchema = z.object({
   id: z.string(),
@@ -28,6 +34,16 @@ export const AdminMeResponseSchema = z.object({
   apellidos: z.string().nullable(),
   rol: z.string().nullable(),
   es_admin: z.boolean(),
+  is_staff: z.boolean().default(false),
+  is_superuser: z.boolean().default(false),
+  nivel: z
+    .enum([
+      ADMIN_NIVELES.USUARIO,
+      ADMIN_NIVELES.STAFF,
+      ADMIN_NIVELES.SUPERUSUARIO,
+    ])
+    .default(ADMIN_NIVELES.USUARIO),
+  capacidades: z.array(z.string()).default([]),
   persona_id: z.string().nullable(),
 });
 

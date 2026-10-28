@@ -7,7 +7,6 @@ from modules.commerce.domain.models import Compra
 from modules.salesianos_fest.domain.results.compra_results import (
     CompraCreatedResult,
     CompraIzipayPreparedResult,
-    CompraConfirmedResult,
     CompraCanceladaResult,
 )
 from modules.salesianos_fest.presentation.schemas.compra_schemas import (
@@ -15,7 +14,6 @@ from modules.salesianos_fest.presentation.schemas.compra_schemas import (
     CompraDetailOut,
     CompraListOut,
     IniciarPagoOut,
-    ConfirmarPagoOut,
     CompraCanceladaOut,
 )
 
@@ -84,17 +82,6 @@ class CompraPresenter:
             buyer_email=result.buyer_email,
             buyer_name=result.buyer_name,
             buyer_surname=result.buyer_surname,
-        )
-
-    @staticmethod
-    def present_confirmar(
-        result: CompraConfirmedResult,
-    ) -> ConfirmarPagoOut:
-        """Transform CompraConfirmedResult into ConfirmarPagoOut."""
-        return ConfirmarPagoOut(
-            compra_id=result.compra_id,
-            success=result.success,
-            already_confirmed=result.already_confirmed,
         )
 
     @staticmethod

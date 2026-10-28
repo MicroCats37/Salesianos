@@ -9,7 +9,7 @@ Also tests:
 - CompraPresenter.present_detail output structure
 - CompraCreateOut output structure
 - IniciarPagoOut output structure
-- ConfirmarPagoOut output structure
+- the public self-settlement route has NO output schema anymore
 - metadata NOT in OrdenPagoOut (pagos endpoint)
 """
 import uuid
@@ -46,7 +46,6 @@ from modules.salesianos_fest.presentation.schemas.compra_schemas import (
     CompraDetailOut,
     CompraListOut,
     IniciarPagoOut,
-    ConfirmarPagoOut,
 )
 from modules.pagos.presentation.schemas.pago_schema import OrdenPagoOut
 
@@ -364,14 +363,16 @@ def test_iniciar_pago_out_schema_excludes_metadata():
     assert "metadata" not in fields
 
 
-def test_confirmar_pago_out_schema_excludes_metadata():
+def test_la_autoliquidacion_publica_no_tiene_esquema():
     """
-    GIVEN: ConfirmarPagoOut schema definition
-    WHEN:  Inspecting the schema fields
-    THEN:  metadata is NOT a field in the schema.
+    GIVEN: the purchase schemas of the module
+    WHEN:  Inspecting the module of the presentation layer
+    THEN:  there is NO `ConfirmarPagoOut`: the public self-settlement route
+           was removed, so its wrapper does not exist anymore.
     """
-    fields = set(ConfirmarPagoOut.model_fields.keys())
-    assert "metadata" not in fields
+    import modules.salesianos_fest.presentation.schemas.compra_schemas as esquema
+
+    assert not hasattr(esquema, "ConfirmarPagoOut")
 
 
 # ── Tests: Ampliacion contract ─────────────────────────────────────────────

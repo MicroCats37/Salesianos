@@ -26,7 +26,7 @@ export function Navbar({
   navLinks = DEFAULT_NAV_LINKS,
   showLive = false,
   brandSlot = <NavbarBrand />,
-  ctaLabel = "Preinscribir equipo",
+  ctaLabel = "Inscribir equipo",
 }: NavbarProps) {
   const user = useAuthUser();
   const [scrolled, setScrolled] = useState(false);
@@ -43,6 +43,11 @@ export function Navbar({
       ? "/admin/dashboard"
       : "/dashboard";
   const registrationHref = user ? "/inscripcion" : "/register";
+  /**
+   * The party passes are bought with an account: a visitor without a session
+   * is sent to the registration, exactly like the sports registration.
+   */
+  const pasesHref = user ? "/pases" : "/register";
   const canShowLive = showLive && EN_VIVO.url.length > 0;
 
   return (
@@ -83,11 +88,7 @@ export function Navbar({
                 variant="outline"
                 className="h-11 rounded-full border-[#312e8e]/25 px-4 text-xs font-black uppercase tracking-wider text-[#312e8e]"
               >
-                <a
-                  href={EN_VIVO.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={EN_VIVO.url} target="_blank" rel="noopener noreferrer">
                   <Radio className="mr-2 size-4" />
                   En vivo
                 </a>
@@ -114,6 +115,14 @@ export function Navbar({
                 <Link href="/login">Iniciar sesión</Link>
               </Button>
             )}
+
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 rounded-full border-[#312e8e]/25 px-4 text-xs font-black uppercase tracking-wider text-[#312e8e]"
+            >
+              <Link href={pasesHref}>Comprar pase de fiesta</Link>
+            </Button>
 
             <Button
               asChild
@@ -175,6 +184,14 @@ export function Navbar({
                     <Link href="/login">Iniciar sesión</Link>
                   </Button>
                 )}
+
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-11 rounded-xl border-[#312e8e]/25 font-black text-[#312e8e]"
+                >
+                  <Link href={pasesHref}>Comprar pase de fiesta</Link>
+                </Button>
 
                 <Button
                   asChild

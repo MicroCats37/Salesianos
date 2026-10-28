@@ -57,6 +57,20 @@ class AdminCuposResumenResult(BaseModel):
     inscripciones_con_capacidad_exhaustada: int
 
 
+class AdminPasesResumenResult(BaseModel):
+    """
+    The party passes of the event — a SEPARATE block.
+
+    The pass revenue never contaminates the sports purchase or cupo metrics:
+    they are different products and they are reported apart.
+    """
+
+    pases_vendidos: int
+    pases_pagados: int
+    monto_pases_pagado: float
+    beneficiarios_activos: int
+
+
 class AdminDisciplinaConteoResult(BaseModel):
     """Teams of one discipline."""
 
@@ -102,12 +116,13 @@ class AdminAccesosResumenResult(BaseModel):
 
 
 class AdminResumenResult(BaseModel):
-    """The eight blocks of the operational overview."""
+    """The blocks of the operational overview."""
 
     evento: EventoResumenResult
     inscripciones: AdminInscripcionesResumenResult
     pagos: AdminPagosResumenResult
     cupos: AdminCuposResumenResult
+    pases: AdminPasesResumenResult
     equipos: AdminEquiposResumenResult
     participantes: AdminParticipantesResumenResult
     acreditaciones: AdminAcreditacionesResumenResult
@@ -119,6 +134,7 @@ __all__ = [
     "AdminInscripcionesResumenResult",
     "AdminPagosResumenResult",
     "AdminCuposResumenResult",
+    "AdminPasesResumenResult",
     "AdminDisciplinaConteoResult",
     "AdminEquiposResumenResult",
     "AdminParticipantesResumenResult",

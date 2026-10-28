@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ADMIN_NIVELES } from "../utils/admin.capacidades";
 import { AdminErrorSchema } from "./admin.comun.schema";
 import { adminPaginadoSchema } from "./admin.paginacion.schema";
 
@@ -7,8 +8,13 @@ import { adminPaginadoSchema } from "./admin.paginacion.schema";
  *
  * Source of truth: `backend/modules/administracion/presentation/schemas/admin_usuario_schemas.py`.
  *
- * The wrapper is READ-ONLY and declares NO credential: no password, no hash,
- * no token, and no `is_superuser`. The break-glass tier is never surfaced.
+ * The wrapper is READ-ONLY and declares NO credential: no password, no hash
+ * and no token.
+ *
+ * The TIER of the account IS published (`is_staff`, `is_superuser`,
+ * `nivel`): an account administrator must be able to see who holds the
+ * break-glass tier. The surface is read-only: it never promotes, demotes nor
+ * deactivates anyone.
  */
 
 export const AdminUsuarioListItemSchema = z.object({
@@ -20,6 +26,15 @@ export const AdminUsuarioListItemSchema = z.object({
   persona_id: z.string(),
   persona_documento: z.string(),
   es_admin: z.boolean(),
+  is_staff: z.boolean().default(false),
+  is_superuser: z.boolean().default(false),
+  nivel: z
+    .enum([
+      ADMIN_NIVELES.USUARIO,
+      ADMIN_NIVELES.STAFF,
+      ADMIN_NIVELES.SUPERUSUARIO,
+    ])
+    .default(ADMIN_NIVELES.USUARIO),
   is_active: z.boolean(),
   last_login: z.string().nullable(),
   created_at: z.string(),

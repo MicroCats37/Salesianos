@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 
 from modules.administracion.tests.factories import (
     make_auth_header,
-    make_forbidden_keys,
+    make_forbidden_keys_de_cuentas,
     make_list_query,
 )
 
@@ -63,8 +63,42 @@ def test_lista_expone_cuentas_globales_sin_credenciales(
     assert por_id[str(usuario_inactivo.id)]["is_active"] is False
 
     cuerpo = response.text.lower()
-    for prohibido in make_forbidden_keys():
+    for prohibido in make_forbidden_keys_de_cuentas():
         assert prohibido not in cuerpo
+
+
+@pytest.mark.django_db
+def test_lista_publica_el_nivel_de_cada_cuenta(
+    api_client,
+    usuario_admin_staff,
+    usuario_admin_superuser,
+    usuario_no_admin,
+    escenario_operativo,
+):
+    """
+    GIVEN: accounts of every tier
+    WHEN:  GET /api/administracion/usuarios
+    THEN:  every account publishes `is_staff`, `is_superuser` and `nivel`.
+    """
+    response = api_client.get(URL_LISTA, **make_auth_header(usuario_admin_staff))
+
+    assert response.status_code == 200
+    por_id = {item["id"]: item for item in response.json()["data"]["items"]}
+
+    staff = por_id[str(usuario_admin_staff.id)]
+    assert staff["is_staff"] is True
+    assert staff["is_superuser"] is False
+    assert staff["nivel"] == "staff"
+
+    superusuario = por_id[str(usuario_admin_superuser.id)]
+    assert superusuario["is_staff"] is True
+    assert superusuario["is_superuser"] is True
+    assert superusuario["nivel"] == "superusuario"
+
+    normal = por_id[str(usuario_no_admin.id)]
+    assert normal["is_staff"] is False
+    assert normal["is_superuser"] is False
+    assert normal["nivel"] == "usuario"
 
 
 @pytest.mark.django_db
@@ -139,7 +173,7 @@ def test_detalle_limita_inscripciones_al_evento_activo(
     assert str(escenario_operativo["inscripcion_fuera"].id) not in response.text
 
     cuerpo = response.text.lower()
-    for prohibido in make_forbidden_keys():
+    for prohibido in make_forbidden_keys_de_cuentas():
         assert prohibido not in cuerpo
 
 

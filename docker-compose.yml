@@ -83,6 +83,10 @@ services:
       NEXT_PUBLIC_FRONTEND_URL: ${NEXT_PUBLIC_FRONTEND_URL:-http://localhost:${PROXY_PORT:-7000}}
       NEXT_PUBLIC_AUTH_STORAGE_PREFIX: ${NEXT_PUBLIC_AUTH_STORAGE_PREFIX:-salesianos_auth}
       NEXT_PUBLIC_IZIPAY_ENABLED: ${NEXT_PUBLIC_IZIPAY_ENABLED:-false}
+      # URL the Next.js SERVER uses to reach Django. It is NOT a NEXT_PUBLIC_*
+      # variable: it is read at runtime and it never reaches the browser.
+      # The browser keeps using NEXT_PUBLIC_API_URL (/backend) through nginx.
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000/api}
     expose:
       - "3000"
     depends_on:

@@ -33,6 +33,7 @@ const KPI_ICONS: Record<string, LucideIcon> = {
   inscripciones: ClipboardList,
   pagos: CreditCard,
   cupos: Ticket,
+  pases: Ticket,
   equipos: Trophy,
   participantes: Users,
   acreditaciones: QrCode,
@@ -92,6 +93,11 @@ export function AdminOverview() {
   const kpis = resumenKpis(resumen);
   const alertas = resumenAlertas(resumen);
   const { evento } = resumen;
+  /**
+   * The last tile spans TWO columns only when the grid would otherwise leave
+   * a hole: with a multiple of four tiles every row is complete.
+   */
+  const ultimoOcupaDos = kpis.length % 4 === 3;
 
   return (
     <div className="flex min-h-svh w-full flex-col text-slate-900">
@@ -161,7 +167,7 @@ export function AdminOverview() {
                 kpi={kpi}
                 icon={Icon}
                 className={
-                  index === kpis.length - 1
+                  index === kpis.length - 1 && ultimoOcupaDos
                     ? "sm:col-span-2 xl:col-span-2"
                     : undefined
                 }
@@ -244,8 +250,9 @@ const SKELETON_TILES = [
   "inscripciones",
   "pagos",
   "cupos",
-  "equipos",
+  "pases",
   "participantes",
+  "equipos",
   "acreditaciones",
   "accesos",
 ];
@@ -255,6 +262,8 @@ const SKELETON_GROUPS = ["alertas-1", "alertas-2"];
 const SKELETON_ITEMS = ["item-1", "item-2", "item-3"];
 
 function AdminOverviewSkeleton() {
+  const ultimoOcupaDos = SKELETON_TILES.length % 4 === 3;
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -264,6 +273,7 @@ function AdminOverviewSkeleton() {
             className={cn(
               "card-elevated p-6",
               index === SKELETON_TILES.length - 1 &&
+                ultimoOcupaDos &&
                 "sm:col-span-2 xl:col-span-2",
             )}
           >

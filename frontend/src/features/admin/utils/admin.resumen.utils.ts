@@ -144,17 +144,20 @@ export function formatearFecha(fecha: string | null | undefined): string {
 }
 
 /**
- * The seven metric tiles of the overview.
+ * The eight metric tiles of the overview.
  *
- * The eighth block of the backend payload (`evento`) is the identity of the
- * active edition, so it is rendered as the header of the page instead of a
- * tile.
+ * The `evento` block of the backend payload is the identity of the active
+ * edition, so it is rendered as the header of the page instead of a tile.
+ *
+ * The party passes are a SEPARATE tile: the pass revenue never contaminates
+ * the sports metrics and it never shares their tile.
  */
 export function resumenKpis(resumen: AdminResumenResponse): AdminKpi[] {
   const {
     inscripciones,
     pagos,
     cupos,
+    pases,
     equipos,
     participantes,
     acreditaciones,
@@ -194,6 +197,15 @@ export function resumenKpis(resumen: AdminResumenResponse): AdminKpi[] {
       hint: `${cupos.disponible_pagado} disponibles · ${cupos.asignado_activo} asignados`,
       tone: "cyan",
       ruta: rutaParticipantes,
+    },
+    {
+      id: "pases",
+      label: "Pases vendidos",
+      value: formatearNumero(pases.pases_vendidos),
+      rawValue: pases.pases_vendidos,
+      hint: `${pases.pases_pagados} pagados · ${pases.beneficiarios_activos} derechos activos`,
+      tone: "amber",
+      ruta: rutaPagos,
     },
     {
       id: "equipos",

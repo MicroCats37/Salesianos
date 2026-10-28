@@ -63,6 +63,20 @@ class AdminCuposResumenOut(BaseSchema):
     inscripciones_con_capacidad_exhaustada: int
 
 
+class AdminPasesResumenOut(BaseSchema):
+    """
+    The party passes of the event — a SEPARATE block.
+
+    The pass revenue never contaminates the sports purchase or cupo metrics:
+    they are different products and they are reported apart.
+    """
+
+    pases_vendidos: int
+    pases_pagados: int
+    monto_pases_pagado: float
+    beneficiarios_activos: int
+
+
 class AdminDisciplinaConteoOut(BaseSchema):
     """Teams of one discipline."""
 
@@ -108,12 +122,13 @@ class AdminAccesosResumenOut(BaseSchema):
 
 
 class AdminResumenOut(BaseSchema):
-    """The eight blocks of the operational overview."""
+    """The blocks of the operational overview."""
 
     evento: EventoResumenOut
     inscripciones: AdminInscripcionesResumenOut
     pagos: AdminPagosResumenOut
     cupos: AdminCuposResumenOut
+    pases: AdminPasesResumenOut
     equipos: AdminEquiposResumenOut
     participantes: AdminParticipantesResumenOut
     acreditaciones: AdminAcreditacionesResumenOut
@@ -125,6 +140,7 @@ __all__ = [
     "AdminInscripcionesResumenOut",
     "AdminPagosResumenOut",
     "AdminCuposResumenOut",
+    "AdminPasesResumenOut",
     "AdminDisciplinaConteoOut",
     "AdminEquiposResumenOut",
     "AdminParticipantesResumenOut",

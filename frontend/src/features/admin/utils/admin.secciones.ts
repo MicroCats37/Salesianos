@@ -9,6 +9,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import { ADMIN_CAPACIDADES, type AdminCapacidad } from "./admin.capacidades";
 
 /**
  * A section of the administration area.
@@ -28,6 +29,13 @@ export interface AdminSeccion {
   href: string;
   /** Description of the section (the sidebar shows it). */
   description: string;
+  /**
+   * Capability the caller must hold to SEE the section.
+   *
+   * Absent means the section is always visible (the entries of the team
+   * panel are not part of the administration area).
+   */
+  capacidad?: AdminCapacidad;
 }
 
 /**
@@ -35,6 +43,12 @@ export interface AdminSeccion {
  *
  * Both the sidebar of the product and the navigation of the area read this
  * list: a section can never exist in one place and be missing in the other.
+ *
+ * The `capacidad` of every section is the DERIVED view of the matrix
+ * "sección → ruta → capability": it is NOT persisted per user and it does
+ * NOT need a table. The backend owns the real decision (`core/capacidades.py`
+ * and `RequireCapability`); this field only decides what the navigation
+ * SHOWS.
  */
 export const ADMIN_SECCIONES: AdminSeccion[] = [
   {
@@ -43,6 +57,7 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     icon: ShieldCheck,
     href: "/administracion",
     description: "Métricas del evento activo",
+    capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
   },
   {
     id: "inscripciones",
@@ -50,6 +65,7 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     icon: ClipboardList,
     href: "/administracion/inscripciones",
     description: "Registros y su detalle",
+    capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
   },
   {
     id: "pagos",
@@ -57,6 +73,9 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     icon: CreditCard,
     href: "/administracion/pagos",
     description: "Compras y órdenes de pago",
+    // El staff LEE los pagos; aprobar y anular es una acción SENSIBLE
+    // (`admin.pagos.aprobar`) que solo tiene el nivel de break-glass.
+    capacidad: ADMIN_CAPACIDADES.PAGOS_VER,
   },
   {
     id: "equipos",
@@ -64,6 +83,7 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     icon: Trophy,
     href: "/administracion/equipos",
     description: "Plantillas de los equipos",
+    capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
   },
   {
     id: "competencias",
@@ -71,6 +91,7 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     icon: Swords,
     href: "/administracion/competencias",
     description: "Competencias, cuadro y agenda",
+    capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
   },
   {
     id: "participantes",
@@ -78,6 +99,7 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     icon: Users,
     href: "/administracion/participantes",
     description: "Personas y participaciones",
+    capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
   },
   {
     id: "acreditaciones",
@@ -85,6 +107,7 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     icon: QrCode,
     href: "/administracion/acreditaciones",
     description: "Acreditaciones y accesos",
+    capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
   },
   {
     id: "usuarios",
@@ -92,8 +115,34 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     icon: UserCog,
     href: "/administracion/usuarios",
     description: "Cuentas del evento",
+    capacidad: ADMIN_CAPACIDADES.USUARIOS_VER,
   },
 ];
+
+/**
+ * The sections the caller may see.
+ *
+ * A section is kept when it declares NO capability (the entries outside the
+ * administration area) or when the caller holds its capability.
+ *
+ * The function is PURE and fails closed: an undefined or empty set of
+ * capabilities leaves only the sections without one. Hiding a section is a
+ * courtesy — the real control is the 403 of the backend.
+ */
+export function adminSeccionesVisibles(
+  capacidades: readonly string[] | undefined | null,
+  secciones: AdminSeccion[] = ADMIN_SECCIONES,
+): AdminSeccion[] {
+  if (!capacidades) {
+    return secciones.filter((seccion) => !seccion.capacidad);
+  }
+
+  const concedidas = new Set(capacidades);
+
+  return secciones.filter(
+    (seccion) => !seccion.capacidad || concedidas.has(seccion.capacidad),
+  );
+}
 
 /**
  * The active section of a route.

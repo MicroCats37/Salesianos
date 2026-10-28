@@ -28,8 +28,18 @@ const CAMPOS_PROHIBIDOS = [
   "metadata",
   "transaction_id",
   "response_message",
-  "is_superuser",
 ];
+
+/**
+ * The break-glass tier (`is_superuser`) IS published on TWO surfaces:
+ *
+ * - `admin.me.schema.ts` — the tier of the CALLER, self-scoped.
+ * - `admin.usuario.schema.ts` — the tier of every account (A13/A14), so an
+ *   account administrator can see who holds it.
+ *
+ * It is forbidden everywhere else.
+ */
+const ESQUEMAS_CON_TIER = ["admin.me.schema.ts", "admin.usuario.schema.ts"];
 
 const ESQUEMAS = [
   "admin.inscripcion.schema.ts",
@@ -50,8 +60,11 @@ function leerEsquema(nombre: string): string {
 test("ningun esquema declara un campo prohibido", () => {
   for (const nombre of ESQUEMAS) {
     const fuente = leerEsquema(nombre);
+    const prohibidos = ESQUEMAS_CON_TIER.includes(nombre)
+      ? CAMPOS_PROHIBIDOS
+      : [...CAMPOS_PROHIBIDOS, "is_superuser"];
 
-    for (const campo of CAMPOS_PROHIBIDOS) {
+    for (const campo of prohibidos) {
       const declarado = new RegExp(`^\\s*${campo}\\s*:`, "m").test(fuente);
 
       assert.equal(
@@ -60,6 +73,25 @@ test("ningun esquema declara un campo prohibido", () => {
         `${nombre} declara el campo prohibido "${campo}"`,
       );
     }
+  }
+});
+
+test("las dos superficies del nivel declaran el break-glass", () => {
+  for (const nombre of ESQUEMAS_CON_TIER) {
+    const fuente = leerEsquema(nombre);
+
+    assert.ok(
+      /^\s*is_superuser\s*:/m.test(fuente),
+      `${nombre} no declara el nivel de break-glass`,
+    );
+    assert.ok(
+      /^\s*is_staff\s*:/m.test(fuente),
+      `${nombre} no declara la bandera de staff`,
+    );
+    assert.ok(
+      /^\s*nivel\s*:/m.test(fuente),
+      `${nombre} no declara el nivel del actor`,
+    );
   }
 });
 

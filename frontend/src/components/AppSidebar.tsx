@@ -27,11 +27,14 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { useEsAdmin } from "@/features/admin/hooks/useAdminSession";
 import {
-  ADMIN_SECCIONES,
+  useAdminCapacidades,
+  useEsAdmin,
+} from "@/features/admin/hooks/useAdminSession";
+import {
   type AdminSeccion,
   adminSeccionActiva,
+  adminSeccionesVisibles,
 } from "@/features/admin/utils/admin.secciones";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { cn } from "@/lib/utils";
@@ -89,6 +92,10 @@ export function AppSidebar() {
 
   // The administration entry appears only when the backend confirms the flag.
   const esAdmin = useEsAdmin();
+  // The sections are filtered by the capabilities the backend granted: a
+  // section the caller may not open is not shown. Hiding is a courtesy; the
+  // backend re-evaluates the capability on every request.
+  const seccionesAdmin = adminSeccionesVisibles(useAdminCapacidades());
 
   const fullName =
     [user?.nombres, user?.apellidos].filter(Boolean).join(" ") ||
@@ -155,13 +162,13 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {esAdmin && (
+        {esAdmin && seccionesAdmin.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300/80">
               Administracion
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <MenuItems items={ADMIN_SECCIONES} pathname={pathname} />
+              <MenuItems items={seccionesAdmin} pathname={pathname} />
             </SidebarGroupContent>
           </SidebarGroup>
         )}

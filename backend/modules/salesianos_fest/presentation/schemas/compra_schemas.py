@@ -67,15 +67,6 @@ class IniciarPagoOut(BaseModel):
     buyer_surname: str = Field(..., description="Buyer last name")
 
 
-# ── Confirmar pago ────────────────────────────────────────────────────────────
-
-class ConfirmarPagoOut(BaseModel):
-    """Output from confirming a Compra payment."""
-    compra_id: str = Field(..., description="commerce.Compra UUID")
-    success: bool = Field(..., description="Whether confirmation succeeded")
-    already_confirmed: bool = Field(..., description="Whether it was already confirmed")
-
-
 # ── Cancelar compra ──────────────────────────────────────────────────────────
 
 class CompraCanceladaOut(BaseModel):

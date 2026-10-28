@@ -9,21 +9,23 @@ Routes:
   GET  /api/compras/{compra_id}            - Get compra detail
   GET  /api/inscripciones/{id}/compras      - List compras for inscripcion
   POST /api/compras/{compra_id}/iniciar-pago - Generate Izipay token for an order
-  POST /api/compras/confirmar-pago         - Recover a Compra (owner or admin only)
   POST /api/compras/{compra_id}/cancelar   - Cancel Compra (refund) and revoke its rights
+
+There is NO public settlement route: a purchase is paid by the backend,
+right after the payment is verified, or by an administrator through the
+manual approval of the administration area (`POST
+/api/administracion/pagos/{orden_pago_id}/aprobar-manual`). A buyer can
+never confirm their own purchase.
 """
 from asgiref.sync import sync_to_async
-from ninja import Query
 from ninja_extra import api_controller, route
 from ninja_extra.permissions import IsAuthenticated
 from injector import inject
 from django.core.exceptions import PermissionDenied
-from uuid import UUID
 
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
 from core.exceptions import BusinessError, NotFoundError
-from modules.salesianos_fest.domain.exceptions import CompraNoAutorizadoError
 from modules.salesianos_fest.domain.services.orchestrators.compra_orchestrator import CompraOrchestrator
 from modules.salesianos_fest.domain.selectors.compra_selector import CompraSelector
 from modules.salesianos_fest.presentation.schemas.compra_schemas import (
@@ -32,7 +34,6 @@ from modules.salesianos_fest.presentation.schemas.compra_schemas import (
     CompraDetailOut,
     CompraListOut,
     IniciarPagoOut,
-    ConfirmarPagoOut,
     CompraCanceladaOut,
 )
 from modules.salesianos_fest.presentation.presenters.compra_presenter import CompraPresenter
@@ -50,11 +51,21 @@ def _get_authenticated_persona_id(request) -> str:
 
 
 def _validate_compra_ownership(compra, responsable_id: str) -> None:
-    """Validate that the authenticated user owns this compra's inscripcion."""
+    """
+    Validate that the authenticated user owns this compra.
+
+    A SPORTS purchase is owned by the responsable of its inscription; any
+    OTHER purchase (a batch of party passes) is owned by the generic
+    `Compra.responsable`. The sports rule is NOT weakened: a purchase with an
+    inscription is always checked against that inscription.
+    """
     compra_inscripcion = getattr(compra, "compra_inscripcion", None)
-    if not compra_inscripcion:
-        raise PermissionDenied()
-    if str(compra_inscripcion.inscripcion.responsable_id) != responsable_id:
+    if compra_inscripcion is not None:
+        if str(compra_inscripcion.inscripcion.responsable_id) != responsable_id:
+            raise PermissionDenied()
+        return
+
+    if not compra.responsable_id or str(compra.responsable_id) != responsable_id:
         raise PermissionDenied()
 
 
@@ -62,29 +73,6 @@ def _is_admin(request) -> bool:
     """Django admin users (is_staff / is_superuser) can act on any compra."""
     user = request.user
     return bool(getattr(user, "is_superuser", False) or getattr(user, "is_staff", False))
-
-
-def _actor_recuperacion(request) -> tuple[str | None, bool]:
-    """
-    Resolve the actor of a manual commercial recovery.
-
-    Administrators act on any purchase. Every other caller must be a person
-    linked to an account; whether that person owns the purchase is decided by
-    the domain, not by the controller.
-
-    Returns (persona_id, es_admin).
-
-    Raises:
-        CompraNoAutorizadoError: the caller has no linked persona.
-    """
-    if _is_admin(request):
-        return None, True
-
-    persona_id = getattr(request.user, "persona_fk_id", None)
-    if not persona_id:
-        raise CompraNoAutorizadoError()
-
-    return str(persona_id), False
 
 
 @api_controller("/compras", tags=["Compras"], permissions=[IsAuthenticated])
@@ -158,52 +146,6 @@ class CompraController:
         return success_response(
             CompraPresenter.present_created(result),
             message="Compra creada correctamente. Proceda al pago.",
-        )
-
-    @route.post(
-        "/confirmar-pago",
-        response={200: ApiResponse[ConfirmarPagoOut]},
-        auth=JWTAuth(),
-    )
-    async def confirmar_pago(
-        self,
-        request,
-        orden_pago_id: UUID = Query(
-            ...,
-            description="Identificador de la orden de pago a confirmar.",
-        ),
-    ):
-        """
-        Confirm a Compra after a successful Izipay payment (manual recovery).
-
-        Route: POST /api/compras/confirmar-pago?orden_pago_id={orden_pago_id}
-
-        This endpoint is NOT part of the normal checkout: the backend settles
-        the purchase right after the payment is verified. It exists to recover
-        a purchase whose commercial settlement did not complete.
-
-        Authorization: the responsible of the inscription linked to the
-        purchase, or a Django administrator. Any other caller is refused with
-        403 and nothing changes — not the Compra, not the payment order, not
-        the cup rights.
-
-        Raises:
-            CompraNotFoundError: the order has no linked purchase.
-            CompraNoAutorizadoError: the caller is neither the owner nor an
-                administrator.
-        """
-        persona_id, es_admin = _actor_recuperacion(request)
-
-        result = await self.orchestrator.confirmar_pago(
-            str(orden_pago_id),
-            persona_id=persona_id,
-            es_admin=es_admin,
-        )
-        return success_response(
-            CompraPresenter.present_confirmar(result),
-            message="Compra confirmada correctamente."
-            if not result.already_confirmed
-            else "Compra ya estaba confirmada.",
         )
 
     @route.get(

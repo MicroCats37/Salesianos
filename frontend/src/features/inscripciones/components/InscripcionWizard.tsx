@@ -188,6 +188,7 @@ export function InscripcionWizard() {
   }, []);
 
   // Animate step transitions: fade/slide the active step container.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: currentStep is the trigger — the effect re-runs when the step changes.
   useEffect(() => {
     if (!wizardRef.current) return;
     const prefersReducedMotion = window.matchMedia(
@@ -477,16 +478,30 @@ function EquiposStepLayout({ methods, paquetes }: EquiposStepLayoutProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md">
-          <Users className="size-5" />
-        </div>
-        <div>
-          <h3 className="text-lg font-bold text-slate-900">Equipos</h3>
-          <p className="text-sm text-slate-500">
-            Crea un equipo por cada disciplina incluida en tu paquete. Las
-            personas se agregan despues desde el detalle de la inscripcion.
-          </p>
+      <div className="card-elevated rounded-3xl p-5 sm:p-6">
+        <div className="flex items-start gap-4">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md">
+            <Users className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-lg font-black tracking-tight text-[#17214b]">
+              Equipos
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-[#626195]">
+              Crea un equipo por cada disciplina incluida en tu paquete.
+            </p>
+            <p className="mt-4 flex items-start gap-2.5 rounded-xl bg-sky-50/80 px-3.5 py-2.5 text-xs leading-relaxed text-sky-900">
+              <Info
+                className="mt-0.5 size-4 shrink-0 text-sky-600"
+                aria-hidden="true"
+              />
+              <span>
+                Las personas se agregan al final, desde el detalle de la
+                inscripción: primero creas la inscripción y luego asignas a cada
+                persona a su equipo.
+              </span>
+            </p>
+          </div>
         </div>
       </div>
 

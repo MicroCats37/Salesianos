@@ -6,8 +6,9 @@ Thin async controller: payload → orchestrator → presenter → `success_respo
 (`contract/django-app-architecture-contract.md` §4.8). No `if`, no ORM, no
 manual error response.
 
-Authorization: the whole controller is gated by `RequireAdmin`
-(admin = `is_staff OR is_superuser`, evaluated SERVER-SIDE on every request):
+Authorization: the whole controller is gated by `RequireAdminVer`
+(the capability `admin.ver`, held by the operational staff and by the
+break-glass tier, evaluated SERVER-SIDE on every request):
 
 - anonymous caller → 401 `AUTHENTICATION_REQUIRED` (JWT runs first),
 - authenticated non-admin → 403 `ACTION_NOT_ALLOWED`,
@@ -24,7 +25,7 @@ from ninja import Query
 from ninja_extra import api_controller, route
 
 from core.pagination import PaginatedData
-from core.permissions import RequireAdmin
+from core.permissions import RequireAdminVer
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
 from modules.administracion.domain.services.orchestrators.admin_operacion_orchestrator import (
@@ -39,7 +40,7 @@ from modules.administracion.presentation.schemas.admin_inscripcion_schemas impor
 )
 
 
-@api_controller("/administracion", tags=["Administración"], permissions=[RequireAdmin])
+@api_controller("/administracion", tags=["Administración"], permissions=[RequireAdminVer])
 class AdminInscripcionController:
     """Controller of the registrations table and its drilldown."""
 

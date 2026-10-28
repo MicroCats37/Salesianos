@@ -2,7 +2,13 @@
 
 from ninja.errors import HttpError
 
-from core.exceptions import ConflictError, NotFoundError, UnprocessableEntityError
+from core.exceptions import (
+    BusinessError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    UnprocessableEntityError,
+)
 
 
 class DisciplinaNotFoundError(NotFoundError):
@@ -224,6 +230,29 @@ class CompraNoAutorizadoError(HttpError):
         super().__init__(403, "No tiene autorización para confirmar esta compra.")
 
 
+class CompraConAprobacionManualError(HttpError):
+    """La compra tiene una aprobación manual activa y no puede anularse aquí.
+
+    Una compra financiada por una aprobación manual activa sólo se revoca
+    mediante la anulación administrativa auditada
+    (`POST /api/administracion/pagos/{orden_pago_id}/anular-manual`): la
+    anulación del comprador no es una decisión auditada.
+
+    El mensaje público sale del catálogo de `core/exceptions.py`; esta
+    excepción nunca interpola identificadores internos.
+    """
+
+    code: str = "COMPRA_CON_APROBACION_MANUAL"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            403,
+            "La compra tiene una aprobación manual activa y sólo puede "
+            "anularla un administrador.",
+        )
+
+
 class CompraNoCobrableError(ConflictError):
     """La compra no está en estado Pendiente y no puede ser cobrada."""
 
@@ -233,6 +262,25 @@ class CompraNoCobrableError(ConflictError):
         self.code = self.code
         super().__init__(
             message="La compra no puede ser cobrada en su estado actual.",
+            code=self.code,
+        )
+
+
+class CompraSinCompradorError(ConflictError):
+    """La compra no tiene comprador y no se puede iniciar el pago.
+
+    El comprador de una compra deportiva es el responsable de su inscripción
+    y el de una compra de pases es el `Compra.responsable` genérico. Una
+    compra sin ninguno de los dos no tiene a quién cobrarle: se rechaza en
+    lugar de adivinar.
+    """
+
+    code: str = "COMPRA_SIN_COMPRADOR"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="La compra no tiene un comprador asignado.",
             code=self.code,
         )
 
@@ -452,3 +500,249 @@ class PersonaDataRequiredError(HttpError):
     def __init__(self):
         self.code = self.code
         super().__init__(422, "Debes proporcionar persona_id o persona_data")
+
+
+# ─── Pases de fiesta (catálogo independiente) ─────────────────────────────────
+#
+# Los mensajes públicos de estos códigos salen del catálogo de
+# `core/exceptions.py`: estas excepciones nunca interpolan identificadores,
+# nombres, UUIDs ni montos internos.
+
+
+class PasesFiestaDeshabilitadoError(ConflictError):
+    """La capacidad de pases de fiesta no está habilitada.
+
+    El interruptor de despliegue `PASES_FIESTA_ENABLED` está apagado: la
+    superficie de compra no existe y nada se escribe en la base de datos.
+    """
+
+    code: str = "PASES_FIESTA_DESHABILITADO"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="La compra de pases no está habilitada en este momento.",
+            code=self.code,
+        )
+
+
+class PaseNoEncontradoError(NotFoundError):
+    """El pase solicitado no existe."""
+
+    code: str = "PASE_NO_ENCONTRADO"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(resource="Pase", code=self.code)
+
+
+class PaseNoDisponibleError(ConflictError):
+    """El pase no se puede comprar ahora mismo.
+
+    O bien está inactivo, o bien pertenece a una edición que no es la activa.
+    """
+
+    code: str = "PASE_NO_DISPONIBLE"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="El pase seleccionado no está disponible para la compra.",
+            code=self.code,
+        )
+
+
+class PasePrecioNoVigenteError(ConflictError):
+    """El pase no tiene ningún precio vigente.
+
+    Sin precio vigente no hay monto que congelar, así que la compra se
+    rechaza antes de crear cualquier fila comercial.
+    """
+
+    code: str = "PASE_PRECIO_NO_VIGENTE"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="El pase seleccionado no tiene un precio vigente.",
+            code=self.code,
+        )
+
+
+class PaseCantidadInvalidaError(UnprocessableEntityError):
+    """La cantidad de pases solicitados no es válida.
+
+    La cantidad es un entero positivo y no puede superar el tope comercial por
+    compra. Es un error de VALIDACIÓN (422): el recurso está bien, lo que el
+    cliente envió no.
+    """
+
+    code: str = "PASE_CANTIDAD_INVALIDA"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="La cantidad de pases solicitada no es válida.",
+            code=self.code,
+        )
+
+
+class PaseInventarioAgotadoError(ConflictError):
+    """No quedan pases suficientes para esa compra.
+
+    El tope lo fija `Pase.cantidad_maxima` (0 = sin límite) y se recalcula
+    dentro de la transacción de compra sobre las compras no canceladas.
+    """
+
+    code: str = "PASE_INVENTARIO_AGOTADO"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="No hay disponibilidad suficiente de ese pase.",
+            code=self.code,
+        )
+
+
+class PaseCompraNoEncontradaError(NotFoundError):
+    """La compra de pases solicitada no existe."""
+
+    code: str = "PASE_COMPRA_NO_ENCONTRADA"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(resource="Compra de pases", code=self.code)
+
+
+class PaseCompraNoAutorizadaError(ForbiddenError):
+    """El llamador no es el responsable de la compra de pases.
+
+    La compra de pases sólo la consulta su responsable (`Compra.responsable`).
+    """
+
+    code: str = "PASE_COMPRA_NO_AUTORIZADA"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            "No tienes autorización para consultar esta compra de pases."
+        )
+
+
+class PaseCompradorSinPersonaError(BusinessError):
+    """El usuario autenticado no tiene una Persona vinculada.
+
+    `Compra.responsable` es el titular de la compra: sin Persona no hay
+    propietario y la compra no puede crearse.
+    """
+
+    code: str = "PASE_COMPRADOR_SIN_PERSONA"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="Usuario sin persona vinculada. Complete su registro.",
+            code=self.code,
+        )
+
+
+# ─── Pases de fiesta: derechos nominativos ───────────────────────────────────
+
+
+class PaseCompraNoPagadaError(ConflictError):
+    """La compra de pases todavía no está pagada.
+
+    Los derechos nominativos sólo existen sobre una compra pagada: sin
+    evidencia de pago no hay derecho que repartir.
+    """
+
+    code: str = "PASE_COMPRA_NO_PAGADA"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="La compra de pases aún no está pagada.",
+            code=self.code,
+        )
+
+
+class PaseBeneficiarioNoEncontradoError(NotFoundError):
+    """La Persona indicada no existe o no tiene derecho en esta compra.
+
+    El identificador debe apuntar a una Persona existente: el flujo nunca
+    crea personas a partir de datos libres del cliente.
+    """
+
+    code: str = "PASE_BENEFICIARIO_NO_ENCONTRADO"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(resource="Beneficiario del pase", code=self.code)
+
+
+class PaseBeneficiariosExcedidosError(ConflictError):
+    """No quedan slots libres para asignar todos los beneficiarios.
+
+    El lote tiene una cantidad fija de pases y cada slot es inmutable: un slot
+    revocado NO vuelve a estar disponible.
+    """
+
+    code: str = "PASE_BENEFICIARIOS_EXCEDIDOS"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="No hay pases suficientes para los beneficiarios indicados.",
+            code=self.code,
+        )
+
+
+class PaseBeneficiarioDuplicadoError(ConflictError):
+    """La persona ya tiene un pase activo en este evento.
+
+    Como máximo existe un pase activo por persona y evento, entre todas las
+    compras.
+    """
+
+    code: str = "PASE_BENEFICIARIO_DUPLICADO"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="Esa persona ya tiene un pase activo en este evento.",
+            code=self.code,
+        )
+
+
+class PaseNoTransferibleError(ConflictError):
+    """El derecho de esa persona no puede transferirse a otra persona.
+
+    En v1 un pase pagado es NOMINAL: revocar un derecho consume su slot de
+    forma permanente y la persona no puede reutilizar ese lote.
+    """
+
+    code: str = "PASE_NO_TRANSFERIBLE"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            message="Ese pase no es transferible a otra persona.",
+            code=self.code,
+        )
+
+
+class PaseCancelacionRequiereAdministracionError(ForbiddenError):
+    """Una compra de pases NO se cancela desde la operación del comprador.
+
+    La cancelación de una compra de pases revoca derechos nominativos ya
+    entregados: es una decisión ADMINISTRATIVA y auditada, no una operación del
+    comprador. El endpoint ordinario del comprador la rechaza.
+    """
+
+    code: str = "PASE_CANCELACION_REQUIERE_ADMINISTRACION"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            "La cancelación de una compra de pases la realiza un administrador."
+        )

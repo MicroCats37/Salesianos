@@ -49,6 +49,49 @@ class CanalConfirmacionPago(models.TextChoices):
     NOTIFICACION = "NOTIFICACION", "Notificación del proveedor"
 
 
+class CanalPagoManual(models.TextChoices):
+    """
+    Closed set of the channels through which a manual payment can arrive.
+
+    The channel is part of the EVIDENCE: it tells the audit trail how the
+    money reached the institution. The set is closed on purpose — an unknown
+    channel is a validation error, never a free text field.
+    """
+
+    TRANSFERENCIA_BANCARIA = "TRANSFERENCIA_BANCARIA", "Transferencia bancaria"
+    EFECTIVO = "EFECTIVO", "Efectivo"
+    YAPE = "YAPE", "Yape"
+    PLIN = "PLIN", "Plin"
+    OTRO = "OTRO", "Otro"
+
+
+class EstadoAprobacionPagoManual(models.TextChoices):
+    """
+    State of a manual payment approval.
+
+    APROBADA — the evidence is active: it proves the payment of its order.
+    ANULADA  — the evidence was revoked by an administrator; it is kept
+               forever as the audit trail of the decision.
+    """
+
+    APROBADA = "APROBADA", "Aprobada"
+    ANULADA = "ANULADA", "Anulada"
+
+
+class OrigenPago(models.TextChoices):
+    """
+    Origin of the payment evidence of an order.
+
+    IZIPAY   — a correlated successful provider transaction.
+    MANUAL   — an active manual approval recorded by an administrator.
+    SIN_PAGO — no verifiable evidence at all.
+    """
+
+    IZIPAY = "IZIPAY", "Izipay"
+    MANUAL = "MANUAL", "Manual"
+    SIN_PAGO = "SIN_PAGO", "Sin pago"
+
+
 class EstadoVerificacionPago(models.TextChoices):
     """
     Result of verifying the provider signature of a confirmation.

@@ -1,13 +1,11 @@
 "use client";
 
 import { gsap } from "gsap";
-import { ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { FestBrandHeader } from "@/components/branding/FestBrandHeader";
-import { Countdown } from "@/components/portada/Countdown";
-import { SEDE } from "@/features/portada/config/festival";
 import { COPY } from "@/features/portada/copy";
 
 /** Fondo del hero: las fotos de la referencia, en crossfade. */
@@ -96,7 +94,7 @@ export function HeroPortada() {
   return (
     <section
       ref={rootRef}
-      className="relative flex min-h-svh w-full flex-col justify-center overflow-hidden"
+      className="relative flex min-h-svh snap-start flex-col justify-center overflow-hidden"
     >
       <div className="absolute inset-0 -z-10">
         {FONDO.map((fondo, i) => (
@@ -241,64 +239,6 @@ export function HeroPortada() {
             >
               {COPY.hero.ctaSecundario.label}
             </a>
-          </div>
-        </div>
-
-        {/* Los tres momentos destacados de la referencia */}
-        <div className="mt-16 grid gap-4 sm:grid-cols-3">
-          {COPY.hero.momentos.map((momento) => (
-            <Link
-              key={momento.numero}
-              href={momento.href}
-              className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/5 backdrop-blur-sm transition-transform hover:-translate-y-1"
-            >
-              <div className="relative aspect-[16/10] w-full">
-                <Image
-                  src={momento.imagen}
-                  alt={momento.alt}
-                  fill
-                  loading="lazy"
-                  sizes="(max-width: 640px) 100vw, 33vw"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 bg-gradient-to-t from-[#0c0c1f]/90 via-[#0c0c1f]/25 to-transparent"
-                />
-              </div>
-              <div className="absolute inset-x-0 bottom-0 p-4">
-                <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[#22d3ee]">
-                  {momento.numero} / {momento.etiqueta}
-                </span>
-                <p className="mt-1 text-sm font-black uppercase leading-tight text-white">
-                  {momento.titular}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Pie del hero: lugar, promesa y cuenta regresiva */}
-        <div className="mt-12 grid gap-6 border-t border-white/10 pt-8 text-center lg:grid-cols-3 lg:text-left">
-          <div className="flex items-center justify-center gap-3 lg:justify-start">
-            <MapPin
-              className="size-5 shrink-0 text-[#22d3ee]"
-              aria-hidden="true"
-            />
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.15em] text-white">
-                {SEDE.nombre}
-              </p>
-              <p className="mt-1 text-xs text-white/60">{SEDE.bienvenida}</p>
-            </div>
-          </div>
-
-          <p className="self-center text-center text-xs font-black uppercase tracking-[0.25em] text-[#f4c64e] lg:text-center">
-            {COPY.hero.pie.promesa}
-          </p>
-
-          <div className="[&_*]:text-white [&_span]:text-white/70">
-            <Countdown />
           </div>
         </div>
       </div>

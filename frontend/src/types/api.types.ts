@@ -37,6 +37,11 @@ export const apiErrorSchema = z.object({
  * Creates a full API response envelope schema wrapping any data payload schema.
  * Use this instead of duplicating { success, data, error } Zod objects per hook.
  *
+ * `message` is NULLABLE on purpose: the backend envelope ALWAYS carries the
+ * key (`success_response` returns `message: None` when the endpoint declares
+ * no message), so an optional-but-not-nullable mirror would reject a perfectly
+ * valid answer.
+ *
  * @example
  * const schema = apiResponseSchema(z.object({ igv_valor: z.number() }));
  */
@@ -45,7 +50,7 @@ export function apiResponseSchema<T>(dataSchema: z.ZodType<T>) {
     success: z.boolean(),
     data: dataSchema.nullable(),
     error: apiErrorSchema.nullable().optional(),
-    message: z.string().optional(),
+    message: z.string().nullable().optional(),
   });
 }
 

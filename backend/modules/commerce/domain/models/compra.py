@@ -16,6 +16,7 @@ Anti-patterns explicitly rejected:
 - Django model inheritance for variants
 """
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 from core.models import BaseModel
 from ..constants import EstadoCompraChoices
@@ -34,6 +35,8 @@ class Compra(BaseModel):
         estado: Commercial state (PENDIENTE/PAGADA/CANCELADA).
         orden_pago: The associated payment order (OneToOne).
     """
+
+    history = HistoricalRecords()
 
     responsable = models.ForeignKey(
         "usuarios.Persona",

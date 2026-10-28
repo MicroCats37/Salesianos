@@ -277,3 +277,43 @@ class MedioAceptacionChoices(models.TextChoices):
     WEB = "WEB", "Formulario web"
     MOBILE = "MOBILE", "Aplicacion movil"
     PAPER = "PAPER", "Papel"
+
+
+# ─── Pases de fiesta (catálogo independiente) ───────────────────────────────
+#
+# Los pases de fiesta son un catálogo PARALELO al de paquetes deportivos.
+# Nunca se modelan como `Paquete.tipo=PASE`: el contrato público del paquete
+# (`tipo`, `modo_disciplinas`, `cantidad_disciplinas`, `minimo_compra_inicial`)
+# es deportivo y un pase no tiene disciplinas, equipos ni beneficios de
+# paquete. El pase reutiliza las mismas etapas de precio (`EtapaChoices`).
+
+
+CANTIDAD_MAXIMA_SIN_LIMITE = 0
+"""`Pase.cantidad_maxima == 0` significa inventario ILIMITADO.
+
+Centinela compartido por el modelo, el selector y el seed: un pase sin
+límite no debe interpretarse como "no se pueden vender pases".
+"""
+
+CANTIDAD_MAXIMA_POR_COMPRA = 50
+"""Tope de pases que un comprador puede pedir en una sola compra.
+
+Protege el lote de una compra (y, más adelante, el número de beneficiarios
+que habrá que asignar). Es un límite COMERCIAL, no de inventario: el tope real
+de unidades lo fija `Pase.cantidad_maxima`.
+"""
+
+
+# ─── Pases de fiesta: derechos nominativos ──────────────────────────────────
+
+
+class EstadoPaseBeneficiarioChoices(models.TextChoices):
+    """Estado de un derecho nominativo de pase.
+
+    ACTIVA   — el derecho concede acceso a la fiesta.
+    REVOCADA — el derecho se revocó con motivo: el SLOT queda CONSUMIDO de
+               forma permanente (un pase pagado no se transfiere en v1).
+    """
+
+    ACTIVA = "ACTIVA", "Activa"
+    REVOCADA = "REVOCADA", "Revocada"

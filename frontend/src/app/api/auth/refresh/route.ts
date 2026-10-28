@@ -8,6 +8,18 @@ import {
   expiresAtCookieOptions,
   refreshTokenCookieOptions,
 } from "@/lib/auth";
+import { backendInternalUrl } from "@/lib/server/backend-url";
+import { expiracionDeToken } from "@/lib/server/jwt";
+
+/**
+ * Fallback lifetime of the access token, used ONLY when the `exp` claim of
+ * the issued token cannot be read.
+ *
+ * It matches the base lifetime of the backend (`ACCESS_TOKEN_LIFETIME = 1h`).
+ * The old value was 30 DAYS: the client believed a token that lives one hour
+ * was valid for a month and only discovered the truth through a 401.
+ */
+const MINUTOS_FALLBACK = 60;
 
 /**
  * Refresh access token using the httpOnly refresh cookie.
@@ -16,9 +28,14 @@ import {
  * It reads the refresh token from cookies, calls the backend /api/token/refresh
  * endpoint, and sets the rotated tokens as cookies (non-httpOnly for client access).
  *
- * Backend access token lifetime: base 1h, dev override 30d.
- * Djangon-ninja-jwt refresh response doesn't include expires_at,
- * so we compute a generous 30-day fallback to cover all environments.
+ * The backend is reached through `backendInternalUrl()`: the browser URL
+ * (`/backend`) is relative and a Node `fetch` cannot resolve it, which broke
+ * the refresh in production with a 500.
+ *
+ * `expires_at` is derived from the REAL `exp` claim of the access token the
+ * backend just issued. It is a UX hint for the proactive refresh of the
+ * client, never an authority: the backend validates the signature of every
+ * token on every request.
  */
 export async function POST() {
   try {
@@ -33,11 +50,8 @@ export async function POST() {
       );
     }
 
-    const backendUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-
     // Call backend refresh endpoint
-    const response = await fetch(`${backendUrl}/token/refresh`, {
+    const response = await fetch(`${backendInternalUrl()}/token/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -64,11 +78,11 @@ export async function POST() {
       );
     }
 
-    // Compute expires_at fallback: generous match for dev (30d) and prod (1h).
-    // Backend base: ACCESS_TOKEN_LIFETIME=1h, dev override: 30d.
-    // Djangon-ninja-jwt refresh doesn't return expires_at, so we use a safe upper bound.
-    const expiresAt = new Date(
-      Date.now() + 30 * 24 * 60 * 60 * 1000,
+    // The REAL expiry of the token the backend just issued. The `exp` claim is
+    // the source of truth; the fallback only covers a malformed token.
+    const expiracionReal = expiracionDeToken(data.access);
+    const expiresAt = (
+      expiracionReal ?? new Date(Date.now() + MINUTOS_FALLBACK * 60 * 1000)
     ).toISOString();
 
     // Set rotated tokens as httpOnly cookies

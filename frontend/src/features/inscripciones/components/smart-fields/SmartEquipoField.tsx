@@ -8,20 +8,12 @@
 // - Layout responsive: desktop 2-col grid; mobile vertical stack
 
 import { gsap } from "gsap";
-import { Lock, User } from "lucide-react";
+import { Info, Lock } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn, stripNonDigits } from "@/lib/utils";
 import type { InscripcionFormData } from "../../schemas/inscripcion.schema";
 import type { PaqueteDisciplina } from "../../services/catalog.service";
 
@@ -47,7 +39,6 @@ function EquipoCard({
 }: EquipoCardProps) {
   const {
     control,
-    watch,
     formState: { errors },
   } = useFormContext<InscripcionFormData>();
   // Always offer the full package catalogue in every card so the user can
@@ -92,17 +83,19 @@ function EquipoCard({
   return (
     <div
       ref={cardRef}
-      className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4 space-y-4"
+      className="card-elevated space-y-5 rounded-3xl p-5 sm:p-6"
     >
-      <div className="flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white text-sm font-bold shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-sm font-bold text-white shadow-sm">
           {index + 1}
         </div>
-        <h4 className="font-bold text-slate-900">Equipo {index + 1}</h4>
+        <h4 className="font-black tracking-tight text-[#17214b]">
+          Equipo {index + 1}
+        </h4>
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#626195]">
           Disciplina{" "}
           {locked && <span className="text-emerald-600">(bloqueado)</span>}{" "}
           <span className="text-amber-600">*</span>
@@ -152,12 +145,14 @@ function EquipoCard({
           />
         )}
         {disciplinaError && (
-          <p className="text-xs text-red-600">{disciplinaError}</p>
+          <p className="text-xs font-semibold text-rose-600">
+            {disciplinaError}
+          </p>
         )}
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#626195]">
           Nombre del equipo <span className="text-amber-600">*</span>
         </Label>
         <Controller
@@ -172,24 +167,17 @@ function EquipoCard({
             />
           )}
         />
-        {nombreError && <p className="text-xs text-red-600">{nombreError}</p>}
+        {nombreError && (
+          <p className="text-xs font-semibold text-rose-600">{nombreError}</p>
+        )}
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-            Participantes
-          </Label>
-          <span className="text-xs font-semibold text-slate-400">0</span>
-        </div>
-        <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center">
-          <User className="size-6 text-slate-300 mx-auto mb-1" />
-          <p className="text-xs text-slate-500">
-            Los participantes se agregan desde el detalle de la inscripción,
-            después de crearla.
-          </p>
-        </div>
-      </div>
+      {/*
+        No hay panel de participantes aquí: en el wizard las personas se
+        agregan DESPUÉS, desde el detalle de la inscripción. La explicación
+        vive una sola vez, en la cabecera de la sección (InscripcionWizard), y
+        un contador fijo "0" en cada tarjeta solo confundía.
+      */}
     </div>
   );
 }
@@ -356,7 +344,6 @@ export function SmartEquipoField({
 
     const modo = paqueteActual.modo_disciplinas;
     const required = paqueteActual.cantidad_disciplinas ?? 1;
-    const disponibles = paqueteDisciplinas.length;
 
     const targetCount = Math.max(
       paqueteActual.cantidad_maxima_equipos ?? required,
@@ -405,7 +392,7 @@ export function SmartEquipoField({
         baseEquipos.map((eq) => eq.disciplina_id).filter(Boolean),
       );
       let cursor = 0;
-      const next = baseEquipos.map((eq, i) => {
+      const next = baseEquipos.map((eq) => {
         if (eq.disciplina_id) return eq;
         while (
           cursor < paqueteDisciplinas.length &&
@@ -457,16 +444,19 @@ export function SmartEquipoField({
 
   return (
     <div ref={containerRef} className="space-y-4">
-      <div className="flex items-start gap-3 rounded-xl bg-sky-50 border border-sky-200 p-3 text-xs text-slate-600">
-        <User className="size-4 text-sky-600 shrink-0 mt-0.5" />
-        <p>
+      <p className="flex items-start gap-2 text-xs leading-relaxed text-[#626195]">
+        <Info
+          className="mt-0.5 size-3.5 shrink-0 text-[#312e8e]"
+          aria-hidden="true"
+        />
+        <span>
           Tu paquete define cuántas disciplinas debes inscribir. Cada equipo
           corresponde a una disciplina
           {permiteDuplicados
             ? " — puedes seleccionar la misma disciplina para más de un equipo."
             : " — solo puedes elegir una disciplina distinta por equipo."}
-        </p>
-      </div>
+        </span>
+      </p>
 
       {errorMessage && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
@@ -496,5 +486,3 @@ export function SmartEquipoField({
     </div>
   );
 }
-
-void cn;

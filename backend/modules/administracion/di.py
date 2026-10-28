@@ -65,6 +65,12 @@ from modules.administracion.domain.services.orchestrators.admin_operacion_orches
 from modules.administracion.domain.services.orchestrators.admin_resumen_orchestrator import (
     AdminResumenOrchestrator,
 )
+from modules.pagos.domain.services.core.evidencia_pago_service import (
+    EvidenciaPagoService,
+)
+from modules.pagos.domain.services.flujos.aprobar_pago_manual_flujo import (
+    AprobarPagoManualFlujo,
+)
 
 
 class AdministracionModule(Module):
@@ -122,6 +128,21 @@ class AdministracionModule(Module):
         binder.bind(
             AdminOperacionOrchestrator,
             to=AdminOperacionOrchestrator,
+            scope=singleton,
+        )
+
+        # ── Aprobación manual del pago ─────────────────────────────────────
+        # The administration area is the CONSUMER of the manual approval: it
+        # binds the flow of the payment module and the truth predicate of the
+        # payment evidence.
+        binder.bind(
+            EvidenciaPagoService,
+            to=EvidenciaPagoService,
+            scope=singleton,
+        )
+        binder.bind(
+            AprobarPagoManualFlujo,
+            to=AprobarPagoManualFlujo,
             scope=singleton,
         )
 

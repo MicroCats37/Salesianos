@@ -67,11 +67,16 @@ class AcreditacionCoreService:
         - A purchase is confirmed (Ampliacion)
         - A player is retired
         - An admin override changes
+        - A pass beneficiary is assigned or revoked
 
         Override rules:
         - BLOQUEADA: acceso_fiesta = False regardless of other origins
         - AUTORIZADA: acceso_fiesta = True
-        - AUTOMATICA: acceso_fiesta = derived from paid compras with FIESTA benefit
+        - AUTOMATICA: acceso_fiesta = derived from paid compras with FIESTA
+          benefit OR from an ACTIVE pass entitlement of a PAID pass purchase
+
+        The pass is only ONE MORE SOURCE of fiesta access: it never grants
+        `acceso_box` and it never touches the administrative overrides.
         """
         from modules.salesianos_fest.domain.models import PaqueteBeneficio
         from modules.salesianos_fest.domain.constants import TipoBeneficioChoices
@@ -134,6 +139,12 @@ class AcreditacionCoreService:
                         acceso_fiesta = True
                         break
 
+        # A PASS entitlement of a PAID pass purchase is the SECOND source of
+        # fiesta access. It is additive: revoking it only removes THIS source
+        # (a sports benefit or an AUTORIZADA override may keep the access).
+        if not acceso_fiesta:
+            acceso_fiesta = self.tiene_pase_activo(evento_id, persona_id)
+
         acreditacion.acceso_fiesta = acceso_fiesta
         acreditacion.estado = (
             EstadoAcreditacionChoices.ACTIVA if acceso_fiesta
@@ -141,6 +152,29 @@ class AcreditacionCoreService:
         )
         acreditacion.save(update_fields=["acceso_fiesta", "estado", "updated_at"])
         return acreditacion
+
+    def tiene_pase_activo(self, evento_id: str, persona_id: str) -> bool:
+        """
+        Return True when the person holds an ACTIVE pass of a PAID purchase.
+
+        The pass is a source of FIESTA access only: it never says anything
+        about `acceso_box`.
+        """
+        from modules.salesianos_fest.domain.constants import (
+            EstadoPaseBeneficiarioChoices,
+        )
+        from modules.salesianos_fest.domain.models import PaseBeneficiario
+
+        return (
+            PaseBeneficiario.objects
+            .filter(
+                evento_id=evento_id,
+                persona_id=persona_id,
+                estado=EstadoPaseBeneficiarioChoices.ACTIVA,
+                compra_pase__compra__estado=EstadoCompraChoices.PAGADA,
+            )
+            .exists()
+        )
 
     def aplicar_override_fiesta(
         self,

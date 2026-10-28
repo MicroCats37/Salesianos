@@ -3,13 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ADMIN_SECCIONES, adminSeccionActiva } from "../utils/admin.secciones";
+import { useAdminCapacidades } from "../hooks/useAdminSession";
+import {
+  adminSeccionActiva,
+  adminSeccionesVisibles,
+} from "../utils/admin.secciones";
 
 /**
  * AdminSeccionNav — the navigation between the seven sections of the area.
  *
  * The active section is DERIVED from the route (`usePathname`), never stored:
  * a hard reload and the browser back button always mark the right section.
+ *
+ * The VISIBLE sections are the ones whose capability the backend granted to
+ * the caller. Hiding a tab is a courtesy, not a control: the backend
+ * re-evaluates the capability on every request and the server-side guard of
+ * the section answers 403 when it is missing.
  *
  * On a phone the seven labels do NOT fit (≈553px of content in 343px of
  * usable width), so the navigation scrolls INSIDE its own container: the page
@@ -18,7 +27,9 @@ import { ADMIN_SECCIONES, adminSeccionActiva } from "../utils/admin.secciones";
  */
 export function AdminSeccionNav() {
   const pathname = usePathname();
-  const activa = adminSeccionActiva(pathname);
+  const capacidades = useAdminCapacidades();
+  const visibles = adminSeccionesVisibles(capacidades);
+  const activa = adminSeccionActiva(pathname, visibles);
 
   return (
     <nav
@@ -26,7 +37,7 @@ export function AdminSeccionNav() {
       className="relative border-b border-slate-200"
     >
       <ul className="flex items-stretch gap-1 overflow-x-auto px-4 sm:px-6 lg:px-10">
-        {ADMIN_SECCIONES.map((seccion) => {
+        {visibles.map((seccion) => {
           const esActiva = activa?.id === seccion.id;
 
           return (

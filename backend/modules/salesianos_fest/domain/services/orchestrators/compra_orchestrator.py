@@ -61,25 +61,6 @@ class CompraOrchestrator:
         """
         return await self.iniciar_flujo._iniciar_pago(compra_id)
 
-    async def confirmar_pago(
-        self,
-        orden_pago_id: str,
-        persona_id: str | None,
-        es_admin: bool,
-    ) -> CompraConfirmedResult:
-        """
-        Confirm a Compra after successful payment, on behalf of a caller.
-
-        Used by the manual recovery endpoint. The caller must be the
-        responsible of the inscription linked to the purchase, or a Django
-        administrator — the flow enforces that rule before any write.
-
-        See ConfirmarPagoFlujo._confirmar_compra_autorizada for full docs.
-        """
-        return await self.confirmar_flujo._confirmar_compra_autorizada(
-            orden_pago_id, persona_id, es_admin
-        )
-
     async def cancelar_compra(
         self,
         compra_id: str,

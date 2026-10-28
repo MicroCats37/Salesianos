@@ -7,12 +7,11 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { IzipayModal } from "@/features/pagos";
 import { AddParticipanteModal } from "../components/AddParticipanteModal";
-import { AsignacionHint } from "../components/AsignacionHint";
 import { DatosInscripcionCard } from "../components/DatosInscripcionCard";
 import { EditParticipanteModal } from "../components/EditParticipanteModal";
 import { EquipoCard } from "../components/EquipoCard";
 import { EquiposEmptyState } from "../components/EquiposEmptyState";
-import { EstadoInscripcionCard } from "../components/EstadoInscripcionCard";
+import { EstadoProgresoCard } from "../components/EstadoProgresoCard";
 import { InscripcionErrorState } from "../components/InscripcionErrorState";
 import { InscripcionHero } from "../components/InscripcionHero";
 import { InscripcionSkeleton } from "../components/InscripcionSkeleton";
@@ -21,8 +20,6 @@ import {
   type ParticipanteColocado,
   PoolParticipantesSeccion,
 } from "../components/PoolParticipantesSeccion";
-import { RegistrationStepsCard } from "../components/RegistrationStepsCard";
-import { ResumenEquiposBadge } from "../components/ResumenEquiposBadge";
 import { ResumenPagoCard } from "../components/ResumenPagoCard";
 import { SelectorParticipanteModal } from "../components/SelectorParticipanteModal";
 import { useElegiblesEquipos } from "../hooks/useElegiblesEquipo";
@@ -256,17 +253,6 @@ export function InscripcionDetailView() {
   );
 
   /**
-   * Roster rows vs distinct people.
-   *
-   * One paid cup authorises a person in EVERY contracted discipline, so the
-   * roster holds more rows than there are people. The backend owns both
-   * numbers (`resumen_participantes`) — the UI never counts them locally.
-   */
-  const participantesTotal =
-    inscripcion?.resumen_participantes?.participaciones ?? 0;
-  const personasDistintas = inscripcion?.resumen_participantes?.personas ?? 0;
-
-  /**
    * People already sitting in a team.
    *
    * The pool endpoint excludes them by design (it only returns people without
@@ -332,9 +318,24 @@ export function InscripcionDetailView() {
           <InscripcionHero inscripcion={inscripcion} />
 
           <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 xl:gap-8">
+            <div className="flex flex-col gap-6 xl:grid xl:grid-cols-12 xl:gap-8">
               {/* ── Operational content ── */}
-              <div className="order-2 space-y-8 xl:order-1 xl:col-span-8">
+              <div className="order-1 min-w-0 space-y-8 xl:col-span-8">
+                {/* The ONE place that shows the state and the progress of the
+                    inscription: badge, meaning, one progress bar and one
+                    checklist. */}
+                <EstadoProgresoCard
+                  inscripcion={inscripcion}
+                  onScrollToTeams={handleScrollToTeams}
+                />
+
+                {/* The ONE payment action of the page. */}
+                <PaymentCallout
+                  resumenPago={inscripcion.resumen_pago}
+                  estado={inscripcion.estado}
+                  onOpenPayment={handleOpenPayment}
+                />
+
                 {/* Participant pool — pre-registered people. Eligibility comes
                     from the backend, never from a local computation. */}
                 <PoolParticipantesSeccion
@@ -353,7 +354,6 @@ export function InscripcionDetailView() {
                   }
                   personaResponsableId={user?.persona_id ?? null}
                   agregarmeLoading={preregistrarPool.isPending}
-                  onOpenPayment={handleOpenPayment}
                   onAsignar={(inscripcionPersonaId) => {
                     // The pool card does not know the team: open the selector of
                     // the FIRST team where the person is ASSIGNABLE. Opening a
@@ -390,14 +390,6 @@ export function InscripcionDetailView() {
                     </div>
                   </header>
 
-                  {/* Assignment hint */}
-                  <AsignacionHint
-                    equiposCount={equiposCount}
-                    participantesTotal={participantesTotal}
-                    personasDistintas={personasDistintas}
-                    poolCount={poolEntries.length}
-                  />
-
                   {inscripcion.equipos.length > 0 ? (
                     <div className="space-y-4">
                       {inscripcion.equipos.map((equipo: EquipoItem) => {
@@ -432,50 +424,20 @@ export function InscripcionDetailView() {
                 </section>
               </div>
 
-              {/* ── Sticky summary + action ── */}
+              {/* ── Reference column: money + people ── */}
               <aside
                 aria-labelledby="resumen-inscripcion-titulo"
-                className="order-1 space-y-4 xl:order-2 xl:col-span-4"
+                className="order-2 space-y-4 xl:col-span-4 xl:self-start xl:sticky xl:top-24 xl:z-20"
               >
-                <div className="hidden xl:block">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#312e8e]">
-                    Panel
-                  </p>
-                  <h2
-                    id="resumen-inscripcion-titulo"
-                    className="mt-1 text-lg font-black tracking-tight text-[#17214b] sm:text-xl"
-                  >
-                    Resumen de la inscripcion
-                  </h2>
-                </div>
-
-                {/* The primary action stays pinned while the responsable
-                    scrolls the roster. */}
-                <div className="xl:sticky xl:top-24 xl:z-20 xl:self-start">
-                  <PaymentCallout
-                    resumenPago={inscripcion.resumen_pago}
-                    estado={inscripcion.estado}
-                    onOpenPayment={handleOpenPayment}
-                  />
-                </div>
-
-                <EstadoInscripcionCard inscripcion={inscripcion} />
-
-                <RegistrationStepsCard
-                  inscripcion={inscripcion}
-                  onScrollToTeams={handleScrollToTeams}
-                  onOpenPayment={handleOpenPayment}
-                  variant="compact"
-                />
+                <h2 id="resumen-inscripcion-titulo" className="sr-only">
+                  Resumen de la inscripcion
+                </h2>
 
                 {/* Aggregate commercial / payment summary — presenter-derived, read-only */}
                 <ResumenPagoCard
                   resumen={inscripcion.resumen_pago}
                   variant="compact"
                 />
-
-                {/* Aggregate equipo roster progress — presenter-derived, read-only */}
-                <ResumenEquiposBadge resumen={inscripcion.resumen_equipos} />
 
                 <DatosInscripcionCard inscripcion={inscripcion} />
               </aside>

@@ -46,6 +46,24 @@ postgresql://salesianos:salesianos@localhost:5433/salesianos
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:4000` | URL pública de la app. |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:4000` | URL pública de la API (mismo proceso). |
 
+### Frontend ↔ Backend: dos URLs distintas
+
+El navegador y el servidor de Next.js **no** llaman al backend por la misma URL:
+
+| Variable | Ejemplo | Quién la usa | Descripción |
+|----------|---------|--------------|-------------|
+| `NEXT_PUBLIC_API_URL` | `/backend` | El **navegador** | URL relativa que reescribe el proxy nginx hacia `/api` de Django. Se compila en el bundle del cliente. |
+| `BACKEND_INTERNAL_URL` | `http://backend:8000/api` | El **servidor** de Next.js | URL interna real del backend (Server Components y Route Handlers). **No** es `NEXT_PUBLIC_*`: se lee en runtime y nunca llega al navegador. |
+
+Reglas:
+
+- `BACKEND_INTERNAL_URL` **debe** ser absoluta. Un valor relativo (`/backend`) no lo
+  resuelve un `fetch` de Node y todas las llamadas del servidor a la API fallan.
+- En Docker Compose el valor por defecto es `http://backend:8000/api` (el nombre
+  del servicio en la red de Docker). Fuera de Docker, `http://localhost:8000/api`.
+- Es una variable de **runtime**: cambiarla no exige recompilar la imagen (a
+  diferencia de cualquier `NEXT_PUBLIC_*`, que se compila en el build).
+
 ## Autenticación
 
 | Variable | Ejemplo | Descripción |

@@ -30,6 +30,17 @@ from .acreditacion_results import (
     OverrideFiestaResult,
     AccesoRegistradoResult,
 )
+from .pase_results import (
+    PasePrecioCatalogoResult,
+    PaseCatalogoResult,
+    PaseCompraCreadaResult,
+    PaseCompraDetalleResult,
+    PaseBeneficiarioResult,
+    PaseConteosBeneficiariosResult,
+    PaseBeneficiariosListaResult,
+    PaseBeneficiariosAsignadosResult,
+    PaseBeneficiarioRevocadoResult,
+)
 
 __all__ = [
     "InscripcionResult",
@@ -53,4 +64,13 @@ __all__ = [
     "AcreditacionResult",
     "OverrideFiestaResult",
     "AccesoRegistradoResult",
+    "PasePrecioCatalogoResult",
+    "PaseCatalogoResult",
+    "PaseCompraCreadaResult",
+    "PaseCompraDetalleResult",
+    "PaseBeneficiarioResult",
+    "PaseConteosBeneficiariosResult",
+    "PaseBeneficiariosListaResult",
+    "PaseBeneficiariosAsignadosResult",
+    "PaseBeneficiarioRevocadoResult",
 ]

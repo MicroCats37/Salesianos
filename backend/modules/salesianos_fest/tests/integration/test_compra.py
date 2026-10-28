@@ -7,7 +7,7 @@ Covers:
 - Missing inscription (InscripcionNotFoundError)
 - Non-owner authorization
 - iniciar_pago happy and non-pending conflict
-- confirmar_pago success, idempotent confirmation, duplicate callback safety
+- the public self-settlement route no longer exists
 """
 import uuid
 import json
@@ -456,16 +456,22 @@ def test_iniciar_pago_compra_ya_pagada(api_client, usuario_con_persona, inscripc
     assert response.status_code == 409, f"Expected 409, got {response.status_code}: {response.json()}"
 
 
-# ── Tests: Confirmar Pago ──────────────────────────────────────────────────────
+# ── Tests: la autoliquidación pública ya no existe ───────────────────────────
 
 @pytest.mark.django_db
-def test_confirmar_pago_success(api_client, usuario_con_persona, inscripcion_base):
+def test_confirmar_pago_ya_no_existe(
+    api_client, usuario_con_persona, inscripcion_base
+):
     """
-    GIVEN: Auth user owns the inscripcion; Compra is PENDIENTE
-    WHEN:  POST /api/compras/confirmar-pago with orden_pago_id
-    THEN:  200 returned with success=True and Compra estado=PAGADA.
+    GIVEN: an authenticated owner of the inscription with a pending purchase
+    WHEN:  POST /api/compras/confirmar-pago (the old self-settlement route)
+    THEN:  405 — the route no longer accepts a settlement and the purchase
+            stays PENDIENTE.
+
+    A buyer can never confirm their own purchase: the commercial settlement
+    belongs to the backend (after the payment is verified) or to an
+    administrator (through the audited manual approval).
     """
-    # Create a Compra
     create_payload = {
         "inscripcion_id": str(inscripcion_base.id),
         "tipo": "INICIAL",
@@ -481,130 +487,30 @@ def test_confirmar_pago_success(api_client, usuario_con_persona, inscripcion_bas
     orden_pago_id = create_resp.json()["data"]["orden_pago_id"]
     compra_id = create_resp.json()["data"]["compra_id"]
 
-    # Confirm the payment
     response = _auth_post(
         api_client,
         f"/api/compras/confirmar-pago?orden_pago_id={orden_pago_id}",
         usuario_con_persona,
     )
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.json()}"
-    data = response.json()
-    assert data["success"] is True
-    assert data["data"]["success"] is True
-    assert data["data"]["already_confirmed"] is False
 
-    # Verify Compra estado changed to PAGADA
+    assert response.status_code == 405, response.content
+
     compra = Compra.objects.get(id=compra_id)
-    assert compra.estado == EstadoCompraChoices.PAGADA
+    assert compra.estado == EstadoCompraChoices.PENDIENTE
 
 
 @pytest.mark.django_db
-def test_confirmar_pago_idempotente(api_client, usuario_con_persona, inscripcion_base):
+def test_confirmar_pago_ya_no_existe_sin_autenticacion(
+    api_client, usuario_con_persona, inscripcion_base
+):
     """
-    GIVEN: Auth user; Compra is already PAGADA
-    WHEN:  POST /api/compras/confirmar-pago again with same orden_pago_id
-    THEN:  200 returned with already_confirmed=True (idempotent).
+    GIVEN: an anonymous caller
+    WHEN:  POST /api/compras/confirmar-pago
+    THEN:  405 — the route does not accept the settlement at all.
     """
-    # Create a Compra
-    create_payload = {
-        "inscripcion_id": str(inscripcion_base.id),
-        "tipo": "INICIAL",
-        "cantidad": 10,
-    }
-    create_resp = _auth_post(
-        api_client,
-        "/api/compras/",
-        usuario_con_persona,
-        data=json.dumps(create_payload),
-    )
-    assert create_resp.status_code == 200
-    orden_pago_id = create_resp.json()["data"]["orden_pago_id"]
+    response = api_client.post("/api/compras/confirmar-pago?orden_pago_id=any")
 
-    # Confirm once
-    first_resp = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={orden_pago_id}",
-        usuario_con_persona,
-    )
-    assert first_resp.status_code == 200
-    assert first_resp.json()["data"]["already_confirmed"] is False
-
-    # Confirm again (idempotent)
-    second_resp = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={orden_pago_id}",
-        usuario_con_persona,
-    )
-    assert second_resp.status_code == 200, f"Expected 200, got {second_resp.status_code}: {second_resp.json()}"
-    data = second_resp.json()
-    assert data["success"] is True
-    assert data["data"]["already_confirmed"] is True
-
-
-@pytest.mark.django_db
-def test_confirmar_pago_orden_no_encontrada(api_client, usuario_con_persona):
-    """
-    GIVEN: Auth user with persona
-    WHEN:  POST /api/compras/confirmar-pago with non-existent orden_pago_id
-    THEN:  404 returned with CompraNotFoundError.
-    """
-    response = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={uuid.uuid4()}",
-        usuario_con_persona,
-    )
-    assert response.status_code == 404, f"Expected 404, got {response.status_code}: {response.json()}"
-
-
-@pytest.mark.django_db
-def test_confirmar_pago_no_duplicate_callback_safety(api_client, usuario_con_persona, inscripcion_base):
-    """
-    GIVEN: Auth user; Compra is PENDIENTE
-    WHEN:  Two POST /api/compras/confirmar-pago calls for same orden_pago_id
-    THEN:  Both return 200; Compra is PAGADA exactly once (idempotent, race-safe).
-    """
-    # Create a Compra
-    create_payload = {
-        "inscripcion_id": str(inscripcion_base.id),
-        "tipo": "INICIAL",
-        "cantidad": 10,
-    }
-    create_resp = _auth_post(
-        api_client,
-        "/api/compras/",
-        usuario_con_persona,
-        data=json.dumps(create_payload),
-    )
-    assert create_resp.status_code == 200
-    orden_pago_id = create_resp.json()["data"]["orden_pago_id"]
-    compra_id = create_resp.json()["data"]["compra_id"]
-
-    # Call confirmar twice (simulating duplicate callback)
-    resp1 = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={orden_pago_id}",
-        usuario_con_persona,
-    )
-    resp2 = _auth_post(
-        api_client,
-        f"/api/compras/confirmar-pago?orden_pago_id={orden_pago_id}",
-        usuario_con_persona,
-    )
-
-    # Both should succeed
-    assert resp1.status_code == 200
-    assert resp2.status_code == 200
-
-    # One should be first (already_confirmed=False), one should be idempotent (already_confirmed=True)
-    data1 = resp1.json()["data"]
-    data2 = resp2.json()["data"]
-    confirmed_states = {data1.get("already_confirmed"), data2.get("already_confirmed")}
-    assert confirmed_states == {False, True}
-
-    # Compra should be PAGADA
-    compra = Compra.objects.get(id=compra_id)
-    assert compra.estado == EstadoCompraChoices.PAGADA
-
+    assert response.status_code == 405, response.content
 
 # ── Tests: Obtener Compra ─────────────────────────────────────────────────────
 

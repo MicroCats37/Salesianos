@@ -103,10 +103,10 @@ DEFAULT_ORDERING_INSCRIPCIONES = "-created_at"
 ORDERING_PAGOS = {
     "created_at": "created_at",
     "total": "total",
-    "cantidad": "cantidad",
-    "estado_compra": "compra__estado",
-    "estado_orden": "compra__orden_pago__estado",
-    "pagada_en": "compra__orden_pago__pagada_en",
+    "cantidad": "cantidad_linea",
+    "estado_compra": "estado",
+    "estado_orden": "orden_pago__estado",
+    "pagada_en": "orden_pago__pagada_en",
 }
 DEFAULT_ORDERING_PAGOS = "-created_at"
 
@@ -168,6 +168,14 @@ ROSTER_INCOMPLETO = "INCOMPLETO"
 def _valores(choices) -> frozenset[str]:
     """Return the values of a domain vocabulary."""
     return frozenset(valor for valor, _etiqueta in choices.choices)
+
+
+#: The commercial kinds a purchase row can carry in the administrative
+#: payments table: the two SPORTS kinds (INICIAL / AMPLIACION) plus the
+#: independent PASS batch (PASE).
+TIPOS_COMPRA_ADMIN = frozenset(
+    (*_valores(TipoCompraChoices), "PASE")
+)
 
 
 class AdminOperacionService:
@@ -290,7 +298,7 @@ class AdminOperacionService:
             estado_orden=self._validar_enum(
                 estado_orden, _valores(OrdenPagoStatus), "estado_orden"
             ),
-            tipo=self._validar_enum(tipo, _valores(TipoCompraChoices), "tipo"),
+            tipo=self._validar_enum(tipo, TIPOS_COMPRA_ADMIN, "tipo"),
             desde=self._validar_fecha(desde, "desde"),
             hasta=self._validar_fecha(hasta, "hasta"),
             q=params.q,

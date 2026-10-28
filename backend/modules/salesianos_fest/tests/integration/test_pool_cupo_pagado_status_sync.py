@@ -26,6 +26,9 @@ from modules.commerce.domain.models import Compra
 from modules.eventos.domain.models import Evento
 from modules.pagos.domain.constants import IzipayStatus, OrdenPagoStatus
 from modules.pagos.domain.models import OrdenPago, TransaccionPago
+from modules.pagos.domain.services.core.evidencia_pago_service import (
+    EvidenciaPagoService,
+)
 from modules.salesianos_fest.domain.constants import (
     AlcanceBeneficioChoices,
     EstadoAsignacionCupoChoices,
@@ -267,6 +270,7 @@ def _liquidar(compra):
     flujo = ConfirmarPagoFlujo(
         asignacion_core=AsignacionCoreService(),
         acreditacion_core=AcreditacionCoreService(),
+        evidencia_pago=EvidenciaPagoService(),
     )
     return async_to_sync(flujo._confirmar_compra)(str(compra.orden_pago_id))
 

@@ -49,6 +49,11 @@ export {
 } from "./AdminListaToolbar";
 export { AdminOverview } from "./AdminOverview";
 export { AdminPageHeader, type AdminPageHeaderProps } from "./AdminPageHeader";
+export {
+  AdminPagoManualDialog,
+  type AdminPagoManualDialogProps,
+  type AdminPagoManualModo,
+} from "./AdminPagoManualDialog";
 export { AdminPagosLista } from "./AdminPagosLista";
 export { AdminParticipantesLista } from "./AdminParticipantesLista";
 

@@ -5,8 +5,8 @@ The presenter NEVER queries the database and NEVER calls a selector
 (`contract/api-wrapper-presenter-contract.md` §3): it only maps result objects
 into the typed HTTP wrappers.
 
-The wrapper declares NO credential: no password, no hash, no token and no
-`is_superuser`.
+The wrapper declares NO credential: no password, no hash and no token. The tier
+of the account (`is_staff`, `is_superuser`, `nivel`) IS published.
 """
 
 from core.pagination import PaginatedData
@@ -43,6 +43,9 @@ class AdminUsuarioPresenter:
             persona_id=result.persona_id,
             persona_documento=result.persona_documento,
             es_admin=result.es_admin,
+            is_staff=result.is_staff,
+            is_superuser=result.is_superuser,
+            nivel=result.nivel,
             is_active=result.is_active,
             last_login=result.last_login,
             created_at=result.created_at,

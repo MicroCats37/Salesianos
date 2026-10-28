@@ -108,3 +108,115 @@ class PagoNotificacionNoVerificableError(ConflictError):
             "La notificación del pago no pudo ser verificada.",
             code=self.code,
         )
+
+
+# ── Aprobación manual de pago (administrador) ──────────────────────────────
+
+class PagoNoVerificadoError(ConflictError):
+    """
+    The order carries NO verifiable payment evidence (409).
+
+    The commercial settlement only turns a purchase into `PAGADA` when the
+    order proves it was paid: a correlated successful provider transaction or
+    an active manual approval. Without that evidence nothing is settled and
+    no right is granted.
+    """
+
+    code = "PAGO_NO_VERIFICADO"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            "El pago no cuenta con evidencia verificable.",
+            code=self.code,
+        )
+
+
+class MontoNoCoincideError(ConflictError):
+    """
+    The approved amount or currency does not match the order (409).
+
+    The approval is a FROZEN snapshot of what was proved: an administrator
+    can never adjust the amount of an order. Nothing is mutated.
+    """
+
+    code = "MONTO_NO_COINCIDE"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            "El monto y la moneda no coinciden con la orden de pago.",
+            code=self.code,
+        )
+
+
+class OrdenYaPagadaConIzipayError(ConflictError):
+    """
+    The order was already paid through the provider (409).
+
+    A manual approval NEVER replaces a provider payment: it would create a
+    second, contradictory evidence of the same order.
+    """
+
+    code = "ORDEN_YA_PAGADA_CON_IZIPAY"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            "La orden de pago ya fue pagada mediante el proveedor.",
+            code=self.code,
+        )
+
+
+class CompraYaCanceladaError(ConflictError):
+    """
+    The purchase that funds the order was already cancelled (409).
+
+    A cancelled purchase never becomes paid again: the approval would
+    resurrect commercial rights that were already revoked.
+    """
+
+    code = "COMPRA_YA_CANCELADA"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            "La compra asociada ya se encuentra cancelada.",
+            code=self.code,
+        )
+
+
+class AprobacionPagoManualDeshabilitadaError(ConflictError):
+    """
+    The manual approval of payments is disabled in this environment (409).
+
+    The capability is rolled out behind a setting: the model and the audit
+    can be deployed first and the action enabled later.
+    """
+
+    code = "PAGO_MANUAL_APROBACION_DESHABILITADA"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            "La aprobación manual de pagos no está habilitada.",
+            code=self.code,
+        )
+
+
+class AprobacionPagoManualNoEncontradaError(NotFoundError):
+    """
+    The order carries no manual approval to annul (404).
+
+    Only an ACTIVE approval can be annulled: the annulled ones are kept as
+    the audit trail of the decision.
+    """
+
+    code = "APROBACION_PAGO_MANUAL_NO_ENCONTRADA"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            resource="Aprobación de pago manual",
+            code=self.code,
+        )

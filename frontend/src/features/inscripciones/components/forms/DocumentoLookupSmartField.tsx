@@ -84,7 +84,7 @@ export function DocumentoLookupSmartField() {
         await trigger(["numeroDocumento", "nombres", "apellidos"]);
         toast.success("Datos del documento cargados");
       }
-    } catch (e) {
+    } catch {
       // El error ya es manejado por el hook
     }
   }

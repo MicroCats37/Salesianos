@@ -159,6 +159,13 @@ const ESTADO_PARTICIPACION_LABEL: Record<string, string> = {
 const TIPO_COMPRA_LABEL: Record<string, string> = {
   INICIAL: "Inicial",
   AMPLIACION: "Ampliación",
+  PASE: "Pase de fiesta",
+};
+
+const TIPO_COMPRA_TONE: Record<string, AdminTone> = {
+  INICIAL: "brand",
+  AMPLIACION: "violet",
+  PASE: "cyan",
 };
 
 const TIPO_ACEPTACION_LABEL: Record<string, string> = {
@@ -185,6 +192,36 @@ const ESTADO_TRANSACCION_LABEL: Record<string, string> = {
   EXITO: "Éxito",
   FALLIDO: "Fallido",
   CANCELADO: "Cancelado",
+};
+
+const ORIGEN_PAGO_TONE: Record<string, AdminTone> = {
+  IZIPAY: "emerald",
+  MANUAL: "violet",
+  SIN_PAGO: "amber",
+};
+
+const ORIGEN_PAGO_LABEL: Record<string, string> = {
+  IZIPAY: "Izipay",
+  MANUAL: "Manual",
+  SIN_PAGO: "Sin pago",
+};
+
+const ESTADO_APROBACION_MANUAL_TONE: Record<string, AdminTone> = {
+  APROBADA: "emerald",
+  ANULADA: "rose",
+};
+
+const ESTADO_APROBACION_MANUAL_LABEL: Record<string, string> = {
+  APROBADA: "Aprobada",
+  ANULADA: "Anulada",
+};
+
+const CANAL_PAGO_MANUAL_LABEL: Record<string, string> = {
+  TRANSFERENCIA_BANCARIA: "Transferencia bancaria",
+  EFECTIVO: "Efectivo",
+  YAPE: "Yape",
+  PLIN: "Plin",
+  OTRO: "Otro",
 };
 
 function tono(mapa: Record<string, AdminTone>, valor: string): AdminTone {
@@ -309,6 +346,11 @@ export function tipoCompraLabel(tipo: string): string {
   return etiqueta(TIPO_COMPRA_LABEL, tipo);
 }
 
+/** Tone of a purchase type (INICIAL, AMPLIACION or PASE). */
+export function tipoCompraTone(tipo: string): AdminTone {
+  return tono(TIPO_COMPRA_TONE, tipo);
+}
+
 /** Label of a legal acceptance type. */
 export function tipoAceptacionLabel(tipo: string): string {
   return etiqueta(TIPO_ACEPTACION_LABEL, tipo);
@@ -327,4 +369,29 @@ export function estadoTransaccionTone(estado: string): AdminTone {
 /** Label of a payment attempt state. */
 export function estadoTransaccionLabel(estado: string): string {
   return etiqueta(ESTADO_TRANSACCION_LABEL, estado);
+}
+
+/** Tone of the origin of the payment evidence (IZIPAY, MANUAL, SIN_PAGO). */
+export function origenPagoTone(origen: string): AdminTone {
+  return tono(ORIGEN_PAGO_TONE, origen);
+}
+
+/** Label of the origin of the payment evidence. */
+export function origenPagoLabel(origen: string): string {
+  return etiqueta(ORIGEN_PAGO_LABEL, origen);
+}
+
+/** Tone of the state of a manual payment approval. */
+export function estadoAprobacionManualTone(estado: string): AdminTone {
+  return tono(ESTADO_APROBACION_MANUAL_TONE, estado);
+}
+
+/** Label of the state of a manual payment approval. */
+export function estadoAprobacionManualLabel(estado: string): string {
+  return etiqueta(ESTADO_APROBACION_MANUAL_LABEL, estado);
+}
+
+/** Label of the channel of a manual payment. */
+export function canalPagoManualLabel(canal: string): string {
+  return etiqueta(CANAL_PAGO_MANUAL_LABEL, canal);
 }

@@ -37,15 +37,18 @@ from modules.salesianos_fest.domain.constants import (
     EstadoAsignacionCupoChoices,
     EstadoEquipoChoices,
     EstadoInscripcionPersonaChoices,
+    EstadoPaseBeneficiarioChoices,
     EstadoParticipacionChoices,
 )
 from modules.salesianos_fest.domain.models import (
     AcreditacionEvento,
     AsignacionCupo,
     CompraInscripcion,
+    CompraPase,
     Equipo,
     Inscripcion,
     InscripcionPersona,
+    PaseBeneficiario,
     Participacion,
 )
 
@@ -199,6 +202,52 @@ class AdminResumenSelector:
             "asignado_activo": asignado_activo,
             "disponible_pagado": max(0, pagado - asignado_activo),
             "inscripciones_con_capacidad_exhaustada": agotadas,
+        }
+
+    # ── Pases de fiesta ─────────────────────────────────────────────────────
+
+    def contar_pases(self, evento_id: str) -> dict:
+        """Return the counters of the party passes of the event.
+
+        The pass revenue lives in its OWN block: it NEVER contaminates the
+        sports purchase or cupo metrics (`contar_compras`, `contar_cupos`).
+
+        - `pases_vendidos`       — passes sold: the ones of the purchases
+          that are NOT cancelled (the live commercial capacity),
+        - `pases_pagados`        — passes of the PAID purchases,
+        - `monto_pases_pagado`   — money of the paid pass purchases,
+        - `beneficiarios_activos`— nominative rights that still grant the
+          fiesta access (a revoked right keeps its slot but grants nothing).
+        """
+        base = CompraPase.objects.filter(evento_id=evento_id)
+
+        vendidos = (
+            base.exclude(compra__estado=EstadoCompraChoices.CANCELADA)
+            .aggregate(total=Sum("cantidad"))["total"]
+            or 0
+        )
+
+        pagados = base.filter(
+            compra__estado=EstadoCompraChoices.PAGADA
+        ).aggregate(
+            # El alias NO puede llamarse `total`: `CompraPase.total` es el
+            # monto de la compra, y Django resolvería `Sum("total")` contra
+            # el alias ya declarado ("Cannot compute Sum('total'): 'total' is
+            # an aggregate").
+            cantidad_total=Sum("cantidad"),
+            monto=Sum("total"),
+        )
+
+        beneficiarios_activos = PaseBeneficiario.objects.filter(
+            evento_id=evento_id,
+            estado=EstadoPaseBeneficiarioChoices.ACTIVA,
+        ).count()
+
+        return {
+            "pases_vendidos": int(vendidos),
+            "pases_pagados": int(pagados["cantidad_total"] or 0),
+            "monto_pases_pagado": pagados["monto"] or 0,
+            "beneficiarios_activos": beneficiarios_activos,
         }
 
     # ── Equipos ─────────────────────────────────────────────────────────────

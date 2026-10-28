@@ -38,6 +38,9 @@ from modules.salesianos_fest.domain.models import (
 )
 from modules.commerce.domain.models import Compra
 from modules.pagos.domain.models import OrdenPago, TransaccionPago
+from modules.pagos.domain.services.core.evidencia_pago_service import (
+    EvidenciaPagoService,
+)
 from modules.salesianos_fest.domain.constants import (
     ModalidadChoices,
     TipoPaqueteChoices,
@@ -232,7 +235,13 @@ def equipo_futbol(db, inscripcion_base, disciplina_futbol, categoria_senior):
 
 @pytest.fixture
 def crear_compra(db, inscripcion_base):
-    """Factory of compras linked to the inscripcion (PENDIENTE by default)."""
+    """Factory of compras linked to the inscripcion (PENDIENTE by default).
+
+    The payment order ALWAYS carries the evidence of a verified payment (a
+    correlated successful transaction): the settlement only turns a purchase
+    into `PAGADA` when the order proves it was paid. The purchase stays
+    PENDIENTE — the commercial settlement is what the tests drive.
+    """
     contador = {"n": 0}
 
     def _crear(
@@ -253,21 +262,16 @@ def crear_compra(db, inscripcion_base):
         orden_pago = OrdenPago.objects.create(
             numero=f"OP-PHASE4-{n:03d}",
             monto_total=total,
-            estado=(
-                OrdenPagoStatus.PAGADA
-                if estado == EstadoCompraChoices.PAGADA
-                else OrdenPagoStatus.PENDIENTE
-            ),
+            estado=OrdenPagoStatus.PAGADA,
         )
-        if estado == EstadoCompraChoices.PAGADA:
-            TransaccionPago.objects.create(
-                orden_pago=orden_pago,
-                transaction_id=f"PHASE4TX{n}",
-                order_number=f"PHASE4TN{n}",
-                amount=total,
-                currency="PEN",
-                status=IzipayStatus.EXITO,
-            )
+        TransaccionPago.objects.create(
+            orden_pago=orden_pago,
+            transaction_id=f"PHASE4TX{n}",
+            order_number=f"PHASE4TN{n}",
+            amount=total,
+            currency="PEN",
+            status=IzipayStatus.EXITO,
+        )
         compra.orden_pago = orden_pago
         compra.save(update_fields=["orden_pago", "updated_at"])
         CompraInscripcion.objects.create(
@@ -333,6 +337,7 @@ def _confirmar_pago(orden_pago_id: str):
     flujo = ConfirmarPagoFlujo(
         asignacion_core=AsignacionCoreService(),
         acreditacion_core=AcreditacionCoreService(),
+        evidencia_pago=EvidenciaPagoService(),
     )
     return async_to_sync(flujo._confirmar_compra)(orden_pago_id)
 
@@ -444,14 +449,17 @@ def test_ampliacion_pagada_asigna_cupos_a_los_que_sobran(
 
 
 @pytest.mark.django_db
-def test_confirmar_pago_por_http_crea_asignaciones(
+def test_el_responsable_no_puede_liquidar_por_http(
     db, api_client, inscripcion_base, crear_compra, preregistrar,
     persona, persona_2, usuario_con_persona
 ):
     """
     GIVEN: 2 preregistered participants and a pending compra
     WHEN:  POST /api/compras/confirmar-pago is called by the responsible
-    THEN:  the compra is paid and the rights are created.
+    THEN:  the route does not exist (405) and NO right is created.
+
+    The commercial settlement belongs to the backend (after the payment is
+    verified) or to an administrator (through the audited manual approval).
     """
     preregistrar(persona, persona_2)
     compra = crear_compra(cantidad=2)
@@ -462,10 +470,10 @@ def test_confirmar_pago_por_http_crea_asignaciones(
         HTTP_AUTHORIZATION=f"Bearer {token}",
     )
 
-    assert response.status_code == 200, response.content
+    assert response.status_code == 405, response.content
     compra.refresh_from_db()
-    assert compra.estado == EstadoCompraChoices.PAGADA
-    assert len(_asignaciones_activas(inscripcion_base.id)) == 2
+    assert compra.estado == EstadoCompraChoices.PENDIENTE
+    assert len(_asignaciones_activas(inscripcion_base.id)) == 0
 
 
 # ── Task 4.2: exceso de participantes queda bloqueado ────────────────────────
@@ -718,6 +726,9 @@ def test_compra_cancelada_revoca_solo_las_asignaciones_afectadas(
     from modules.salesianos_fest.domain.services.core.asignacion_service import (
         AsignacionCoreService,
     )
+    from modules.salesianos_fest.domain.services.core.pase_beneficiario_service import (
+        PaseBeneficiarioCoreService,
+    )
 
     preregistrar(persona, persona_2)
     compra_inicial = crear_compra(cantidad=1, tipo=TipoCompraChoices.INICIAL)
@@ -733,6 +744,7 @@ def test_compra_cancelada_revoca_solo_las_asignaciones_afectadas(
     flujo = CancelarCompraFlujo(
         asignacion_core=AsignacionCoreService(),
         acreditacion_core=AcreditacionCoreService(),
+        pase_beneficiario_core=PaseBeneficiarioCoreService(),
     )
     result = async_to_sync(flujo._cancelar_compra)(str(compra_inicial.id))
 
@@ -774,6 +786,9 @@ def test_compra_cancelada_conserva_acreditacion_entre_inscripciones(
     from modules.salesianos_fest.domain.services.core.asignacion_service import (
         AsignacionCoreService,
     )
+    from modules.salesianos_fest.domain.services.core.pase_beneficiario_service import (
+        PaseBeneficiarioCoreService,
+    )
 
     inscripcion_a = Inscripcion.objects.create(
         evento=evento,
@@ -812,6 +827,14 @@ def test_compra_cancelada_conserva_acreditacion_entre_inscripciones(
         monto_total=Decimal("50.00"),
         estado=OrdenPagoStatus.PAGADA,
     )
+    TransaccionPago.objects.create(
+        orden_pago=orden_a,
+        transaction_id="OPATXA",
+        order_number="OPATNA",
+        amount=Decimal("50.00"),
+        currency="PEN",
+        status=IzipayStatus.EXITO,
+    )
     compra_a.orden_pago = orden_a
     compra_a.save(update_fields=["orden_pago", "updated_at"])
     CompraInscripcion.objects.create(
@@ -834,6 +857,14 @@ def test_compra_cancelada_conserva_acreditacion_entre_inscripciones(
         monto_total=Decimal("50.00"),
         estado=OrdenPagoStatus.PAGADA,
     )
+    TransaccionPago.objects.create(
+        orden_pago=orden_b,
+        transaction_id="OPATXB",
+        order_number="OPATNB",
+        amount=Decimal("50.00"),
+        currency="PEN",
+        status=IzipayStatus.EXITO,
+    )
     compra_b.orden_pago = orden_b
     compra_b.save(update_fields=["orden_pago", "updated_at"])
     CompraInscripcion.objects.create(
@@ -855,6 +886,7 @@ def test_compra_cancelada_conserva_acreditacion_entre_inscripciones(
     flujo = CancelarCompraFlujo(
         asignacion_core=AsignacionCoreService(),
         acreditacion_core=AcreditacionCoreService(),
+        pase_beneficiario_core=PaseBeneficiarioCoreService(),
     )
     async_to_sync(flujo._cancelar_compra)(str(compra_a.id))
 

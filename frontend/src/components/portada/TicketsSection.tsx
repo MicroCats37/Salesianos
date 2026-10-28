@@ -72,7 +72,7 @@ export function TicketsSection() {
           externo: true,
         }
       : {
-          label: "PREINSCRIBIR EQUIPO",
+          label: "INSCRIBIR EQUIPO",
           href: ENLACES.registro,
           externo: false,
         };

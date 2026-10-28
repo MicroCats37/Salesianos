@@ -9,6 +9,7 @@ from modules.administracion.tests.fixtures.fest_fixtures import (
     escenario_operativo,
     escenario_otra_edicion,
     escenario_paginacion,
+    escenario_pases,
 )
 from modules.administracion.tests.fixtures.usuarios_fixtures import (
     api_client,

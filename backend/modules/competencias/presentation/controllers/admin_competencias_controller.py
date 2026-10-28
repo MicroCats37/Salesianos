@@ -6,13 +6,18 @@ Thin async controller: payload → orchestrator → presenter →
 No `if`, no ORM, no manual error response: the errors are raised by the
 domain and translated by the global handlers of `core/exceptions.py`.
 
-Authorization: the whole controller is gated by `RequireAdmin`
-(admin = `is_staff OR is_superuser`, evaluated SERVER-SIDE on every
-request):
+Authorization: the whole controller is gated by `RequireCompetenciasEscribir`
+(the capability `admin.competencias.escribir`, held by the operational staff
+and by the break-glass tier, evaluated SERVER-SIDE on every request):
 
 - anonymous caller → 401 `AUTHENTICATION_REQUIRED` (the JWT runs first),
 - authenticated non-admin → 403 `ACTION_NOT_ALLOWED`,
 - admin → 200/201/204.
+
+The gate is declared once at the controller level: the read capability
+(`admin.ver`) and the write capability (`admin.competencias.escribir`) are
+held by the SAME tier today, so splitting them route by route would repeat
+the same decision twenty times.
 
 Routes:
   GET    /administracion/competencias                     — the competitions.
@@ -36,7 +41,7 @@ from injector import inject
 from ninja import Query
 from ninja_extra import api_controller, route
 
-from core.permissions import RequireAdmin
+from core.permissions import RequireCompetenciasEscribir
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
 from modules.competencias.domain.schemas.competencias_schemas import (
@@ -90,7 +95,7 @@ from modules.competencias.presentation.schemas.competencias_schemas import (
 @api_controller(
     "/administracion/competencias",
     tags=["Competencias"],
-    permissions=[RequireAdmin],
+    permissions=[RequireCompetenciasEscribir],
 )
 class AdminCompetenciasController:
     """Controller of the competitions and of their bracket."""

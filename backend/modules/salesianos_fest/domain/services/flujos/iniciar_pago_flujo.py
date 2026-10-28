@@ -3,7 +3,9 @@ IniciarPagoFlujo — async flow for initiating Izipay payment for a Compra.
 
 Flow:
 1. Load commerce.Compra and validate it is PENDIENTE
-2. Load CompraInscripcion to get Inscripcion.responsable (Persona) for buyer data
+2. Resolve the buyer: the responsable of the Inscripcion for a sports
+   purchase, the generic `Compra.responsable` for any other purchase (a
+   batch of party passes)
 3. Call PagosOrchestrator.preparar_pago_izipay with OrdenPago data
 4. Return Izipay token + config to frontend
 """
@@ -12,7 +14,11 @@ import logging
 from asgiref.sync import sync_to_async
 from injector import inject
 
-from modules.salesianos_fest.domain.exceptions import CompraNotFoundError, CompraNoCobrableError
+from modules.salesianos_fest.domain.exceptions import (
+    CompraNoCobrableError,
+    CompraNotFoundError,
+    CompraSinCompradorError,
+)
 from modules.salesianos_fest.domain.results.compra_results import CompraIzipayPreparedResult
 from modules.pagos.domain.services.orchestrators.pagos_orchestrator import PagosOrchestrator
 from modules.pagos.domain.constants import OrdenPagoStatus
@@ -26,8 +32,9 @@ class IniciarPagoFlujo:
     """
     Async flow for initiating Izipay payment for an existing Compra.
 
-    Uses the buyer data from the responsable Persona linked to the Inscripcion
-    via CompraInscripcion.
+    The buyer data comes from the responsible Persona of the purchase: the
+    one linked to the Inscripcion of a sports purchase, or the generic
+    `Compra.responsable` of any other purchase.
     """
 
     @inject
@@ -46,13 +53,14 @@ class IniciarPagoFlujo:
 
         Steps:
         1. Load commerce.Compra and validate it is PENDIENTE
-        2. Load CompraInscripcion to get Inscripcion.responsable for buyer data
+        2. Resolve the buyer of the purchase
         3. Call PagosOrchestrator.preparar_pago_izipay
         4. Return Izipay token + config
 
         Raises:
             CompraNotFoundError: if compra not found
             CompraNoCobrableError: if compra is not PENDIENTE
+            CompraSinCompradorError: if the purchase has no owner
         """
         compra, orden_pago, buyer = await sync_to_async(self._cargar_contexto_pago)(compra_id)
 
@@ -84,7 +92,12 @@ class IniciarPagoFlujo:
         """Load and validate all ORM-backed payment context synchronously."""
         compra = (
             Compra.objects
-            .select_related("orden_pago", "compra_inscripcion", "compra_inscripcion__inscripcion__responsable")
+            .select_related(
+                "orden_pago",
+                "responsable",
+                "compra_inscripcion",
+                "compra_inscripcion__inscripcion__responsable",
+            )
             .filter(id=compra_id)
             .first()
         )
@@ -98,9 +111,10 @@ class IniciarPagoFlujo:
         if orden_pago.estado != OrdenPagoStatus.PENDIENTE:
             raise CompraNoCobrableError()
 
-        # Get responsable from Inscripcion via CompraInscripcion
-        inscripcion = compra.compra_inscripcion.inscripcion
-        responsable = inscripcion.responsable
+        responsable = self._resolver_comprador(compra)
+        if responsable is None:
+            raise CompraSinCompradorError()
+
         buyer = {
             "email": getattr(responsable, "email", None) or "sin-email@ejemplo.com",
             "name": getattr(responsable, "nombres", None) or "CLIENTE",
@@ -109,3 +123,17 @@ class IniciarPagoFlujo:
             "phone": getattr(responsable, "telefono", None) or "999999999",
         }
         return compra, orden_pago, buyer
+
+    @staticmethod
+    def _resolver_comprador(compra):
+        """
+        Return the buyer of a purchase, or None when it has no owner.
+
+        A SPORTS purchase is bought by the responsable of its inscription; any
+        OTHER purchase (a batch of party passes) is bought by the generic
+        `Compra.responsable`. The sports rule keeps its precedence.
+        """
+        compra_inscripcion = getattr(compra, "compra_inscripcion", None)
+        if compra_inscripcion is not None:
+            return compra_inscripcion.inscripcion.responsable
+        return compra.responsable

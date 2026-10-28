@@ -55,6 +55,34 @@ PUBLIC_ERROR_MESSAGES = {
     "COMPRA_NO_AUTORIZADA": (
         "No tiene autorización para realizar esta acción."
     ),
+    "COMPRA_SIN_COMPRADOR": (
+        "La compra no tiene un comprador asignado."
+    ),
+    "COMPRA_CON_APROBACION_MANUAL": (
+        "La compra tiene una aprobación manual activa y sólo puede anularla "
+        "un administrador."
+    ),
+    # ── Aprobación manual de pago (administrador) ─────────────────────────────
+    # Categoría "Payment" (409). Los mensajes explican la condición del pago
+    # sin exponer identificadores, montos internos ni payloads del proveedor.
+    "PAGO_NO_VERIFICADO": (
+        "El pago no cuenta con evidencia verificable."
+    ),
+    "MONTO_NO_COINCIDE": (
+        "El monto y la moneda no coinciden con la orden de pago."
+    ),
+    "ORDEN_YA_PAGADA_CON_IZIPAY": (
+        "La orden de pago ya fue pagada mediante el proveedor."
+    ),
+    "COMPRA_YA_CANCELADA": (
+        "La compra asociada ya se encuentra cancelada."
+    ),
+    "PAGO_MANUAL_APROBACION_DESHABILITADA": (
+        "La aprobación manual de pagos no está habilitada."
+    ),
+    "APROBACION_PAGO_MANUAL_NO_ENCONTRADA": (
+        "No se encontró la aprobación de pago manual solicitada."
+    ),
     # ── Pool primero (alta de participantes) ──────────────────────────────────
     "PARTICIPANTE_DEBE_PREREGISTRARSE": (
         "Los participantes se pre-registran en el pool y luego se asignan a un equipo."
@@ -80,6 +108,18 @@ PUBLIC_ERROR_MESSAGES = {
     ),
     "RESOURCE_NOT_FOUND": (
         "No se encontró el recurso solicitado."
+    ),
+    # ── Identidad / personas ──────────────────────────────────────────────────
+    # 404 — el documento consultado NO corresponde a una `Persona` registrada.
+    # El mensaje no confirma ni desmiente datos de cuentas, contactos ni
+    # credenciales: sólo dice que no hay una persona con ese documento.
+    "PERSONA_NO_ENCONTRADA": (
+        "No se encontró una persona registrada con ese documento."
+    ),
+    # 422 — el tipo de documento consultado NO pertenece al vocabulario
+    # cerrado del módulo de identidad (DNI, CE, PAS).
+    "TIPO_DOCUMENTO_INVALIDO": (
+        "El tipo de documento no es válido."
     ),
     # ── Petición inválida (parámetros de consulta) ───────────────────────────
     # Categoría "Validation" (422). Cubre los rechazos del contrato de
@@ -151,6 +191,64 @@ PUBLIC_ERROR_MESSAGES = {
     ),
     "REASON_REQUIRED": (
         "Debes indicar el motivo del cambio."
+    ),
+    # ── Pases de fiesta (catálogo independiente) ───────────────────────────────
+    # Categorías transversales del contrato de wrappers (§8). Los mensajes son
+    # prosa fija: nunca interpolan ids, UUIDs, nombres ni montos internos.
+    # 409 — la capacidad está apagada o la condición de negocio no se cumple.
+    "PASES_FIESTA_DESHABILITADO": (
+        "La compra de pases no está habilitada en este momento."
+    ),
+    "PASE_NO_DISPONIBLE": (
+        "El pase seleccionado no está disponible para la compra."
+    ),
+    "PASE_PRECIO_NO_VIGENTE": (
+        "El pase seleccionado no tiene un precio vigente."
+    ),
+    "PASE_INVENTARIO_AGOTADO": (
+        "No hay disponibilidad suficiente de ese pase."
+    ),
+    # 404 — el recurso no existe.
+    "PASE_NO_ENCONTRADO": (
+        "No se encontró el pase solicitado."
+    ),
+    "PASE_COMPRA_NO_ENCONTRADA": (
+        "No se encontró la compra de pases solicitada."
+    ),
+    # 403 — el actor está autenticado pero no es el titular.
+    "PASE_COMPRA_NO_AUTORIZADA": (
+        "No tienes autorización para consultar esta compra de pases."
+    ),
+    # 400 — el usuario autenticado no tiene una Persona vinculada.
+    "PASE_COMPRADOR_SIN_PERSONA": (
+        "Usuario sin persona vinculada. Complete su registro."
+    ),
+    # 422 — la cantidad de pases solicitada no es válida.
+    "PASE_CANTIDAD_INVALIDA": (
+        "La cantidad de pases solicitada no es válida."
+    ),
+    # ── Pases de fiesta: derechos nominativos ─────────────────────────────────
+    # 409 — el estado comercial o la capacidad del lote no lo permiten.
+    "PASE_COMPRA_NO_PAGADA": (
+        "La compra de pases aún no está pagada."
+    ),
+    "PASE_BENEFICIARIOS_EXCEDIDOS": (
+        "No hay pases suficientes para los beneficiarios indicados."
+    ),
+    "PASE_BENEFICIARIO_DUPLICADO": (
+        "Esa persona ya tiene un pase activo en este evento."
+    ),
+    "PASE_NO_TRANSFERIBLE": (
+        "Ese pase no es transferible a otra persona."
+    ),
+    # 404 — la persona indicada no existe o no tiene derecho en la compra.
+    "PASE_BENEFICIARIO_NO_ENCONTRADO": (
+        "No se encontró el beneficiario indicado."
+    ),
+    # 403 — la cancelación de una compra de pases es una decisión
+    # administrativa: el comprador no puede tomarla.
+    "PASE_CANCELACION_REQUIERE_ADMINISTRACION": (
+        "La cancelación de una compra de pases la realiza un administrador."
     ),
 }
 

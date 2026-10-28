@@ -2,7 +2,6 @@
 
 import {
   IdCard,
-  Info,
   MessageSquare,
   Shield,
   UserPlus,
@@ -216,26 +215,20 @@ export function AddParticipanteModal({
 
         return (
           <div className="space-y-5">
-            {/* Pool context strip */}
-            <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/[0.04] px-4 py-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Users className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-                  Destino
-                </p>
-                <p className="truncate text-sm font-bold text-foreground">
-                  Pool de participantes (sin equipo)
-                </p>
-              </div>
+            {/* Destino: el dato (DÓNDE va), no otra explicación. El porqué
+                ya está en la descripción del modal. */}
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.04] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.15em] text-primary">
+                <Users className="size-3.5" />
+                Destino: pool de participantes
+              </span>
             </div>
 
             {/* ── Identidad ──────────────────────────────────────────── */}
             <Section
               icon={IdCard}
               title="Identidad"
-              description="Datos de identidad del participante. Puedes autocompletar con DNI."
+              description="Autocompleta los datos con el DNI."
               badge="Obligatorio"
               accent="sky"
             >
@@ -306,7 +299,7 @@ export function AddParticipanteModal({
             <Section
               icon={Users}
               title="Contacto"
-              description="Datos de contacto opcionales del participante."
+              description="Opcional. Para que el comité pueda ubicarla."
               accent="amber"
             >
               <div className="grid grid-cols-12 gap-3">
@@ -316,7 +309,7 @@ export function AddParticipanteModal({
                     label: "Teléfono",
                     type: "text",
                     placeholder: "9 dígitos",
-                    helperText: "Opcional — 9 dígitos sin prefijo",
+                    helperText: "9 dígitos sin prefijo",
                     containerClassName: "col-span-12 sm:col-span-6",
                   }}
                   register={register as never}
@@ -329,7 +322,7 @@ export function AddParticipanteModal({
                     label: "WhatsApp",
                     type: "text",
                     placeholder: "9 dígitos",
-                    helperText: "Opcional — para contacto rápido del comité",
+                    helperText: "9 dígitos",
                     containerClassName: "col-span-12 sm:col-span-6",
                   }}
                   register={register as never}
@@ -345,7 +338,7 @@ export function AddParticipanteModal({
             <Section
               icon={Shield}
               title="Seguro Médico"
-              description="Datos del seguro médico del participante (opcional)."
+              description="Opcional. Datos de la póliza."
               accent="emerald"
             >
               <div className="grid grid-cols-12 gap-3">
@@ -384,7 +377,7 @@ export function AddParticipanteModal({
             <Section
               icon={MessageSquare}
               title="Notas internas"
-              description="Información adicional que el comité debe conocer (alergias, condiciones médicas, observaciones)."
+              description="Alergias, condiciones médicas u observaciones."
               accent="violet"
             >
               <NotasTextarea
@@ -396,16 +389,9 @@ export function AddParticipanteModal({
               />
             </Section>
 
-            {/* ── Footer info ────────────────────────────────────────── */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-              <Info className="size-3.5" />
-              <p>
-                El participante quedará en el pool de la inscripción, sin
-                equipo. Si hay cupo pagado disponible se le asigna
-                automáticamente; después podrás ubicarlo en un equipo con el
-                selector del equipo.
-              </p>
-            </div>
+            {/* Sin pie: la descripción del modal ya explica el destino y el
+                espera del cupo pagado. Repetirlo por tercera vez solo
+                alargaba el formulario. */}
           </div>
         );
       }}

@@ -13,9 +13,13 @@ from .domain.services.core.persona_core_service import PersonaCoreService
 from .domain.services.flujos.auth_flujo import AuthFlujo
 from .domain.services.flujos.registro_flujo import RegistroFlujo
 from .domain.services.flujos.persona_busqueda_flujo import PersonaBusquedaFlujo
+from .domain.services.flujos.persona_resolucion_flujo import PersonaResolucionFlujo
 from .domain.services.orchestrators.auth_orchestrator import AuthOrchestrator
 from .domain.services.orchestrators.registro_orchestrator import RegistroOrchestrator
 from .domain.services.orchestrators.persona_busqueda_orchestrator import PersonaBusquedaOrchestrator
+from .domain.services.orchestrators.persona_resolucion_orchestrator import (
+    PersonaResolucionOrchestrator,
+)
 from .domain.ports import IConsultaExternaClient
 from .domain.selectors import PersonaSelector, UsuarioSelector
 from .infrastructure.services import ConsultaExternaSimulator, RealConsultaExternaClient
@@ -34,6 +38,8 @@ class UsuariosModule(Module):
     - RegistroOrchestrator (fachada ligera, depende de RegistroFlujo)
     - PersonaBusquedaFlujo (flujo de búsqueda, depende de IConsultaExternaClient)
     - PersonaBusquedaOrchestrator (fachada ligera, depende de PersonaBusquedaFlujo)
+    - PersonaResolucionFlujo (flujo de resolución exacta, depende de PersonaSelector)
+    - PersonaResolucionOrchestrator (fachada ligera, depende de PersonaResolucionFlujo)
     - IConsultaExternaClient (reutilizado de entidades: simulador o cliente real)
 
     Todos los servicios son de ámbito singleton.
@@ -53,6 +59,14 @@ class UsuariosModule(Module):
         # Servicios de búsqueda de personas — ámbito singleton
         binder.bind(PersonaBusquedaFlujo, to=PersonaBusquedaFlujo, scope=singleton)
         binder.bind(PersonaBusquedaOrchestrator, to=PersonaBusquedaOrchestrator, scope=singleton)
+
+        # Resolución EXACTA de una identidad registrada (depende de PersonaSelector)
+        binder.bind(PersonaResolucionFlujo, to=PersonaResolucionFlujo, scope=singleton)
+        binder.bind(
+            PersonaResolucionOrchestrator,
+            to=PersonaResolucionOrchestrator,
+            scope=singleton,
+        )
 
         # Selectors de identidad (solo lectura) — los consume la superficie de
         # administración operativa para listar cuentas y personas.

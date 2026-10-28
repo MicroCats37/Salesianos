@@ -17,6 +17,7 @@ from modules.administracion.presentation.schemas.admin_resumen_schemas import (
     AdminEquiposResumenOut,
     AdminInscripcionesResumenOut,
     AdminPagosResumenOut,
+    AdminPasesResumenOut,
     AdminParticipantesResumenOut,
     AdminResumenOut,
     EventoResumenOut,
@@ -62,6 +63,12 @@ class AdminResumenPresenter:
                 inscripciones_con_capacidad_exhaustada=(
                     result.cupos.inscripciones_con_capacidad_exhaustada
                 ),
+            ),
+            pases=AdminPasesResumenOut(
+                pases_vendidos=result.pases.pases_vendidos,
+                pases_pagados=result.pases.pases_pagados,
+                monto_pases_pagado=result.pases.monto_pases_pagado,
+                beneficiarios_activos=result.pases.beneficiarios_activos,
             ),
             equipos=AdminEquiposResumenOut(
                 total=result.equipos.total,

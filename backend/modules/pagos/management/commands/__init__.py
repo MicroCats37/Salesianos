@@ -1,0 +1,1 @@
+"""pagos management commands package."""

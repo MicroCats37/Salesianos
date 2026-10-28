@@ -1,7 +1,8 @@
 "use client";
 
 import { CreditCard } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -21,15 +22,30 @@ import { useAdminCatalogos } from "../hooks/useAdminCatalogos";
 import { useAdminControlLista } from "../hooks/useAdminControlLista";
 import { useAdminDetalleUrl } from "../hooks/useAdminListaUrl";
 import { useAdminPagoDetalle, useAdminPagos } from "../hooks/useAdminPagos";
-import type { AdminPagoListItem } from "../schemas";
+import { useAdminTieneCapacidad } from "../hooks/useAdminSession";
+import { AdminPaseCancelarDialog } from "../pases/components";
 import {
+  adminBeneficiarioEstadoLabel,
+  adminBeneficiarioEstadoTone,
+  adminPaseCancelable,
+  adminPaseConteosTexto,
+} from "../pases/utils";
+import type { AdminPagoListItem } from "../schemas";
+import { ADMIN_CAPACIDADES } from "../utils/admin.capacidades";
+import {
+  canalPagoManualLabel,
+  estadoAprobacionManualLabel,
+  estadoAprobacionManualTone,
   estadoCompraLabel,
   estadoCompraTone,
   estadoOrdenLabel,
   estadoOrdenTone,
   estadoTransaccionLabel,
   estadoTransaccionTone,
+  origenPagoLabel,
+  origenPagoTone,
   tipoCompraLabel,
+  tipoCompraTone,
 } from "../utils/admin.estado.utils";
 import { adminOpcionesOrdering } from "../utils/admin.lista.utils";
 import {
@@ -48,6 +64,10 @@ import {
 } from "./AdminListaEstados";
 import { type AdminColumna, AdminListaOperativa } from "./AdminListaOperativa";
 import { AdminPageHeader } from "./AdminPageHeader";
+import {
+  AdminPagoManualDialog,
+  type AdminPagoManualModo,
+} from "./AdminPagoManualDialog";
 
 /**
  * AdminPagosLista — the payments table (A5) and the drilldown of one order
@@ -63,6 +83,19 @@ export function AdminPagosLista() {
   const catalogos = useAdminCatalogos();
   const consulta = useAdminPagos(control.estado);
   const consultaDetalle = useAdminPagoDetalle(detalle.detalleId);
+  const [dialogo, setDialogo] = useState<{
+    modo: AdminPagoManualModo;
+    ordenPagoId: string;
+  } | null>(null);
+  const [dialogoPase, setDialogoPase] = useState(false);
+
+  // Approving, annulling or cancelling a purchase is a SENSITIVE action:
+  // the backend answers 403 to the caller without `admin.pagos.aprobar`.
+  // The button is hidden here so the interface does not offer what the
+  // backend would refuse — the authority is still the backend.
+  const puedeAprobarPagos = useAdminTieneCapacidad(
+    ADMIN_CAPACIDADES.PAGOS_APROBAR,
+  );
 
   const datos = consulta.data?.success ? consulta.data.data : null;
   const items = datos?.items ?? [];
@@ -93,10 +126,35 @@ export function AdminPagosLista() {
       clave: "tipo",
       etiqueta: "Tipo",
       render: (item) => (
-        <span className="text-xs text-slate-600">
-          {tipoCompraLabel(item.tipo)}
+        <AdminEstadoBadge
+          etiqueta={tipoCompraLabel(item.tipo)}
+          tono={tipoCompraTone(item.tipo)}
+        />
+      ),
+    },
+    {
+      clave: "producto",
+      etiqueta: "Producto",
+      render: (item) => (
+        <span className="text-xs font-bold text-slate-700">
+          {item.producto_nombre}
         </span>
       ),
+    },
+    {
+      clave: "beneficiarios",
+      etiqueta: "Derechos de pase",
+      render: (item) =>
+        item.tipo === "PASE" ? (
+          <span className="text-xs font-bold text-slate-700">
+            {adminPaseConteosTexto(
+              item.beneficiarios_activos,
+              item.beneficiarios_revocados,
+            )}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        ),
     },
     {
       clave: "cantidad",
@@ -110,6 +168,16 @@ export function AdminPagosLista() {
         <span className="font-bold text-slate-800">
           {formatearMonto(item.total)}
         </span>
+      ),
+    },
+    {
+      clave: "origen_pago",
+      etiqueta: "Origen",
+      render: (item) => (
+        <AdminEstadoBadge
+          etiqueta={origenPagoLabel(item.origen_pago)}
+          tono={origenPagoTone(item.origen_pago)}
+        />
       ),
     },
     {
@@ -217,6 +285,7 @@ export function AdminPagosLista() {
                 opciones={[
                   { valor: "INICIAL", etiqueta: "Inicial" },
                   { valor: "AMPLIACION", etiqueta: "Ampliación" },
+                  { valor: "PASE", etiqueta: "Pase de fiesta" },
                 ]}
                 onChange={(valor) => control.onFiltro("tipo", valor)}
               />
@@ -248,7 +317,10 @@ export function AdminPagosLista() {
               </div>
               <div className="flex flex-wrap gap-2 text-[11px] text-slate-600">
                 <span className="rounded-full bg-slate-100 px-2 py-1">
-                  {item.cantidad} cupo(s)
+                  {item.cantidad} {item.tipo === "PASE" ? "pase(s)" : "cupo(s)"}
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-1">
+                  {item.producto_nombre}
                 </span>
                 <span className="rounded-full bg-slate-100 px-2 py-1">
                   {formatearMonto(item.total)}
@@ -328,6 +400,10 @@ export function AdminPagosLista() {
                         },
                         { etiqueta: "Tipo", valor: tipoCompraLabel(pago.tipo) },
                         {
+                          etiqueta: "Producto",
+                          valor: pago.producto_nombre,
+                        },
+                        {
                           etiqueta: "Estado de la compra",
                           valor: estadoCompraLabel(pago.estado_compra),
                         },
@@ -336,6 +412,10 @@ export function AdminPagosLista() {
                           valor: pago.estado_orden
                             ? estadoOrdenLabel(pago.estado_orden)
                             : "—",
+                        },
+                        {
+                          etiqueta: "Origen del pago",
+                          valor: origenPagoLabel(pago.origen_pago),
                         },
                         {
                           etiqueta: "Total",
@@ -466,12 +546,226 @@ export function AdminPagosLista() {
                         </>
                       )}
                     </div>
+
+                    <div>
+                      <h3 className="mb-2 text-[10px] font-black uppercase tracking-[0.25em] text-[#312e8e]">
+                        Aprobaciones manuales ({pago.aprobaciones.length})
+                      </h3>
+
+                      {pago.aprobaciones.length === 0 ? (
+                        <AdminListaVacia
+                          titulo="Sin aprobaciones manuales"
+                          descripcion="Esta orden no registra aprobaciones administrativas de pago."
+                        />
+                      ) : (
+                        <ul className="flex flex-col gap-2">
+                          {pago.aprobaciones.map((aprobacion) => (
+                            <li
+                              key={aprobacion.id}
+                              className="rounded-2xl border border-slate-200 p-3"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <AdminEstadoBadge
+                                  etiqueta={estadoAprobacionManualLabel(
+                                    aprobacion.estado,
+                                  )}
+                                  tono={estadoAprobacionManualTone(
+                                    aprobacion.estado,
+                                  )}
+                                />
+                                <span className="text-xs font-black text-slate-900">
+                                  {formatearMonto(aprobacion.monto)}{" "}
+                                  {aprobacion.moneda}
+                                </span>
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-600">
+                                <span className="rounded-full bg-slate-100 px-2 py-1">
+                                  Canal:{" "}
+                                  {canalPagoManualLabel(aprobacion.canal)}
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-2 py-1">
+                                  Referencia: {aprobacion.referencia}
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-2 py-1">
+                                  Actor: {aprobacion.actor || "—"}
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-2 py-1">
+                                  {formatearFecha(aprobacion.created_at)}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-[11px] text-slate-700">
+                                {aprobacion.motivo}
+                              </p>
+                              {aprobacion.anulada_en ? (
+                                <p className="mt-1 text-[11px] text-slate-600">
+                                  Anulada por {aprobacion.anulada_por || "—"} ·{" "}
+                                  {formatearFecha(aprobacion.anulada_en)} ·{" "}
+                                  {aprobacion.motivo_anulacion}
+                                </p>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {pago.orden_pago_id && puedeAprobarPagos ? (
+                      <div className="flex flex-wrap gap-2">
+                        {pago.origen_pago === "SIN_PAGO" &&
+                        pago.estado_compra !== "CANCELADA" &&
+                        pago.estado_orden !== "CANCELADA" &&
+                        pago.estado_orden !== "VENCIDA" ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() =>
+                              setDialogo({
+                                modo: "aprobar",
+                                ordenPagoId: pago.orden_pago_id as string,
+                              })
+                            }
+                          >
+                            Registrar el pago manual
+                          </Button>
+                        ) : null}
+
+                        {pago.aprobaciones.some(
+                          (aprobacion) => aprobacion.estado === "APROBADA",
+                        ) ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setDialogo({
+                                modo: "anular",
+                                ordenPagoId: pago.orden_pago_id as string,
+                              })
+                            }
+                          >
+                            Anular la aprobación
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {pago.tipo === "PASE" ? (
+                      <div>
+                        <h3 className="mb-2 text-[10px] font-black uppercase tracking-[0.25em] text-[#312e8e]">
+                          Derechos de pase ({pago.beneficiarios.length})
+                        </h3>
+
+                        {pago.beneficiarios.length === 0 ? (
+                          <AdminListaVacia
+                            titulo="Sin derechos asignados"
+                            descripcion="Esta compra de pases todavía no tiene personas asignadas."
+                          />
+                        ) : (
+                          <ul className="flex flex-col gap-2">
+                            {pago.beneficiarios.map((beneficiario) => (
+                              <li
+                                key={beneficiario.persona_id}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 p-3"
+                              >
+                                <span className="text-xs font-black text-slate-900">
+                                  {`Slot ${beneficiario.slot}`}
+                                </span>
+                                <AdminEstadoBadge
+                                  etiqueta={adminBeneficiarioEstadoLabel(
+                                    beneficiario.estado,
+                                  )}
+                                  tono={adminBeneficiarioEstadoTone(
+                                    beneficiario.estado,
+                                  )}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <p className="mt-2 text-[11px] font-medium text-slate-600">
+                          {adminPaseConteosTexto(
+                            pago.beneficiarios_activos,
+                            pago.beneficiarios_revocados,
+                          )}
+                        </p>
+
+                        {adminPaseCancelable(
+                          pago.estado_compra,
+                          pago.estado_orden,
+                        ) && puedeAprobarPagos ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="mt-3"
+                            onClick={() => setDialogoPase(true)}
+                          >
+                            Cancelar la compra de pases
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })()
             )}
           </SheetContent>
         </Sheet>
+
+        <AdminPagoManualDialog
+          open={dialogo !== null}
+          onOpenChange={(abierto) => {
+            if (!abierto) setDialogo(null);
+          }}
+          modo={dialogo?.modo ?? "aprobar"}
+          ordenPagoId={dialogo?.ordenPagoId ?? ""}
+          numeroOrden={
+            consultaDetalle.data?.success
+              ? (consultaDetalle.data.data?.numero_orden ?? null)
+              : null
+          }
+          montoOrden={
+            consultaDetalle.data?.success
+              ? (consultaDetalle.data.data?.monto_orden ?? null)
+              : null
+          }
+          monedaOrden={
+            consultaDetalle.data?.success
+              ? (consultaDetalle.data.data?.moneda_orden ?? null)
+              : null
+          }
+        />
+
+        <AdminPaseCancelarDialog
+          open={dialogoPase}
+          onOpenChange={(abierto) => setDialogoPase(abierto)}
+          compraId={
+            consultaDetalle.data?.success
+              ? (consultaDetalle.data.data?.compra_id ?? "")
+              : ""
+          }
+          ordenPagoId={
+            consultaDetalle.data?.success
+              ? (consultaDetalle.data.data?.orden_pago_id ?? null)
+              : null
+          }
+          productoNombre={
+            consultaDetalle.data?.success
+              ? (consultaDetalle.data.data?.producto_nombre ?? null)
+              : null
+          }
+          cantidad={
+            consultaDetalle.data?.success
+              ? (consultaDetalle.data.data?.cantidad ?? null)
+              : null
+          }
+          beneficiariosActivos={
+            consultaDetalle.data?.success
+              ? (consultaDetalle.data.data?.beneficiarios_activos ?? null)
+              : null
+          }
+        />
       </div>
     </>
   );

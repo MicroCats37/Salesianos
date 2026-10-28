@@ -1,8 +1,4 @@
-export {
-  type AdminSession,
-  type AdminSessionStatus,
-  revalidateAdminSession,
-} from "./admin.guard.service";
+export { revalidateAdminSession } from "./admin.guard.service";
 export { adminGet } from "./admin.http.service";
 export {
   getAdminInscripcionDetalle,
@@ -18,6 +14,8 @@ export {
   getAdminParticipantes,
 } from "./admin.operacion.service";
 export {
+  anularPagoManual,
+  aprobarPagoManual,
   getAdminPagoDetalle,
   getAdminPagos,
 } from "./admin.pago.service";
@@ -25,6 +23,10 @@ export {
   getAdminCatalogos,
   getAdminResumen,
 } from "./admin.resumen.service";
+export type {
+  AdminSession,
+  AdminSessionStatus,
+} from "./admin.session.server";
 export {
   getAdminUsuarioDetalle,
   getAdminUsuarios,

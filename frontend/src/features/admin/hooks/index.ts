@@ -35,6 +35,15 @@ export {
   useAdminPagos,
 } from "./useAdminPagos";
 export {
+  construirPayloadAnularManual,
+  construirPayloadAprobarManual,
+  invalidarLecturasPago,
+  useAnularPagoManual,
+  useAprobarPagoManual,
+  type VariablesAnularPagoManual,
+  type VariablesAprobarPagoManual,
+} from "./useAdminPagosComandos";
+export {
   adminParticipacionesQueryOptions,
   adminParticipantesQueryOptions,
   useAdminParticipaciones,

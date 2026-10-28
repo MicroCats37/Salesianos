@@ -1,5 +1,5 @@
 """
-Integration tests — the `es_admin` flag of GET /api/auth/me.
+Integration tests — the authorization flags of GET /api/auth/me.
 
 The administration surface needs ONE authorization flag, computed SERVER-SIDE
 with the project rule:
@@ -10,8 +10,10 @@ It is the same rule that `core.permissions.RequireAdmin` applies, so the
 client can anticipate a 403 without being the authority: the backend
 re-evaluates the rule on every request.
 
-`is_superuser` is never exposed: the break-glass tier is not assignable nor
-visible from the administration UI.
+The endpoint ALSO publishes the tier of the CALLER (`is_staff`,
+`is_superuser`, `nivel`) and its capabilities. They are self-scoped: the
+own privilege level is not a disclosure, it is the base of the interface.
+The vocabulary comes from `core.capacidades`, the single map of the project.
 """
 import uuid
 
@@ -20,6 +22,13 @@ from django.contrib.auth import get_user_model
 from django.test import Client
 from ninja_jwt.tokens import AccessToken
 
+from core.capacidades import (
+    CAP_ADMIN_VER,
+    CAP_PAGOS_APROBAR,
+    CAP_PAGOS_VER,
+    CAP_USUARIOS_VER,
+    TODAS_LAS_CAPACIDADES,
+)
 from modules.usuarios.domain.models.persona import Persona
 
 URL_ME = "/api/auth/me"
@@ -114,20 +123,81 @@ def test_me_de_superuser_es_admin(api_client):
 
 
 @pytest.mark.django_db
-def test_me_no_expone_is_superuser(api_client):
+def test_me_publica_el_nivel_del_propio_usuario(api_client):
     """
     GIVEN: an authenticated superuser
     WHEN:  GET /api/auth/me
-    THEN:  the response exposes neither `is_superuser` nor any credential.
+    THEN:  the response publishes the tier of the CALLER (`is_staff`,
+            `is_superuser`, `nivel`) and NEVER a credential.
     """
     usuario = _crear_usuario("super", es_superuser=True)
 
     response = api_client.get(URL_ME, **_auth_header(usuario))
 
+    data = response.json()["data"]
+    assert data["is_staff"] is True
+    assert data["is_superuser"] is True
+    assert data["nivel"] == "superusuario"
+
     crudo = response.content.decode().lower()
-    assert "is_superuser" not in crudo
     assert "password" not in crudo
     assert "token" not in crudo
+
+
+@pytest.mark.django_db
+def test_me_publica_el_nivel_del_staff(api_client):
+    """
+    GIVEN: an authenticated operational staff
+    WHEN:  GET /api/auth/me
+    THEN:  the tier is `staff` and the capabilities are the operational ones.
+    """
+    usuario = _crear_usuario("staff", es_admin=True)
+
+    response = api_client.get(URL_ME, **_auth_header(usuario))
+
+    data = response.json()["data"]
+    assert data["is_staff"] is True
+    assert data["is_superuser"] is False
+    assert data["nivel"] == "staff"
+
+    capacidades = set(data["capacidades"])
+    assert CAP_ADMIN_VER in capacidades
+    assert CAP_PAGOS_VER in capacidades
+    assert CAP_USUARIOS_VER in capacidades
+    # The operational staff does NOT approve or annul payments.
+    assert CAP_PAGOS_APROBAR not in capacidades
+
+
+@pytest.mark.django_db
+def test_me_de_usuario_normal_no_tiene_capacidades(api_client):
+    """
+    GIVEN: an authenticated user that is neither staff nor superuser
+    WHEN:  GET /api/auth/me
+    THEN:  the tier is `usuario` and the capability set is EMPTY.
+    """
+    usuario = _crear_usuario("normal")
+
+    response = api_client.get(URL_ME, **_auth_header(usuario))
+
+    data = response.json()["data"]
+    assert data["nivel"] == "usuario"
+    assert data["capacidades"] == []
+
+
+@pytest.mark.django_db
+def test_me_del_superuser_publica_todas_las_capacidades(api_client):
+    """
+    GIVEN: an authenticated superuser
+    WHEN:  GET /api/auth/me
+    THEN:  the capability set is the COMPLETE one (Django bypasses every
+            check, so our map must never be narrower).
+    """
+    usuario = _crear_usuario("super", es_superuser=True)
+
+    response = api_client.get(URL_ME, **_auth_header(usuario))
+
+    capacidades = set(response.json()["data"]["capacidades"])
+    assert capacidades == set(TODAS_LAS_CAPACIDADES)
 
 
 @pytest.mark.django_db

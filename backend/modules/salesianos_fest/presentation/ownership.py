@@ -20,14 +20,17 @@ endpoint.
 """
 from asgiref.sync import sync_to_async
 
+from core.capacidades import es_admin
 from core.exceptions import ForbiddenError
 
 
 def _is_admin(user) -> bool:
-    """Return True when the actor is a Django admin (is_staff or is_superuser)."""
-    return bool(
-        getattr(user, "is_superuser", False) or getattr(user, "is_staff", False)
-    )
+    """Return True when the actor is a Django admin (is_staff or is_superuser).
+
+    The rule is NOT re-implemented here: it is delegated to
+    `core.capacidades`, the single map of the project.
+    """
+    return es_admin(user)
 
 
 async def check_ownership_or_admin(request, inscripcion_id: str) -> None:

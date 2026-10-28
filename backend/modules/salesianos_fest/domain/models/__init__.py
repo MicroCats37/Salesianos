@@ -6,6 +6,10 @@ from .paquete import Paquete
 from .paquete_disciplina import PaqueteDisciplina
 from .paquete_precio import PaquetePrecio
 from .paquete_beneficio import PaqueteBeneficio
+from .pase import Pase
+from .pase_precio import PasePrecio
+from .compra_pase import CompraPase
+from .pase_beneficiario import PaseBeneficiario
 from .inscripcion import Inscripcion
 from .equipo import Equipo
 from .inscripcion_persona import InscripcionPersona
@@ -24,6 +28,10 @@ __all__ = [
     "PaqueteDisciplina",
     "PaquetePrecio",
     "PaqueteBeneficio",
+    "Pase",
+    "PasePrecio",
+    "CompraPase",
+    "PaseBeneficiario",
     "Inscripcion",
     "Equipo",
     "InscripcionPersona",

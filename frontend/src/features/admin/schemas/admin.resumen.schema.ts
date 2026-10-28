@@ -66,6 +66,25 @@ export const AdminCuposResumenSchema = z.object({
 
 export type AdminCuposResumen = z.infer<typeof AdminCuposResumenSchema>;
 
+/**
+ * The party passes of the event — a SEPARATE block.
+ *
+ * The pass revenue never contaminates the sports purchase or cupo metrics:
+ * they are different products and they are reported apart.
+ */
+export const AdminPasesResumenSchema = z.object({
+  /** Passes of the purchases that were not cancelled. */
+  pases_vendidos: z.number(),
+  /** Passes of the PAID purchases. */
+  pases_pagados: z.number(),
+  /** Amount of the paid passes. */
+  monto_pases_pagado: z.number(),
+  /** Rights that still grant access (a revoked right keeps its slot). */
+  beneficiarios_activos: z.number(),
+});
+
+export type AdminPasesResumen = z.infer<typeof AdminPasesResumenSchema>;
+
 export const AdminDisciplinaConteoSchema = z.object({
   disciplina_id: z.string(),
   sigla: z.string(),
@@ -114,12 +133,13 @@ export const AdminAccesosResumenSchema = z.object({
 
 export type AdminAccesosResumen = z.infer<typeof AdminAccesosResumenSchema>;
 
-/** The eight blocks of the operational overview. */
+/** The nine blocks of the operational overview. */
 export const AdminResumenResponseSchema = z.object({
   evento: EventoResumenSchema,
   inscripciones: AdminInscripcionesResumenSchema,
   pagos: AdminPagosResumenSchema,
   cupos: AdminCuposResumenSchema,
+  pases: AdminPasesResumenSchema,
   equipos: AdminEquiposResumenSchema,
   participantes: AdminParticipantesResumenSchema,
   acreditaciones: AdminAcreditacionesResumenSchema,

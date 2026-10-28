@@ -6,14 +6,16 @@ The account surface REUSES the selector of the OWNING module
 the admin rule (`is_staff OR is_superuser`) nor the free-text search over the
 accounts (`contract/api-wrapper-presenter-contract.md` §1).
 
-The surface is READ-ONLY and never carries a credential: no password, no
-hash, no token, and no `is_superuser` — the break-glass tier is neither
-surfaced nor manageable from here.
+The tier of every account IS surfaced (`is_staff`, `is_superuser`, `nivel`),
+always read from `core.capacidades`, the single map of the project. The
+surface is READ-ONLY and never carries a credential: no password, no hash, no
+token — and it never promotes, demotes nor deactivates anyone.
 
 Read-only by construction: no method in this selector writes.
 """
 from injector import inject
 
+from core.capacidades import es_admin, es_staff, es_superusuario, nivel_de
 from modules.administracion.domain.exceptions import AdminResourceNotFoundError
 from modules.administracion.domain.results.admin_usuario_results import (
     AdminUsuarioDetalleResult,
@@ -119,7 +121,10 @@ class AdminUsuarioSelector:
             apellidos=persona.apellidos,
             persona_id=str(persona.id),
             persona_documento=persona.numero_documento,
-            es_admin=bool(usuario.is_staff or usuario.is_superuser),
+            es_admin=es_admin(usuario),
+            is_staff=es_staff(usuario),
+            is_superuser=es_superusuario(usuario),
+            nivel=nivel_de(usuario),
             is_active=bool(usuario.is_active),
             last_login=usuario.last_login,
             created_at=usuario.created_at,

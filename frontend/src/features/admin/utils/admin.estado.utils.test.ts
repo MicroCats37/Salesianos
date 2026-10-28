@@ -46,6 +46,7 @@ const utils = (await import(specifier)) as {
   rolParticipanteLabel: (rol: string) => string;
   tipoAceptacionLabel: (tipo: string) => string;
   tipoCompraLabel: (tipo: string) => string;
+  tipoCompraTone: (tipo: string) => string;
 };
 
 // The states of the REGISTRATION live in the overview module: it is the one
@@ -96,6 +97,12 @@ test("los estados de la compra se distinguen de los de la orden", () => {
 test("el tipo de compra distingue la inicial de la ampliacion", () => {
   assert.equal(utils.tipoCompraLabel("INICIAL"), "Inicial");
   assert.equal(utils.tipoCompraLabel("AMPLIACION"), "Ampliación");
+});
+
+test("el tipo de compra reconoce el lote de pases de fiesta", () => {
+  assert.equal(utils.tipoCompraLabel("PASE"), "Pase de fiesta");
+  assert.equal(utils.tipoCompraTone("PASE"), "cyan");
+  assert.equal(utils.tipoCompraTone("INICIAL"), "brand");
 });
 
 // ── The roster, the pool and the assignments ───────────────────────────────

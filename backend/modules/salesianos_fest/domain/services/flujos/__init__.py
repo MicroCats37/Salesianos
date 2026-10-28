@@ -12,6 +12,9 @@ from .asignar_persona_flujo import AsignarPersonaFlujo
 from .liberar_cupo_flujo import LiberarCupoFlujo
 from .override_fiesta_flujo import OverrideFiestaFlujo
 from .registrar_acceso_flujo import RegistrarAccesoFlujo
+from .listar_pases_flujo import ListarPasesFlujo
+from .crear_compra_pase_flujo import CrearCompraPaseFlujo
+from .obtener_compra_pase_flujo import ObtenerCompraPaseFlujo
 
 __all__ = [
     "CrearInscripcionFlujo",
@@ -27,4 +30,7 @@ __all__ = [
     "LiberarCupoFlujo",
     "OverrideFiestaFlujo",
     "RegistrarAccesoFlujo",
+    "ListarPasesFlujo",
+    "CrearCompraPaseFlujo",
+    "ObtenerCompraPaseFlujo",
 ]

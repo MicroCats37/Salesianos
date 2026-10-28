@@ -11,6 +11,9 @@ The port is expressed purely in payment vocabulary (`orden_pago_id`), so no
 """
 from abc import ABC, abstractmethod
 
+from modules.pagos.domain.schemas.aprobacion_pago_manual_schemas import (
+    EstadoCompraOrdenPago,
+)
 from modules.pagos.domain.schemas.result import SettlementResult
 
 
@@ -70,4 +73,33 @@ class IPropietarioOrdenPagoService(ABC):
         ...
 
 
-__all__ = ["IConfirmadorOrdenPagoService", "IPropietarioOrdenPagoService"]
+class IEstadoCompraOrdenPagoService(ABC):
+    """
+    Port that resolves the commercial state of the purchase funding an order.
+
+    The consumer (`pagos`) needs it to refuse the manual approval of a
+    purchase that was already cancelled. The purchase aggregate belongs to
+    `commerce`, so the payment module asks for this tiny projection instead
+    of importing it: the dependency direction stays `commerce -> pagos`.
+    """
+
+    @abstractmethod
+    def obtener_estado_compra(self, orden_pago_id: str) -> EstadoCompraOrdenPago:
+        """
+        Return the commercial state of the purchase that funds an order.
+
+        Args:
+            orden_pago_id: UUID of the OrdenPago.
+
+        Returns:
+            EstadoCompraOrdenPago with `existe=False` when no purchase funds
+            the order, or with the commercial state of that purchase.
+        """
+        ...
+
+
+__all__ = [
+    "IConfirmadorOrdenPagoService",
+    "IEstadoCompraOrdenPagoService",
+    "IPropietarioOrdenPagoService",
+]

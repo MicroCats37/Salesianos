@@ -17,7 +17,7 @@ from injector import inject
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
 from core.exceptions import NotFoundError
-from core.permissions import RequireAdmin
+from core.permissions import RequireAcreditacionesEscribir
 from modules.salesianos_fest.domain.services.orchestrators.acreditacion_orchestrator import AcreditacionOrchestrator
 from modules.salesianos_fest.domain.selectors.acreditacion_selector import AcreditacionSelector
 from modules.salesianos_fest.presentation.schemas.acreditacion_schemas import (
@@ -86,7 +86,7 @@ class AcreditacionController:
         "/{evento_id}/{persona_id}/override-fiesta",
         response={200: ApiResponse[OverrideFiestaOut]},
         auth=JWTAuth(),
-        permissions=[RequireAdmin],
+        permissions=[RequireAcreditacionesEscribir],
     )
     async def override_fiesta(self, request, evento_id: str, persona_id: str, payload: OverrideFiestaIn):
         """
@@ -97,9 +97,9 @@ class AcreditacionController:
         Sets autorizacion_fiesta to AUTORIZADA or BLOQUEADA.
         The override persists and takes precedence over AUTOMATICA.
 
-        Authorization: Django admin only (is_staff/is_superuser). Anonymous
-        callers get 401; authenticated non-admins get 403 and nothing is
-        mutated.
+        Authorization: the capability `admin.acreditaciones.escribir` (the
+        operational staff and the break-glass tier). Anonymous callers get
+        401; authenticated non-admins get 403 and nothing is mutated.
 
         Raises:
             ValueError: if autorizacion is invalid.
@@ -125,7 +125,7 @@ class AcreditacionController:
         "/{evento_id}/{persona_id}/generar-qr",
         response={200: ApiResponse[GenerarQROut]},
         auth=JWTAuth(),
-        permissions=[RequireAdmin],
+        permissions=[RequireAcreditacionesEscribir],
     )
     async def generar_qr(self, request, evento_id: str, persona_id: str):
         """
@@ -134,7 +134,8 @@ class AcreditacionController:
         Route: POST /api/acreditaciones/{evento_id}/{persona_id}/generar-qr
 
         This is the ONLY endpoint that delivers the live QR credential, and
-        it is admin-only (is_staff/is_superuser). The previous credential stops
+        it needs the capability `admin.acreditaciones.escribir` (the
+        operational staff and the break-glass tier). The previous credential stops
         working as soon as it is rotated.
 
         Raises:

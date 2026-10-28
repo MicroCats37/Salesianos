@@ -5,23 +5,26 @@ Thin async controller: payload → orchestrator → presenter → `success_respo
 (`contract/django-app-architecture-contract.md` §4.8). No `if`, no ORM, no
 manual error response.
 
-Authorization: the whole controller is gated by `RequireAdmin`
-(admin = `is_staff OR is_superuser`, evaluated SERVER-SIDE on every request):
-anonymous → 401, authenticated non-admin → 403, admin → 200.
+Authorization: the whole controller is gated by `RequireUsuariosVer` (the
+capability `admin.usuarios.ver`, held by the operational staff and by the
+break-glass tier), evaluated SERVER-SIDE on every request: anonymous → 401,
+authenticated non-admin → 403, admin → 200.
 
 Routes:
   GET /administracion/usuarios       — the accounts table (A13).
   GET /administracion/usuarios/{id}  — the drilldown (A14).
 
 Both endpoints are READ-ONLY: they never write. The surface never manages
-passwords and never exposes `is_superuser`.
+passwords and never exposes a credential. The TIER of every account IS
+published (`is_staff`, `is_superuser`, `nivel`) so an account administrator
+can see who holds the break-glass tier.
 """
 from injector import inject
 from ninja import Query
 from ninja_extra import api_controller, route
 
 from core.pagination import PaginatedData
-from core.permissions import RequireAdmin
+from core.permissions import RequireUsuariosVer
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
 from modules.administracion.domain.services.orchestrators.admin_operacion_orchestrator import (
@@ -36,7 +39,7 @@ from modules.administracion.presentation.schemas.admin_usuario_schemas import (
 )
 
 
-@api_controller("/administracion", tags=["Administración"], permissions=[RequireAdmin])
+@api_controller("/administracion", tags=["Administración"], permissions=[RequireUsuariosVer])
 class AdminUsuarioController:
     """Controller of the accounts table and its drilldown."""
 
@@ -76,11 +79,12 @@ class AdminUsuarioController:
 
         Route: GET /api/administracion/usuarios
 
-        Authorization: Django admin only (is_staff OR is_superuser).
+        Authorization: the capability `admin.usuarios.ver` (operational staff
+        and break-glass tier).
 
         The endpoint is READ-ONLY. The response NEVER carries the password,
-        its hash, any token, nor `is_superuser`. The admin flag follows the
-        project rule: `is_staff OR is_superuser`.
+        its hash nor any token. It DOES publish the tier of the account
+        (`is_staff`, `is_superuser`, `nivel`).
 
         The accounts are global identities: they are NOT scoped to an event.
         The registrations shown in the drilldown (A14) ARE scoped to the
@@ -114,11 +118,13 @@ class AdminUsuarioController:
 
         Route: GET /api/administracion/usuarios/{usuario_id}
 
-        Authorization: Django admin only (is_staff OR is_superuser).
+        Authorization: the capability `admin.usuarios.ver` (operational staff
+        and break-glass tier).
 
         The endpoint is READ-ONLY and returns the account with the
         registrations it owns INSIDE the active event. The response NEVER
-        carries the password, its hash, any token, nor `is_superuser`.
+        carries the password, its hash nor any token. It DOES publish the tier
+        of the account (`is_staff`, `is_superuser`, `nivel`).
 
         An unknown id is answered with 404 `RESOURCE_NOT_FOUND`.
 

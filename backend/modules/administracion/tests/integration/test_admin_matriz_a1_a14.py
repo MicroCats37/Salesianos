@@ -42,6 +42,7 @@ from modules.administracion.domain.services.core.admin_operacion_service import 
 from modules.administracion.tests.factories import (
     make_auth_header,
     make_forbidden_keys,
+    make_forbidden_keys_de_cuentas,
     make_list_query,
 )
 
@@ -106,7 +107,8 @@ URLS_LISTA = {
 }
 
 #: The path prefixes of the operational administration surface (A1-A14) that
-#: THIS module owns. Every route under them must be READ-ONLY.
+#: THIS module owns. Every route under them must be READ-ONLY, EXCEPT the
+#: audited writes of the manual payment approval.
 PREFIJOS_SUPERFICIE_OPERATIVA = (
     "/api/administracion/health",
     "/api/administracion/resumen",
@@ -119,6 +121,16 @@ PREFIJOS_SUPERFICIE_OPERATIVA = (
     "/api/administracion/acreditaciones",
     "/api/administracion/accesos",
     "/api/administracion/usuarios",
+)
+
+#: The ONLY writes of the operational administration surface: the audited
+#: approval and annulment of a payment received outside the provider. They
+#: are admin-only, they record the actor and their motive, and they are
+#: covered by their own suite (`modules/pagos/tests/integration/
+#: test_admin_pago_manual.py`).
+RUTAS_ESCRITURA_AUDITADA = (
+    "/api/administracion/pagos/{orden_pago_id}/aprobar-manual",
+    "/api/administracion/pagos/{orden_pago_id}/anular-manual",
 )
 
 #: The administrative namespaces owned by ANOTHER module. They are EXCLUDED
@@ -273,8 +285,17 @@ def test_matriz_a1_a14_no_expone_ninguna_clave_prohibida(
 
     assert response.status_code == 200
 
+    # Las cuentas (A13/A14) publican el NIVEL de cada cuenta
+    # (`is_staff`, `is_superuser`, `nivel`): un administrador de cuentas debe
+    # poder ver quién tiene el nivel de break-glass. El resto de las
+    # superficies NO lo publican.
+    if superficie in {"A13", "A14"}:
+        prohibido_keys = make_forbidden_keys_de_cuentas()
+    else:
+        prohibido_keys = make_forbidden_keys()
+
     claves = {clave.lower() for clave in _claves(response.json())}
-    for prohibido in make_forbidden_keys():
+    for prohibido in prohibido_keys:
         assert prohibido not in claves
 
     cuerpo = response.text.lower()
@@ -307,6 +328,11 @@ def test_la_superficie_administrativa_no_declara_ningun_metodo_de_escritura():
         ), f"la superficie operativa no expone la ruta {prefijo}"
     for ruta in rutas_operativas:
         metodos = set(schema["paths"][ruta].keys())
+        if ruta in RUTAS_ESCRITURA_AUDITADA:
+            # The audited writes of the manual payment approval: the ONLY
+            # writes of the operational surface.
+            assert metodos == {"post"}, f"{ruta} declara {sorted(metodos)}"
+            continue
         assert metodos == {"get"}, f"{ruta} declara {sorted(metodos)}"
 
 

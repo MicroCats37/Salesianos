@@ -1,33 +1,40 @@
 """
-ConfirmarPagoFlujo — async flow for confirming a Compra after Izipay payment.
+ConfirmarPagoFlujo — async flow for confirming a Compra after a verified payment.
 
-Called after PagosOrchestrator confirms the payment (OrdenPago=PAGADA, TransaccionPago=EXITO).
-This flow transitions commerce.Compra to PAGADA and converts the paid capacity
-into rights (AsignacionCupo) for the preregistered participants.
+Called after the payment was durably recorded (OrdenPago=PAGADA plus the
+evidence that proves it: a correlated `TransaccionPago=EXITO` or an active
+manual approval). This flow transitions commerce.Compra to PAGADA and
+converts the paid capacity into rights (AsignacionCupo) for the preregistered
+participants.
 
 IMPORTANT: This does NOT transition Inscripcion to any state.
 Inscripcion state transitions (CONFIRMADA, etc.) are handled in Phase 5+
 with AsignacionCupo. A successful payment does NOT automatically confirm
 the sports/administrative state of the Inscripcion.
 
-Two entry points:
-1. `_confirmar_compra` — INTERNAL. Driven by the backend right after the
-   payment was durably recorded. There is no human actor to authorize, so it
-   settles the purchase directly.
-2. `_confirmar_compra_autorizada` — MANUAL RECOVERY, driven by an
-   authenticated caller. The caller must be the responsible of the
-   inscription linked to the purchase, or a Django administrator. The
-   authorization is evaluated inside the settlement transaction and BEFORE
-   any write, so a refused request leaves the purchase, the payment order
-   and the cup rights untouched.
+ONE entry point:
+`_confirmar_compra` — INTERNAL. Driven by the backend right after the
+payment was durably recorded. There is no human actor to authorize: the
+payment module itself is the only caller.
+
+TRUTH PREDICATE: the purchase is only settled when the order proves it was
+paid. An order with no correlated successful transaction and no active manual
+approval is refused with `PAGO_NO_VERIFICADO` and grants nothing: a purchase
+is never paid by assertion.
 
 Flow:
 1. Find commerce.Compra by orden_pago_id
-2. Validate Compra is PENDIENTE
+2. Verify the payment evidence of the order (correlated Izipay transaction
+   or active manual approval) — inside the settlement transaction
 3. Mark Compra as PAGADA (within transaction.atomic for safety)
 4. Allocate the paid capacity to the preregistered participants — deterministic
    order and idempotent: a repeated confirmation creates nothing new
 5. Sync AcreditacionEvento for every person that received a right
+
+TWO KINDS OF PURCHASE, ONE ENTRY POINT: the settlement is the same for both.
+A SPORTS purchase allocates cupos; a PASS purchase (a batch of party passes)
+is settled to PAGADA and allocates ZERO sports rights — its nominative rights
+are materialized later, from the paid purchase.
 """
 import logging
 
@@ -38,10 +45,11 @@ from injector import inject
 
 from modules.commerce.domain.models import Compra
 from modules.commerce.domain.constants import EstadoCompraChoices
-from modules.salesianos_fest.domain.exceptions import (
-    CompraNoAutorizadoError,
-    CompraNotFoundError,
+from modules.pagos.domain.exceptions import PagoNoVerificadoError
+from modules.pagos.domain.services.core.evidencia_pago_service import (
+    EvidenciaPagoService,
 )
+from modules.salesianos_fest.domain.exceptions import CompraNotFoundError
 from modules.salesianos_fest.domain.results.compra_results import CompraConfirmedResult
 from modules.salesianos_fest.domain.services.core.acreditacion_service import AcreditacionCoreService
 from modules.salesianos_fest.domain.services.core.asignacion_service import AsignacionCoreService
@@ -61,59 +69,37 @@ class ConfirmarPagoFlujo:
         self,
         asignacion_core: AsignacionCoreService,
         acreditacion_core: AcreditacionCoreService,
+        evidencia_pago: EvidenciaPagoService,
     ):
         self.asignacion_core = asignacion_core
         self.acreditacion_core = acreditacion_core
+        self.evidencia_pago = evidencia_pago
 
     async def _confirmar_compra(
         self,
         orden_pago_id: str,
     ) -> CompraConfirmedResult:
         """
-        Confirm a Compra after successful payment (internal settlement).
+        Confirm a Compra after a verified payment (internal settlement).
 
         This entry point is driven by the backend right after the payment was
-        durably recorded, so there is no human actor to authorize. The manual
-        recovery path uses `_confirmar_compra_autorizada`.
+        durably recorded, so there is no human actor to authorize.
 
         Steps:
         1. Find commerce.Compra by orden_pago_id
-        2. Validate Compra is PENDIENTE
+        2. Verify the payment evidence of the order
         3. Mark Compra as PAGADA (within transaction.atomic)
         4. Allocate the paid capacity to the preregistered participants
         5. Return result
+
+        Raises:
+            CompraNotFoundError: the order has no linked purchase.
+            PagoNoVerificadoError: the order carries no verifiable evidence.
 
         NOTE: Does NOT transition Inscripcion to any state.
               Inscripcion state is managed separately in Phase 5+.
         """
         return await sync_to_async(self._confirmar_sync)(orden_pago_id)
-
-    async def _confirmar_compra_autorizada(
-        self,
-        orden_pago_id: str,
-        persona_id: str | None,
-        es_admin: bool,
-    ) -> CompraConfirmedResult:
-        """
-        Confirm a Compra on behalf of an authenticated caller (manual recovery).
-
-        The caller must be the responsible of the inscription linked to the
-        purchase, or a Django administrator. The authorization is evaluated
-        inside the settlement transaction and before any write, so a refused
-        request leaves the Compra, the OrdenPago and the cup rights untouched.
-
-        Args:
-            orden_pago_id: UUID of the payment order that funds the purchase.
-            persona_id: UUID of the authenticated person (None for admins).
-            es_admin: True when the caller has administrative authority.
-
-        Raises:
-            CompraNotFoundError: the order has no linked purchase.
-            CompraNoAutorizadoError: the caller does not own the purchase.
-        """
-        return await sync_to_async(self._confirmar_autorizada_sync)(
-            orden_pago_id, persona_id, es_admin
-        )
 
     @transaction.atomic()
     def _confirmar_sync(self, orden_pago_id: str) -> CompraConfirmedResult:
@@ -131,43 +117,23 @@ class ConfirmarPagoFlujo:
 
         return self._liquidar_compra(compra)
 
-    @transaction.atomic()
-    def _confirmar_autorizada_sync(
-        self,
-        orden_pago_id: str,
-        persona_id: str | None,
-        es_admin: bool,
-    ) -> CompraConfirmedResult:
-        """
-        Authorized variant of `_confirmar_sync`.
-
-        The ownership check runs inside the same transaction as the settlement
-        and BEFORE any write: a refused caller changes nothing.
-
-        Raises:
-            CompraNotFoundError: the order has no linked purchase.
-            CompraNoAutorizadoError: the caller does not own the purchase.
-        """
-        compra = self._bloquear_compra(orden_pago_id)
-        if compra is None:
-            raise CompraNotFoundError()
-
-        if not es_admin and not self._es_responsable(compra, persona_id):
-            logger.warning(
-                "Manual commercial recovery refused: the caller is not the "
-                "responsible of the inscription linked to the purchase"
-            )
-            raise CompraNoAutorizadoError()
-
-        return self._liquidar_compra(compra)
-
     def _bloquear_compra(self, orden_pago_id: str) -> Compra | None:
         """
         Lock the purchase that funds the given payment order.
 
         `select_for_update` prevents two concurrent confirmations from
-        allocating the same rights twice. Returns None when the order has no
-        linked purchase.
+        allocating the same rights twice. The graph includes BOTH commercial
+        compositions (`compra_inscripcion` and `compra_pase`) so the
+        settlement knows what kind of purchase it is settling without an
+        extra query per purchase. Returns None when the order has no linked
+        purchase.
+
+        `of=("self",)` locks ONLY the purchase row. The graph joins nullable
+        relations (the order and the two compositions are optional), and
+        PostgreSQL refuses `FOR UPDATE` on the nullable side of an outer
+        join: without the explicit target the whole query fails on the
+        production database. The purchase row is exactly what has to be
+        serialized — the rights allocation takes its own locks.
         """
         return (
             Compra.objects
@@ -175,42 +141,29 @@ class ConfirmarPagoFlujo:
                 "orden_pago",
                 "compra_inscripcion",
                 "compra_inscripcion__inscripcion__evento",
+                "compra_pase",
             )
-            .select_for_update()
+            .select_for_update(of=("self",))
             .filter(orden_pago_id=orden_pago_id)
             .first()
         )
 
-    def _es_responsable(self, compra: Compra, persona_id: str | None) -> bool:
-        """
-        Return True when the person is the responsible of the linked inscription.
-
-        The owner of a purchase is the responsible of the inscription it
-        funds. A purchase without an inscription link has no owner: nobody can
-        recover it manually (only the backend settlement can settle it).
-        """
-        if not persona_id:
-            return False
-
-        compra_inscripcion = getattr(compra, "compra_inscripcion", None)
-        if compra_inscripcion is None:
-            return False
-
-        inscripcion = getattr(compra_inscripcion, "inscripcion", None)
-        if inscripcion is None:
-            return False
-
-        return str(inscripcion.responsable_id) == str(persona_id)
-
     def _liquidar_compra(self, compra: Compra) -> CompraConfirmedResult:
         """
         Mark the purchase as paid and allocate its rights.
+
+        The TRUTH PREDICATE runs first: the order must carry verifiable
+        evidence of the payment (a correlated successful provider transaction
+        or an active manual approval). Without it the purchase is never
+        settled and no right is granted.
 
         Idempotent: if the Compra is already PAGADA it is reported as
         already confirmed instead of raising an error. The allocation of the
         paid rights is idempotent too, so a repeated payment confirmation
         never duplicates assignments.
         """
+        self._verificar_evidencia(compra)
+
         # Idempotent: if already paid, do not raise — just report it
         already_confirmed = compra.estado != EstadoCompraChoices.PENDIENTE
         if not already_confirmed:
@@ -229,13 +182,44 @@ class ConfirmarPagoFlujo:
             already_confirmed=already_confirmed,
         )
 
+    def _verificar_evidencia(self, compra: Compra) -> None:
+        """
+        Refuse to settle a purchase whose order carries no payment evidence.
+
+        The evidence is either a correlated successful provider transaction or
+        an active manual approval. A purchase is never paid by assertion:
+        without the proof nothing is settled and no right is granted.
+        """
+        orden_pago = getattr(compra, "orden_pago", None)
+        if orden_pago is None:
+            raise PagoNoVerificadoError()
+
+        if not self.evidencia_pago.tiene_evidencia_pago(orden_pago):
+            logger.warning(
+                "Settlement refused: the order of the compra carries no "
+                "verifiable payment evidence"
+            )
+            raise PagoNoVerificadoError()
+
     def _asignar_derechos(self, compra: Compra) -> None:
         """
         Convert the paid capacity of this compra into rights.
 
-        Delegates the deterministic allocation to AsignacionCoreService and
-        syncs AcreditacionEvento for every person that received a right.
+        A PASS purchase is a commercial batch, not a sports purchase: it
+        grants ZERO sports rights — no cupo, no participant, no team and no
+        accreditation. Its nominative rights are materialized later, from the
+        paid purchase, by the beneficiary flow.
+
+        A SPORTS purchase delegates the deterministic allocation to
+        AsignacionCoreService and syncs AcreditacionEvento for every person
+        that received a right.
         """
+        if self._es_compra_de_pase(compra):
+            logger.info(
+                f"Compra {compra.id} is a pass purchase — no sports rights are assigned"
+            )
+            return
+
         compra_inscripcion = getattr(compra, "compra_inscripcion", None)
         if compra_inscripcion is None:
             logger.info(
@@ -260,3 +244,8 @@ class ConfirmarPagoFlujo:
         logger.info(
             f"Compra {compra.id} confirmed — {len(asignaciones)} rights assigned"
         )
+
+    @staticmethod
+    def _es_compra_de_pase(compra: Compra) -> bool:
+        """True when the purchase is a batch of party passes."""
+        return getattr(compra, "compra_pase", None) is not None

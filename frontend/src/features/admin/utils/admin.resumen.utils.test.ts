@@ -80,6 +80,12 @@ const resumen = {
     disponible_pagado: 10,
     inscripciones_con_capacidad_exhaustada: 1,
   },
+  pases: {
+    pases_vendidos: 12,
+    pases_pagados: 9,
+    monto_pases_pagado: 225,
+    beneficiarios_activos: 8,
+  },
   equipos: {
     total: 8,
     completos: 5,
@@ -107,15 +113,16 @@ const resumen = {
 
 // ── The tiles render what the backend computed — they never recompute ────────
 
-test("el resumen expone los siete tiles de los bloques metricos", () => {
+test("el resumen expone los ocho tiles de los bloques metricos", () => {
   const kpis = utils.resumenKpis(resumen);
-  assert.equal(kpis.length, 7);
+  assert.equal(kpis.length, 8);
   assert.deepEqual(
     kpis.map((kpi) => kpi.id),
     [
       "inscripciones",
       "pagos",
       "cupos",
+      "pases",
       "equipos",
       "participantes",
       "acreditaciones",

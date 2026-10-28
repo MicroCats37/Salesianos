@@ -152,7 +152,8 @@ def test_resumen_admin_staff_responde_200(api_client, usuario_admin_staff, event
     """
     GIVEN: an administrator (`is_staff`)
     WHEN:  GET /api/administracion/resumen
-    THEN:  200 with the eight blocks of the overview.
+    THEN:  200 with the blocks of the overview, the party passes included in
+           their OWN block.
     """
     response = api_client.get(URL_RESUMEN, **_auth_header(usuario_admin_staff))
 
@@ -165,6 +166,7 @@ def test_resumen_admin_staff_responde_200(api_client, usuario_admin_staff, event
         "inscripciones",
         "pagos",
         "cupos",
+        "pases",
         "equipos",
         "participantes",
         "acreditaciones",

@@ -3,7 +3,6 @@
 import {
   AlertCircle,
   Clock,
-  CreditCard,
   Layers,
   UserCheck,
   UserPlus,
@@ -79,10 +78,6 @@ export interface PoolParticipantesSeccionProps {
   /** Opens the preregistration modal (pool mode, no team). */
   onAddParticipant: () => void;
   /**
-   * Opens the payment modal.
-   */
-  onOpenPayment: () => void;
-  /**
    * Preregisters the RESPONSIBLE in the pool (pool-first self registration).
    *
    * It never places anybody in a team: the team placement is done afterwards
@@ -118,7 +113,6 @@ export function PoolParticipantesSeccion({
   equiposCount,
   equipos = [],
   onAddParticipant,
-  onOpenPayment,
   onAgregarme,
   personaResponsableId,
   agregarmeLoading = false,
@@ -144,14 +138,9 @@ export function PoolParticipantesSeccion({
   const personasColocadas = new Set(
     colocados.map((colocado) => colocado.inscripcionPersonaId),
   ).size;
-  const totalPersonas = pool.length + personasColocadas;
 
   // Missing players per team — presenter counters, not a local computation.
   const equiposIncompletos = equipos.filter((equipo) => equipo.faltantes > 0);
-  const faltantesTotal = equiposIncompletos.reduce(
-    (acc, equipo) => acc + equipo.faltantes,
-    0,
-  );
 
   const bloqueados = pool.filter((entry) => !entry.tiene_cupo_activo);
   // Participants whose payment already exists and whose cup is simply not
@@ -167,7 +156,8 @@ export function PoolParticipantesSeccion({
 
   // The contextual callout is derived from the returned pool/saldo fields:
   // a participant whose cup is simply not assigned yet never gets a payment
-  // CTA (the payment already exists).
+  // CTA (the payment already exists). The payment BUTTON lives in a single
+  // place — `PaymentCallout` — so this block only explains the blockage.
   const cta =
     !loading && !error && bloqueados.length > 0 ? (
       porAsignar > 0 ? (
@@ -184,7 +174,6 @@ export function PoolParticipantesSeccion({
                 ? "Esta inscripcion esta cancelada o rechazada."
                 : "El pago en linea no esta disponible en este momento."
             }
-            onOpenPayment={onOpenPayment}
           />
         ) : (
           <AmpliarCallout bloqueados={bloqueados.length} />
@@ -243,12 +232,12 @@ export function PoolParticipantesSeccion({
         </p>
 
         {/* ── At a glance ── */}
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        <div className="mt-5 grid max-w-xl grid-cols-2 gap-2 sm:gap-3">
           <StatTile
             icon={Users}
             label="En el pool"
             value={pool.length}
-            hint={`${totalPersonas} personas en total`}
+            hint="sin equipo asignado"
           />
           <StatTile
             icon={UserCheck}
@@ -256,45 +245,7 @@ export function PoolParticipantesSeccion({
             value={personasColocadas}
             hint={`${colocados.length} participaciones`}
           />
-          <StatTile
-            icon={AlertCircle}
-            label="Faltan por equipo"
-            value={faltantesTotal}
-            tone={faltantesTotal > 0 ? "amber" : "emerald"}
-            hint={
-              faltantesTotal > 0
-                ? `${equiposIncompletos.length} equipo(s) por completar`
-                : "Todos los equipos completos"
-            }
-          />
-          <StatTile
-            icon={CreditCard}
-            label="Cupos pagados"
-            value={saldo?.pagados ?? 0}
-            tone={(saldo?.disponibles_pagados ?? 0) > 0 ? "brand" : "neutral"}
-            hint={
-              saldo
-                ? `${saldo.asignados_pagados} asignados · ${saldo.disponibles_pagados} disponibles`
-                : "Sin datos de saldo"
-            }
-          />
         </div>
-
-        {/* ── Paid capacity balance ── */}
-        {saldo && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <SaldoChip label="Lugares contratados" value={saldo.contratados} />
-            <SaldoChip
-              label="Cupos asignados"
-              value={saldo.asignados_pagados}
-            />
-            <SaldoChip
-              label="Disponibles"
-              value={saldo.disponibles_pagados}
-              highlight={saldo.disponibles_pagados > 0}
-            />
-          </div>
-        )}
 
         {/* ── Teams that still need players ── */}
         {equiposIncompletos.length > 0 && (
@@ -484,41 +435,14 @@ function StatTile({
   );
 }
 
-function SaldoChip({
-  label,
-  value,
-  highlight = false,
-}: {
-  label: string;
-  value: number;
-  highlight?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-        highlight
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border-slate-200 bg-slate-50 text-slate-600",
-      )}
-      title={`${label}: ${value}`}
-    >
-      {label}
-      <span className="tabular-nums">{value}</span>
-    </span>
-  );
-}
-
 function PagarCallout({
   bloqueados,
   puedePagar,
   motivoBloqueo,
-  onOpenPayment,
 }: {
   bloqueados: number;
   puedePagar: boolean;
   motivoBloqueo: string;
-  onOpenPayment: () => void;
 }) {
   return (
     <div
@@ -545,16 +469,7 @@ function PagarCallout({
             </p>
           </div>
         </div>
-        {puedePagar ? (
-          <Button
-            type="button"
-            onClick={onOpenPayment}
-            className="btn-brand-gradient btn-shine h-12 shrink-0 rounded-full px-6 text-sm font-black uppercase tracking-widest shadow-lg"
-          >
-            <CreditCard className="size-4" />
-            Proceder al Pago
-          </Button>
-        ) : (
+        {!puedePagar && (
           <p className="max-w-xs text-xs leading-relaxed text-amber-900/70">
             {motivoBloqueo}
           </p>

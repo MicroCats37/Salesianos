@@ -9,6 +9,10 @@ from .domain.models import (
     PaqueteDisciplina,
     PaquetePrecio,
     PaqueteBeneficio,
+    Pase,
+    PasePrecio,
+    CompraPase,
+    PaseBeneficiario,
     Inscripcion,
     Equipo,
     InscripcionPersona,
@@ -96,9 +100,127 @@ class PaqueteAdmin(admin.ModelAdmin):
     ordering = ["evento__nombre", "nombre"]
 
 
+class PasePrecioInline(admin.TabularInline):
+    """Inline for PasePrecio within PaseAdmin.
+
+    The operator configures the stage prices (and activates them) from here.
+    """
+
+    model = PasePrecio
+    extra = 1
+
+
+@admin.register(Pase)
+class PaseAdmin(admin.ModelAdmin):
+    """Admin configuration for Pase model.
+
+    The pass is the operator's switch for the catalogue: `activo` publishes
+    it (together with the rollout flag `PASES_FIESTA_ENABLED`) and
+    `cantidad_maxima` caps the inventory (0 = unlimited).
+    """
+
+    list_display = [
+        "id",
+        "nombre",
+        "evento",
+        "cantidad_maxima",
+        "activo",
+        "created_at",
+    ]
+    list_filter = ["activo", "evento"]
+    search_fields = ["nombre", "evento__nombre"]
+    readonly_fields = ["created_at", "updated_at"]
+    raw_id_fields = ["evento"]
+    inlines = [PasePrecioInline]
+    ordering = ["evento__nombre", "nombre"]
+
+
+@admin.register(PasePrecio)
+class PasePrecioAdmin(admin.ModelAdmin):
+    """Admin configuration for PasePrecio model."""
+
+    list_display = [
+        "id",
+        "pase",
+        "etapa",
+        "precio_unitario",
+        "vigente_desde",
+        "vigente_hasta",
+        "activo",
+    ]
+    list_filter = ["etapa", "activo", "pase__evento"]
+    search_fields = ["pase__nombre"]
+    readonly_fields = ["created_at", "updated_at"]
+    raw_id_fields = ["pase"]
+    ordering = ["pase", "etapa"]
+
+
+@admin.register(CompraPase)
+class CompraPaseAdmin(admin.ModelAdmin):
+    """Admin configuration for CompraPase model (audit of the sold batches)."""
+
+    list_display = [
+        "id",
+        "compra",
+        "pase",
+        "evento",
+        "cantidad",
+        "precio_unitario",
+        "total",
+        "compra_estado",
+        "created_at",
+    ]
+    list_filter = ["evento", "pase"]
+    search_fields = [
+        "compra__responsable__numero_documento",
+        "compra__responsable__nombres",
+        "compra__responsable__apellidos",
+        "pase__nombre",
+        "compra__referencia_externa",
+    ]
+    readonly_fields = ["created_at", "updated_at"]
+    raw_id_fields = ["compra", "pase", "evento"]
+    ordering = ["-created_at"]
+
+    def compra_estado(self, obj):
+        return obj.compra.estado
+    compra_estado.short_description = "Estado Compra"
+
+
+@admin.register(PaseBeneficiario)
+class PaseBeneficiarioAdmin(admin.ModelAdmin):
+    """Admin configuration for PaseBeneficiario model (audit of the rights)."""
+
+    list_display = [
+        "id",
+        "compra_pase",
+        "persona",
+        "evento",
+        "slot",
+        "estado",
+        "asignado_por",
+        "asignado_en",
+        "revocado_en",
+    ]
+    list_filter = ["estado", "evento"]
+    search_fields = [
+        "persona__numero_documento",
+        "persona__nombres",
+        "persona__apellidos",
+    ]
+    readonly_fields = [
+        "created_at",
+        "updated_at",
+        "asignado_en",
+        "revocado_en",
+        "motivo_revocacion",
+    ]
+    raw_id_fields = ["compra_pase", "persona", "evento", "asignado_por", "revocado_por"]
+    ordering = ["compra_pase", "slot"]
+
+
 class ParticipacionInline(admin.TabularInline):
     """Inline for Participacion within EquipoAdmin."""
-
     model = Participacion
     # Same form as the standalone admin: the model safety net rejects an
     # incompatible ACTIVE participacion and reports it once.

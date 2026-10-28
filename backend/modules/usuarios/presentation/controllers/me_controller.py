@@ -9,6 +9,13 @@ from ninja import Schema
 from ninja_extra import api_controller, route
 from ninja_jwt.authentication import JWTAuth
 
+from core.capacidades import (
+    capacidades_de,
+    es_admin,
+    es_staff,
+    es_superusuario,
+    nivel_de,
+)
 from core.responses import ApiResponse, success_response
 
 
@@ -20,6 +27,10 @@ class MeOut(Schema):
     apellidos: Optional[str] = None
     rol: Optional[str] = None
     es_admin: bool = False
+    is_staff: bool = False
+    is_superuser: bool = False
+    nivel: str = "usuario"
+    capacidades: list[str] = []
     persona_id: Optional[str] = None
 
 
@@ -46,11 +57,12 @@ class AuthMeController:
         Route: GET /api/auth/me
         Auth: JWT required.
         Returns: id, username, email, nombres, apellidos, rol, es_admin,
-                 persona_id del usuario.
+                 is_staff, is_superuser, nivel, capacidades, persona_id del
+                 usuario.
                  Si no está autenticado, retorna data=None (no lanza error).
 
-        `es_admin` es la ÚNICA bandera de autorización que consume el cliente y
-        se calcula en el servidor con la regla del proyecto:
+        `es_admin` es la bandera de autorización que consume el cliente y se
+        calcula en el servidor con la regla del proyecto:
 
             admin = is_staff OR is_superuser
 
@@ -58,8 +70,15 @@ class AuthMeController:
         frontend puede anticipar un 403 sin ser la autoridad: la sesión del
         cliente no decide nada, el backend vuelve a evaluarla en cada petición.
 
-        `is_superuser` NUNCA se expone: el nivel de break-glass no es
-        asignable ni visible desde la UI de administración.
+        `is_staff`, `is_superuser`, `nivel` y `capacidades` son AUTOS
+        (self-scoped): el endpoint publica el nivel del propio llamador, que
+        no es una filtración sino la base de la interfaz. El vocabulario sale
+        de `core.capacidades`, el único mapa del proyecto, de modo que el
+        cliente nunca pueda divergir del backend.
+
+        `capacidades` es ADVISORIO para la UI: el backend vuelve a evaluarlas
+        en cada petición (`RequireCapability`). Ocultar un botón NO es
+        autorizar: la puerta real es el 403 del backend.
         """
         usuario = request.user
         if usuario is None or not usuario.is_authenticated:
@@ -69,15 +88,12 @@ class AuthMeController:
         nombres = getattr(persona, "nombres", None) if persona else None
         apellidos = getattr(persona, "apellidos", None) if persona else None
 
-        es_admin = bool(
-            getattr(usuario, "is_staff", False)
-            or getattr(usuario, "is_superuser", False)
-        )
+        admin = es_admin(usuario)
         # `rol` se mantiene por compatibilidad con clientes existentes, pero se
         # deriva de la MISMA regla que `es_admin` para que el vocabulario no
         # pueda divergir (antes un usuario staff recibía "staff" y no "admin",
         # pese a ser administrador para efectos de autorización).
-        rol = "admin" if es_admin else "user"
+        rol = "admin" if admin else "user"
 
         return success_response(
             {
@@ -87,7 +103,11 @@ class AuthMeController:
                 "nombres": nombres,
                 "apellidos": apellidos,
                 "rol": rol,
-                "es_admin": es_admin,
+                "es_admin": admin,
+                "is_staff": es_staff(usuario),
+                "is_superuser": es_superusuario(usuario),
+                "nivel": nivel_de(usuario),
+                "capacidades": sorted(capacidades_de(usuario)),
                 "persona_id": str(persona.id) if persona else None,
             }
         )

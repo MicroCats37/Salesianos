@@ -24,6 +24,8 @@ from modules.salesianos_fest.domain.models import (
     PaqueteDisciplina,
     PaquetePrecio,
     PaqueteBeneficio,
+    Pase,
+    PasePrecio,
 )
 from modules.salesianos_fest.domain.constants import (
     ModalidadChoices,
@@ -33,7 +35,22 @@ from modules.salesianos_fest.domain.constants import (
     TipoBeneficioChoices,
     AlcanceBeneficioChoices,
     ModoCalculoBeneficioChoices,
+    CANTIDAD_MAXIMA_SIN_LIMITE,
 )
+
+# ── Supuestos del seed del catálogo de pases ────────────────────────────────
+#
+# Defaults de PRIMERA creación, aislados aquí a propósito. El operador puede
+# ajustarlos (precio, inventario, activación) desde el admin del módulo y el
+# seed NO vuelve a escribirlos: reejecutar el seed no debe deshacer la
+# configuración de la organización. Por eso el bloque del pase usa
+# `get_or_create` y no `update_or_create`.
+#
+# Los montos son un supuesto de producto pendiente de confirmación.
+PASE_FIESTA_NOMBRE = "Pase de Fiesta"
+PASE_FIESTA_DESCRIPCION = "Acceso nominativo a la fiesta de cierre."
+PASE_FIESTA_PREVENTA = Decimal("25.00")
+PASE_FIESTA_REGULAR = Decimal("35.00")
 
 
 class Command(BaseCommand):
@@ -56,6 +73,9 @@ class Command(BaseCommand):
             PaquetePrecio.objects.all().delete()
             PaqueteDisciplina.objects.all().delete()
             Paquete.objects.all().delete()
+            # Los pases protegen al Evento (PROTECT): se borran antes.
+            PasePrecio.objects.all().delete()
+            Pase.objects.all().delete()
             Disciplina.objects.all().delete()
             Promocion.objects.all().delete()
             Categoria.objects.all().delete()
@@ -353,9 +373,59 @@ class Command(BaseCommand):
         self.stdout.write(f"    {'Created' if created else 'Exists'}: {pkg.nombre}")
         reconciliar_disciplinas(pkg, ["BAS"])
 
+        self.stdout.write("  Seeding Pases de fiesta (catálogo independiente)...")
+        # El pase es un catálogo PARALELO al de paquetes: no se modela como
+        # `Paquete.tipo=PASE`.
+        #
+        # El seed SÓLO crea lo que falta. Un pase que el operador ya activó (o
+        # cuyos precios ajustó) NO se vuelve a inactivar ni a sobreescribir:
+        # el rollout es explícito (PASES_FIESTA_ENABLED=True + activación
+        # manual) y el rollback es volver a desactivar, nunca borrar datos.
+        pase, created = Pase.objects.get_or_create(
+            evento=evento,
+            nombre=PASE_FIESTA_NOMBRE,
+            defaults={
+                "descripcion": PASE_FIESTA_DESCRIPCION,
+                "cantidad_maxima": CANTIDAD_MAXIMA_SIN_LIMITE,
+                "activo": False,
+            },
+        )
+        self.stdout.write(
+            f"    {'Created' if created else 'Exists'}: {pase.nombre} "
+            f"({'activo' if pase.activo else 'inactivo'})"
+        )
+
+        if created:
+            # Mismo calendario de etapas que los paquetes: preventa hasta el
+            # cierre de preventa y regular desde ese mismo día.
+            PasePrecio.objects.get_or_create(
+                pase=pase,
+                etapa=EtapaChoices.PREVENTA,
+                defaults={
+                    "precio_unitario": PASE_FIESTA_PREVENTA,
+                    "vigente_desde": hoy,
+                    "vigente_hasta": fecha_limite_preventa,
+                    "activo": False,
+                },
+            )
+            PasePrecio.objects.get_or_create(
+                pase=pase,
+                etapa=EtapaChoices.REGULAR,
+                defaults={
+                    "precio_unitario": PASE_FIESTA_REGULAR,
+                    "vigente_desde": fecha_limite_preventa,
+                    "vigente_hasta": None,
+                    "activo": False,
+                },
+            )
+            self.stdout.write("    Precios PREVENTA/REGULAR creados (inactivos)")
+        else:
+            self.stdout.write("    Precios existentes preservados")
+
         self.stdout.write(self.style.SUCCESS("\n  Seed completed successfully!"))
         self.stdout.write(f"  Evento: {evento.nombre}")
         self.stdout.write(f"  Disciplinas: {Disciplina.objects.count()}")
         self.stdout.write(f"  Promociones: {Promocion.objects.count()}")
         self.stdout.write(f"  Categorías: {Categoria.objects.count()}")
         self.stdout.write(f"  Paquetes: {Paquete.objects.count()}")
+        self.stdout.write(f"  Pases: {Pase.objects.count()}")

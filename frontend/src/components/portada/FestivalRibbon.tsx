@@ -24,7 +24,7 @@ export function FestivalRibbon({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden border-y border-white/10 bg-[#312e8e] py-3",
+        "relative snap-none overflow-hidden border-y border-white/10 bg-[#312e8e] py-3",
         className,
       )}
     >

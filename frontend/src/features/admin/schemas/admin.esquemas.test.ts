@@ -163,3 +163,87 @@ test("el detalle de un usuario hereda el listado y anade las inscripciones", () 
   assert.ok(fuente.includes("AdminUsuarioListItemSchema.extend"));
   assert.ok(/^\s*personas\s*:/m.test(fuente));
 });
+
+// ── The published vocabularies and the operator verdict ─────────────────────
+
+test("el espejo de los catalogos declara los vocabularios publicados", () => {
+  const fuente = leerEsquema("admin.catalogos.schema.ts");
+
+  for (const vocabulario of [
+    "roster",
+    "estado_participacion",
+    "tipo_compra",
+    "estado_operativo_pago",
+    "estado_capacidad_equipo",
+  ]) {
+    assert.ok(
+      new RegExp(`^\\s*${vocabulario}\\s*:`, "m").test(fuente),
+      `el espejo de los catalogos no declara "${vocabulario}"`,
+    );
+  }
+});
+
+// ── The teams publish their CAPACITY, not a misleading fraction ────────────
+
+test("el espejo de los equipos declara el minimo, el maximo y la capacidad", () => {
+  const fuente = leerEsquema("admin.inscripcion.schema.ts");
+
+  for (const campo of [
+    "jugadores_registrados",
+    "minimo_deportivo",
+    "maximo_deportivo",
+    "estado_capacidad",
+    "inscripcion_estado",
+  ]) {
+    assert.ok(
+      new RegExp(`^\\s*${campo}\\s*:`, "m").test(fuente),
+      `el espejo de los equipos no declara "${campo}"`,
+    );
+  }
+});
+
+test("el espejo de los equipos NO declara los faltantes", () => {
+  // `faltantes` duplicaba el minimo y no se renderizaba en ninguna parte.
+  const fuente = leerEsquema("admin.inscripcion.schema.ts");
+
+  assert.equal(/^\s*faltantes\s*:/m.test(fuente), false);
+});
+
+// ── The participants publish ONLY the pool verdict ─────────────────────────
+
+test("el espejo de los participantes NO declara el cupo activo", () => {
+  // `tiene_cupo_activo` es equivalente a `estado_pool == LISTO`: era una
+  // segunda copia del mismo hecho.
+  const fuente = leerEsquema("admin.inscripcion.schema.ts");
+
+  assert.equal(/^\s*tiene_cupo_activo\s*:/m.test(fuente), false);
+  assert.ok(/^\s*estado_pool\s*:/m.test(fuente));
+  assert.ok(/^\s*motivo_bloqueo\s*:/m.test(fuente));
+});
+
+test("el espejo de los pagos declara el veredicto operativo", () => {
+  const fuente = leerEsquema("admin.pago.schema.ts");
+
+  assert.ok(
+    /^\s*estado_operativo\s*:/m.test(fuente),
+    "el espejo de los pagos no declara el veredicto operativo",
+  );
+});
+
+test("el veredicto del pago viaja CON los hechos que lo sostienen", () => {
+  const fuente = leerEsquema("admin.pago.schema.ts");
+
+  // El veredicto NO reemplaza los hechos: siguen declarados porque el
+  // DETALLE los muestra como la traza de auditoria de la decision.
+  for (const hecho of [
+    "estado_compra",
+    "estado_orden",
+    "origen_pago",
+    "pagada_en",
+  ]) {
+    assert.ok(
+      new RegExp(`^\\s*${hecho}\\s*:`, "m").test(fuente),
+      `el espejo de los pagos no declara "${hecho}"`,
+    );
+  }
+});

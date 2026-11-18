@@ -32,6 +32,41 @@ def _mismo_monto(monto_a, monto_b) -> bool:
 class EvidenciaPagoService:
     """Read-only predicate of the payment evidence of an order."""
 
+    @staticmethod
+    def origenes_por_ordenes(ordenes: dict[str, object]) -> dict[str, str]:
+        """Return evidence origins for a page of orders without N+1 queries."""
+        if not ordenes:
+            return {}
+
+        orden_ids = list(ordenes)
+        manuales = {
+            str(orden_pago_id)
+            for orden_pago_id, monto, moneda in AprobacionPagoManual.objects.filter(
+                orden_pago_id__in=orden_ids,
+                estado=EstadoAprobacionPagoManual.APROBADA,
+            ).values_list("orden_pago_id", "monto", "moneda")
+            if _mismo_monto(monto, ordenes[str(orden_pago_id)].monto_total)
+            and moneda == ordenes[str(orden_pago_id)].moneda
+        }
+        izipay = {
+            str(orden_pago_id)
+            for orden_pago_id, monto, moneda in TransaccionPago.objects.filter(
+                orden_pago_id__in=orden_ids,
+                status=IzipayStatus.EXITO,
+            ).values_list("orden_pago_id", "amount", "currency")
+            if _mismo_monto(monto, ordenes[str(orden_pago_id)].monto_total)
+            and moneda == ordenes[str(orden_pago_id)].moneda
+        }
+
+        return {
+            orden_id: (
+                OrigenPago.MANUAL if orden_id in manuales
+                else OrigenPago.IZIPAY if orden_id in izipay
+                else OrigenPago.SIN_PAGO
+            )
+            for orden_id in orden_ids
+        }
+
     def tiene_evidencia_izipay(self, orden_pago) -> bool:
         """
         Return True when the order carries a CORRELATED successful transaction.

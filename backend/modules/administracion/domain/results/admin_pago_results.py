@@ -21,6 +21,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from modules.pagos.domain.constants import EstadoOperativoPago
+
 
 class AdminPagoListItemResult(BaseModel):
     """A purchase line with its payment order.
@@ -29,6 +31,11 @@ class AdminPagoListItemResult(BaseModel):
     a sports `CompraInscripcion` (inscripcion_id) OR a pass batch
     `CompraPase` (pase_id). The two identities are never both present and
     never both absent.
+
+    `estado_operativo` is the OPERATOR VERDICT of the payment: the ONE answer
+    to "is this payment done?". The raw facts it derives from
+    (`estado_compra`, `estado_orden`, `origen_pago`, `pagada_en`) stay in the
+    payload as the audit trail of the decision.
     """
 
     compra_id: str
@@ -46,6 +53,7 @@ class AdminPagoListItemResult(BaseModel):
     estado_orden: str | None = None
     pagada_en: datetime | None = None
     origen_pago: str = "SIN_PAGO"
+    estado_operativo: str = EstadoOperativoPago.SIN_ORDEN
     monto_orden: float | None = None
     moneda_orden: str | None = None
     beneficiarios_activos: int = 0

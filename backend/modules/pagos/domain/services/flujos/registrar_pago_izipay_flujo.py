@@ -5,13 +5,21 @@ Async flow with transaction.atomic — coordinates the full prepare + confirm cy
 
 PREPARE (server-side token generation):
   1. Validates the orden_pago is PENDIENTE
-  2. Applies the attempt lifecycle: the active pending attempt of the order
-     is reused while it is still usable; otherwise the superseded attempts
-     are expired before a new one is created
-  3. Generates transaction_id + order_number for a new attempt
-  4. Calls Izipay Perú Token/Generate (server-side)
-  5. Creates TransaccionPago as PENDIENTE (only after successful provider call)
+  2. Applies the attempt lifecycle ATOMICALLY: the live attempt of the order
+     is retired and a fresh one is created — both in a single transaction,
+     with the order row locked
+  3. Generates a collision-safe, order-scoped transaction_id + order_number
+     for the new attempt
+  4. Calls Izipay Perú Token/Generate (server-side) for the NEW attempt
+  5. Persists the provider session on the new attempt — only while it is
+     still the live attempt
   6. Returns token + SDK config to frontend
+
+  A provider session is NEVER replayed: every checkout opening gets a fresh
+  attempt with its own session and its own transaction identity. If the
+  attempt was superseded while its session was being opened, the request is
+  refused with a retryable conflict instead of handing a dead session to the
+  browser.
 
 CONFIRM (provider confirmation, from either channel):
   1. Extracts the transactionId from the provider payload
@@ -54,19 +62,15 @@ The commercial settlement is delegated to `salesianos_fest` through the
 """
 import json
 import logging
-from datetime import timedelta
 
 from asgiref.sync import sync_to_async
-from django.db import transaction
-from django.utils import timezone
+from django.db import IntegrityError, transaction
 
 from injector import inject
 
 from modules.pagos.domain.constants import (
-    CLAVE_TOKEN_SESION,
     CanalConfirmacionPago,
     EstadoVerificacionPago,
-    INTENTO_REUTILIZABLE_MINUTOS,
     IzipayStatus,
     OrdenPagoStatus,
     SettlementStatus,
@@ -76,8 +80,10 @@ from modules.pagos.domain.exceptions import (
     OrdenPagoNoEncontradaError,
     PagoDatosInconsistentesError,
     PagoFirmaInvalidaError,
+    PagoIntentoEnConflictoError,
     PagoNoAutorizadoError,
     PagoNotificacionNoVerificableError,
+    TransaccionDuplicadaError,
     TransaccionPagoNoEncontradaError,
 )
 from modules.pagos.domain.ports import (
@@ -107,9 +113,10 @@ class RegistrarPagoIzipayFlujo:
 
     Prepare step:
       - Validates orden_pago is PENDIENTE
-      - Generates transaction_id + order_number
+      - Retires the live attempt and creates a fresh one (atomically)
+      - Generates a collision-safe, order-scoped transaction_id + order_number
       - Calls Izipay Perú Token/Generate
-      - Persists TransaccionPago as PENDIENTE (only after successful provider call)
+      - Persists the provider session on the new attempt
 
     Confirm step:
       - Receives kr_answer callback directly from frontend
@@ -121,6 +128,11 @@ class RegistrarPagoIzipayFlujo:
       - Then drives the commercial settlement of the linked purchase from the
         backend, so the browser never confirms the purchase
     """
+
+    # Attempts to create the attempt identity of an order. The identity is
+    # unique by construction (scope + ordinal + random nonce); the retries
+    # only exist because the database is the last word on uniqueness.
+    INTENTOS_IDENTIDAD = 3
 
     @inject
     def __init__(
@@ -155,13 +167,13 @@ class RegistrarPagoIzipayFlujo:
 
         Steps:
         1. Load and validate the OrdenPago with estado=PENDIENTE
-        2. Apply the attempt lifecycle: reuse the active pending attempt of
-           the order when it is still usable, otherwise expire the
-           superseded attempts
-        3. Generate transaction_id + order_number for a new attempt
+        2. Apply the attempt lifecycle ATOMICALLY: retire the live attempt of
+           the order and create a fresh one
+        3. Generate a collision-safe, order-scoped transaction_id +
+           order_number for the new attempt
         4. Call Izipay Perú Token/Generate (server-side)
-        5. Persist TransaccionPago as PENDIENTE (only after successful
-           provider call)
+        5. Persist the provider session on the new attempt — only while it is
+           still the live attempt
         6. Return token + SDK config to frontend
 
         Args:
@@ -177,6 +189,8 @@ class RegistrarPagoIzipayFlujo:
 
         Raises:
             IzipayError: if orden_pago not found, not payable, or provider call fails
+            PagoIntentoEnConflictoError: if the attempt was superseded while
+                its provider session was being opened (retryable).
         """
         # 1. Load OrdenPago and validate it's PENDIENTE
         orden_pago = await sync_to_async(
@@ -192,73 +206,64 @@ class RegistrarPagoIzipayFlujo:
             )
 
         # 2. Attempt lifecycle. A pending transaction is an ATTEMPT, not a
-        #    charge: re-opening the checkout must not pile up attempts.
-        intento = await sync_to_async(
-            self.izipay_core.obtener_intento_pendiente
-        )(orden_pago_id)
+        #    charge: the live attempt of the order is retired and a fresh one
+        #    is created, both in ONE transaction with the order row locked.
+        intento = await sync_to_async(self._preparar_intento_sync)(orden_pago_id)
 
-        if intento is not None and self._intento_es_reutilizable(intento, orden_pago):
-            # The active attempt is reused: the SAME provider session — and
-            # therefore the same transaction id — is handed back. No new
-            # attempt is created and no second charge opportunity is opened.
-            return self._resultado_intento_reutilizado(
-                intento,
-                orden_pago,
+        # 3. Call Izipay Perú Token/Generate for the NEW attempt
+        try:
+            provider_response = await self.izipay_client.generar_token_sesion(
+                transaction_id=intento.transaction_id,
+                order_number=intento.order_number,
+                amount=str(orden_pago.monto_total),
+                currency=orden_pago.moneda,
                 buyer_email=buyer_email,
                 buyer_name=buyer_name,
                 buyer_surname=buyer_surname,
+                buyer_document=buyer_document,
+                buyer_phone=buyer_phone,
             )
-
-        # 3. Generate IDs for a new attempt
-        transaction_id = self.izipay_core.generar_transaction_id()
-        order_number = self.izipay_core.generar_order_number()
-
-        # 4. Call Izipay Perú Token/Generate — do NOT persist yet
-        provider_response = await self.izipay_client.generar_token_sesion(
-            transaction_id=transaction_id,
-            order_number=order_number,
-            amount=str(orden_pago.monto_total),
-            currency=orden_pago.moneda,
-            buyer_email=buyer_email,
-            buyer_name=buyer_name,
-            buyer_surname=buyer_surname,
-            buyer_document=buyer_document,
-            buyer_phone=buyer_phone,
-        )
+        except Exception:
+            # The session never opened: the attempt is not a charge and it
+            # must not stay as the live attempt of its order.
+            await sync_to_async(self.izipay_core.marcar_intento_fallido)(
+                intento.transaction_id,
+                response_message="El proveedor no pudo abrir la sesión de pago.",
+            )
+            raise
 
         # Extract token from Izipay Perú response structure
-        token = (
-            provider_response.get("token")
-            or (provider_response.get("response", {}).get("token")
-                if isinstance(provider_response.get("response"), dict)
-                else None)
-        )
+        token = self._extraer_token(provider_response)
         if not token:
+            # The session never opened: the attempt is not a charge and must
+            # not stay as the live attempt of its order.
+            await sync_to_async(self.izipay_core.marcar_intento_fallido)(
+                intento.transaction_id,
+                response_message="El proveedor no devolvió una sesión de pago.",
+            )
             raise IzipayError(
                 f"Izipay token generation returned no token. "
                 f"Response: {provider_response}"
             )
 
-        # 5. Close the superseded attempts BEFORE the new one is persisted,
-        #    then persist the new attempt with its provider session token so
-        #    it can be reused instead of opening a second session.
-        await sync_to_async(
-            self.izipay_core.expirar_intentos_pendientes
-        )(orden_pago_id)
-        await sync_to_async(
-            self.izipay_core.crear_transaccion
-        )(
-            orden_pago_id=orden_pago_id,
-            transaction_id=transaction_id,
-            order_number=order_number,
-            amount=orden_pago.monto_total,
-            currency=orden_pago.moneda,
-            metadata={CLAVE_TOKEN_SESION: token},
+        # 4. Persist the provider session on the attempt — only while it is
+        #    still the live attempt. A superseded attempt must never hand its
+        #    session to the browser.
+        persistida = await sync_to_async(self._guardar_token_sync)(
+            intento.transaction_id, token
         )
+        if not persistida:
+            logger.warning(
+                "The attempt of the orden_pago %s was superseded while its "
+                "provider session was being opened — the session is not handed "
+                "to the browser",
+                orden_pago_id,
+            )
+            raise PagoIntentoEnConflictoError()
 
         return IzipayPrepareResult(
-            transaction_id=transaction_id,
-            order_number=order_number,
+            transaction_id=intento.transaction_id,
+            order_number=intento.order_number,
             amount=orden_pago.monto_total,
             currency=orden_pago.moneda,
             orden_pago_id=orden_pago_id,
@@ -269,54 +274,89 @@ class RegistrarPagoIzipayFlujo:
             buyer_surname=buyer_surname,
         )
 
-    def _intento_es_reutilizable(self, intento, orden_pago) -> bool:
-        """
-        Resolve whether an active attempt can be reused for this order.
+    def _extraer_token(self, provider_response: dict) -> str | None:
+        """Extract the provider session token from the provider response."""
+        if not isinstance(provider_response, dict):
+            return None
 
-        An attempt is reusable when it still matches the order (amount and
-        currency) and its provider session is still fresh. A stale or
-        mismatched attempt is superseded: it is expired and a new attempt is
-        created instead.
-        """
-        if intento.amount != orden_pago.monto_total:
-            return False
-        if intento.currency != orden_pago.moneda:
-            return False
-        if not (intento.metadata or {}).get(CLAVE_TOKEN_SESION):
-            return False
+        token = provider_response.get("token")
+        if token:
+            return token
 
-        ventana = timezone.now() - timedelta(
-            minutes=INTENTO_REUTILIZABLE_MINUTOS
+        respuesta = provider_response.get("response")
+        if isinstance(respuesta, dict):
+            return respuesta.get("token") or None
+        return None
+
+    @transaction.atomic()
+    def _preparar_intento_sync(self, orden_pago_id: str):
+        """
+        Retire the live attempt and create the fresh one — atomically.
+
+        The order row is locked, so two preparations of the same order cannot
+        create two live attempts: the second one finds the attempt of the
+        first retired and supersedes it. The retired attempts are kept as
+        history — a payment attempt is an audit record, never a row to
+        delete.
+
+        Returns:
+            The new live TransaccionPago (PENDIENTE).
+        """
+        orden_pago = self.izipay_core.bloquear_orden_pago(orden_pago_id)
+        if orden_pago is None:
+            raise IzipayError(f"OrdenPago {orden_pago_id} not found.")
+
+        if orden_pago.estado != OrdenPagoStatus.PENDIENTE:
+            raise IzipayError(
+                f"OrdenPago {orden_pago_id} is in estado={orden_pago.estado}, "
+                "which is not payable."
+            )
+
+        # 1. Retire the live attempt (and any legacy duplicate).
+        self.izipay_core.expirar_intentos_pendientes(orden_pago_id)
+
+        # 2. The identity of the new attempt: the position it occupies in its
+        #    order + a random nonce. The order number is deterministic; the
+        #    transaction id carries the nonce that makes it unique.
+        ordinal = self.izipay_core.contar_intentos(orden_pago_id) + 1
+        order_number = self.izipay_core.generar_order_number(orden_pago_id, ordinal)
+
+        for _ in range(self.INTENTOS_IDENTIDAD):
+            try:
+                with transaction.atomic():
+                    return self.izipay_core.crear_transaccion(
+                        orden_pago_id=orden_pago_id,
+                        transaction_id=self.izipay_core.generar_transaction_id(
+                            orden_pago_id, ordinal
+                        ),
+                        order_number=order_number,
+                        amount=orden_pago.monto_total,
+                        currency=orden_pago.moneda,
+                        metadata={},
+                    )
+            except (TransaccionDuplicadaError, IntegrityError):
+                # The unique constraint refused the identity: a new nonce
+                # makes the next attempt of this order safe.
+                logger.warning(
+                    "Transaction id collision on the orden_pago %s — retrying "
+                    "with a new nonce",
+                    orden_pago_id,
+                )
+
+        raise IzipayError(
+            f"Could not create a unique transaction id for {orden_pago_id}."
         )
-        return intento.created_at >= ventana
 
-    def _resultado_intento_reutilizado(
-        self,
-        intento,
-        orden_pago,
-        buyer_email: str,
-        buyer_name: str,
-        buyer_surname: str,
-    ) -> IzipayPrepareResult:
+    @transaction.atomic()
+    def _guardar_token_sync(self, transaction_id: str, token: str) -> bool:
         """
-        Build the prepare result of a reused attempt.
+        Persist the provider session of a live attempt.
 
-        The provider session — and therefore the transaction id — is the one
-        of the active attempt: the browser continues the SAME checkout
-        instead of opening a second charge opportunity for the same order.
+        Returns:
+            True when the session was persisted, False when the attempt is
+            no longer live (it was superseded meanwhile).
         """
-        return IzipayPrepareResult(
-            transaction_id=intento.transaction_id,
-            order_number=intento.order_number,
-            amount=orden_pago.monto_total,
-            currency=orden_pago.moneda,
-            orden_pago_id=str(orden_pago.id),
-            token=intento.metadata[CLAVE_TOKEN_SESION],
-            merchant_code=self.izipay_client.shop_id,
-            buyer_email=buyer_email,
-            buyer_name=buyer_name,
-            buyer_surname=buyer_surname,
-        )
+        return self.izipay_core.guardar_token_sesion(transaction_id, token)
 
     # ── Confirm ────────────────────────────────────────────────────────────────
 
@@ -350,7 +390,8 @@ class RegistrarPagoIzipayFlujo:
         6. Validate code == "00" for success
         7. Inside transaction.atomic:
            a. Update TransaccionPago with final status + sanitized metadata
-           b. If EXITO → transition OrdenPago to PAGADA
+           b. If EXITO → transition OrdenPago to PAGADA (only when the order
+              is not paid yet: an attempt settles its order at most once)
         8. After the payment is committed, drive the commercial settlement
         9. Return IzipayConfirmResult
 
@@ -454,7 +495,7 @@ class RegistrarPagoIzipayFlujo:
         sanitized_metadata = sanitizar_kr_answer(raw_metadata)
 
         # 8. Atomic DB update + OrdenPago state transition
-        await sync_to_async(
+        transiciono = await sync_to_async(
             self._confirmar_sync
         )(
             transaction_id=transaction_id,
@@ -469,8 +510,11 @@ class RegistrarPagoIzipayFlujo:
         # 9. The payment is durable at this point (its own committed
         #    transaction). The commercial settlement runs afterwards in its own
         #    transaction — a failure there never rolls back the payment.
+        #    An attempt only settles its order ONCE: when the order was
+        #    already paid, the attempt is kept in the audit trail but no
+        #    second settlement is created.
         settlement_status = SettlementStatus.NOT_APPLICABLE
-        if final_status == IzipayStatus.EXITO:
+        if final_status == IzipayStatus.EXITO and transiciono:
             settlement_status = await self._liquidar_orden_pagada(
                 str(tx.orden_pago_id)
             )
@@ -758,12 +802,19 @@ class RegistrarPagoIzipayFlujo:
         response_message: str,
         metodo_pago: str,
         sanitized_metadata: dict,
-    ) -> None:
+    ) -> bool:
         """
         Sync wrapper with transaction.atomic for confirm step.
 
         Updates TransaccionPago status and transitions OrdenPago to PAGADA
         on success — all within the same DB transaction.
+
+        Returns:
+            True when THIS call paid the order (the order transitioned to
+            PAGADA), False when the order was already paid. The attempt is
+            always recorded — the audit trail keeps every payment outcome —
+            but the payment evidence of an already paid order is never
+            rewritten and no second settlement is created.
 
         NOTE: Does NOT transition Inscripcion or create AsignacionCupo.
         The commercial settlement is driven by the flow right after this
@@ -781,7 +832,18 @@ class RegistrarPagoIzipayFlujo:
         )
 
         # If successful, transition OrdenPago to PAGADA
-        if final_status == IzipayStatus.EXITO:
-            orden_pago = self.izipay_core.obtener_orden_pago_por_id(orden_pago_id)
-            if orden_pago is not None:
-                self.izipay_core.marcar_orden_pagada(orden_pago)
+        if final_status != IzipayStatus.EXITO:
+            return False
+
+        orden_pago = self.izipay_core.obtener_orden_pago_por_id(orden_pago_id)
+        if orden_pago is None:
+            return False
+
+        if orden_pago.estado == OrdenPagoStatus.PAGADA:
+            # The order was already paid (another attempt settled it): the
+            # attempt outcome is recorded, but the payment evidence of the
+            # order is not rewritten and no second settlement is created.
+            return False
+
+        self.izipay_core.marcar_orden_pagada(orden_pago)
+        return True

@@ -39,6 +39,11 @@ class AdminEstadosCatalogosOut(BaseSchema):
     acceso: list[str]
     pool: list[str]
     rol_participante: list[str]
+    roster: list[str]
+    estado_participacion: list[str]
+    tipo_compra: list[str]
+    estado_operativo_pago: list[str]
+    estado_capacidad_equipo: list[str]
 
 
 class AdminCatalogosOut(BaseSchema):

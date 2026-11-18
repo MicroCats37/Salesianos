@@ -21,6 +21,10 @@ from datetime import date
 
 from injector import inject
 
+from modules.administracion.domain.constants import (
+    ROSTER_ESTADOS,
+    TIPOS_COMPRA_ADMIN,
+)
 from modules.administracion.domain.exceptions import (
     AdminResourceNotFoundError,
     InvalidFilterError,
@@ -73,7 +77,7 @@ from modules.administracion.domain.services.core.admin_paginacion_service import
 )
 from modules.commerce.domain.constants import EstadoCompraChoices
 from modules.eventos.domain.models import Evento
-from modules.pagos.domain.constants import OrdenPagoStatus
+from modules.pagos.domain.constants import EstadoOperativoPago, OrdenPagoStatus
 from modules.salesianos_fest.domain.constants import (
     AutorizacionFiestaChoices,
     EstadoAcreditacionChoices,
@@ -83,7 +87,6 @@ from modules.salesianos_fest.domain.constants import (
     EstadoPoolChoices,
     ResultadoAccesoChoices,
     RolParticipanteChoices,
-    TipoCompraChoices,
 )
 
 # ── Ordering whitelists ───────────────────────────────────────────────────────
@@ -161,21 +164,11 @@ DEFAULT_ORDERING_USUARIOS = "-created_at"
 
 ESTADO_USUARIO_ACTIVO = "activo"
 ESTADO_USUARIO_INACTIVO = "inactivo"
-ROSTER_COMPLETO = "COMPLETO"
-ROSTER_INCOMPLETO = "INCOMPLETO"
 
 
 def _valores(choices) -> frozenset[str]:
     """Return the values of a domain vocabulary."""
     return frozenset(valor for valor, _etiqueta in choices.choices)
-
-
-#: The commercial kinds a purchase row can carry in the administrative
-#: payments table: the two SPORTS kinds (INICIAL / AMPLIACION) plus the
-#: independent PASS batch (PASE).
-TIPOS_COMPRA_ADMIN = frozenset(
-    (*_valores(TipoCompraChoices), "PASE")
-)
 
 
 class AdminOperacionService:
@@ -276,6 +269,7 @@ class AdminOperacionService:
         ordering: str | None = None,
         estado_compra: str | None = None,
         estado_orden: str | None = None,
+        estado_operativo: str | None = None,
         tipo: str | None = None,
         desde: str | None = None,
         hasta: str | None = None,
@@ -297,6 +291,9 @@ class AdminOperacionService:
             ),
             estado_orden=self._validar_enum(
                 estado_orden, _valores(OrdenPagoStatus), "estado_orden"
+            ),
+            estado_operativo=self._validar_enum(
+                estado_operativo, _valores(EstadoOperativoPago), "estado_operativo"
             ),
             tipo=self._validar_enum(tipo, TIPOS_COMPRA_ADMIN, "tipo"),
             desde=self._validar_fecha(desde, "desde"),
@@ -351,7 +348,7 @@ class AdminOperacionService:
             ),
             roster=self._validar_enum(
                 roster,
-                frozenset({ROSTER_COMPLETO, ROSTER_INCOMPLETO}),
+                ROSTER_ESTADOS,
                 "roster",
             ),
             q=params.q,

@@ -233,6 +233,35 @@ def test_catalogos_exponen_los_vocabularios_de_estado(
 
 
 @pytest.mark.django_db
+def test_catalogos_exponen_los_vocabularios_que_el_cliente_inventaba(
+    api_client, usuario_admin_staff, evento
+):
+    """
+    GIVEN: an administrator
+    WHEN:  GET /api/administracion/catalogos
+    THEN:  the vocabularies the client used to hardcode are published, so no
+            filter dropdown carries its own copy of the options.
+    """
+    response = api_client.get(URL_CATALOGOS, **_auth_header(usuario_admin_staff))
+
+    estados = response.json()["data"]["estados"]
+    assert estados["roster"] == ["COMPLETO", "INCOMPLETO"]
+    assert estados["estado_participacion"] == ["A", "R"]
+    assert estados["tipo_compra"] == ["INICIAL", "AMPLIACION", "PASE"]
+    assert estados["estado_operativo_pago"] == [
+        "SIN_ORDEN",
+        "PAGADA",
+        "PAGADA_SIN_LIQUIDAR",
+        "PAGADA_SIN_EVIDENCIA",
+        "PAGADA_SIN_FECHA",
+        "PENDIENTE",
+        "CANCELADA",
+        "VENCIDA",
+    ]
+    assert estados["estado_capacidad_equipo"] == ["CON_CUPOS", "AL_LIMITE"]
+
+
+@pytest.mark.django_db
 def test_catalogos_identifican_el_evento_activo(
     api_client, usuario_admin_staff, escenario_operativo
 ):

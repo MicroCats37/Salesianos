@@ -62,6 +62,11 @@ class AdminCatalogosPresenter:
                 acceso=list(result.estados.acceso),
                 pool=list(result.estados.pool),
                 rol_participante=list(result.estados.rol_participante),
+                roster=list(result.estados.roster),
+                estado_participacion=list(result.estados.estado_participacion),
+                tipo_compra=list(result.estados.tipo_compra),
+                estado_operativo_pago=list(result.estados.estado_operativo_pago),
+                estado_capacidad_equipo=list(result.estados.estado_capacidad_equipo),
             ),
         )
 

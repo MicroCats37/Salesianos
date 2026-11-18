@@ -32,6 +32,7 @@ def make_orden_pago_payload(
     estado: str = "PENDIENTE",
     descripcion: str = "Test purchase",
     referencia_externa: str = "TEST-REF-001",
+    pagada_en: str | None = None,
     metadata: dict | None = None,
     **kwargs,
 ) -> dict:
@@ -44,6 +45,8 @@ def make_orden_pago_payload(
         "descripcion": descripcion,
         "referencia_externa": referencia_externa,
     }
+    if pagada_en is not None:
+        payload["pagada_en"] = pagada_en
     if metadata is not None:
         payload["metadata"] = metadata
     return {**payload, **kwargs}
@@ -53,7 +56,7 @@ def make_transaccion_pago_payload(
     orden_pago_id: str | None = None,
     amount: Decimal | str = "100.00",
     currency: str = "PEN",
-    status: str = "CAPTURED",
+    status: str = "EXITO",
     transaction_id: str = "TXN-TEST-001",
     order_number: str = "ORD-TEST-001",
     **kwargs,

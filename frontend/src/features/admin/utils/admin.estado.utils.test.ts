@@ -28,10 +28,15 @@ const utils = (await import(specifier)) as {
   estadoAsignacionTone: (estado: string) => string;
   estadoCompraLabel: (estado: string) => string;
   estadoCompraTone: (estado: string) => string;
+  estadoCapacidadEquipoLabel: (estado: string) => string;
+  estadoCapacidadEquipoTone: (estado: string) => string;
   estadoEquipoLabel: (estado: string) => string;
   estadoEquipoTone: (estado: string) => string;
   estadoOrdenLabel: (estado: string) => string;
   estadoOrdenTone: (estado: string) => string;
+  estadoOperativoPagoAviso: (estado: string) => string;
+  estadoOperativoPagoLabel: (estado: string) => string;
+  estadoOperativoPagoTone: (estado: string) => string;
   estadoParticipacionLabel: (estado: string) => string;
   estadoPersonaLabel: (estado: string) => string;
   estadoPoolLabel: (estado: string) => string;
@@ -39,6 +44,8 @@ const utils = (await import(specifier)) as {
   estadoTransaccionLabel: (estado: string) => string;
   estadoTransaccionTone: (estado: string) => string;
   medioAceptacionLabel: (medio: string) => string;
+  origenPagoLabel: (origen: string) => string;
+  origenPagoTone: (origen: string) => string;
   resultadoAccesoLabel: (resultado: string) => string;
   resultadoAccesoTone: (resultado: string) => string;
   rosterLabel: (estado: string) => string;
@@ -113,6 +120,21 @@ test("la completitud de la plantilla tiene dos tonos", () => {
   assert.equal(utils.rosterLabel("COMPLETO"), "Completo");
 });
 
+test("la capacidad del equipo distingue el equipo lleno del que tiene lugar", () => {
+  // The vocabulary is the one of `EstadoCapacidadEquipoChoices`
+  // (`backend/modules/salesianos_fest/domain/constants.py`): the client
+  // mirrors it and NEVER compares the players with the cap itself.
+  assert.equal(utils.estadoCapacidadEquipoLabel("CON_CUPOS"), "Con cupos");
+  assert.equal(utils.estadoCapacidadEquipoLabel("AL_LIMITE"), "Al límite");
+  assert.equal(utils.estadoCapacidadEquipoTone("CON_CUPOS"), "emerald");
+  assert.equal(utils.estadoCapacidadEquipoTone("AL_LIMITE"), "orange");
+});
+
+test("una capacidad desconocida se muestra neutra y conserva su texto", () => {
+  assert.equal(utils.estadoCapacidadEquipoTone("INVENTADO"), "slate");
+  assert.equal(utils.estadoCapacidadEquipoLabel("INVENTADO"), "INVENTADO");
+});
+
 test("el estado del pool se distingue del estado de la persona", () => {
   assert.equal(utils.estadoPoolTone("LISTO"), "emerald");
   assert.equal(utils.estadoPoolTone("ESPERANDO_PAGO"), "amber");
@@ -180,4 +202,64 @@ test("el estado del equipo distingue el activo del cancelado", () => {
   assert.equal(utils.estadoEquipoTone("EQUIPO_ACTIVO"), "emerald");
   assert.equal(utils.estadoEquipoTone("EQUIPO_CANCELADO"), "slate");
   assert.equal(utils.estadoEquipoLabel("EQUIPO_ACTIVO"), "Activo");
+});
+
+// ── The operator verdict of a payment ───────────────────────────────────────
+
+test("el veredicto del pago nombra los ocho codigos del backend", () => {
+  // The vocabulary is the one of `EstadoOperativoPago`
+  // (`backend/modules/pagos/domain/constants.py`): the client mirrors it
+  // and NEVER recomputes it.
+  assert.equal(utils.estadoOperativoPagoLabel("SIN_ORDEN"), "Sin orden");
+  assert.equal(utils.estadoOperativoPagoLabel("PAGADA"), "Pagada");
+  assert.equal(
+    utils.estadoOperativoPagoLabel("PAGADA_SIN_LIQUIDAR"),
+    "Pagada sin liquidar",
+  );
+  assert.equal(
+    utils.estadoOperativoPagoLabel("PAGADA_SIN_EVIDENCIA"),
+    "Pagada sin evidencia",
+  );
+  assert.equal(
+    utils.estadoOperativoPagoLabel("PAGADA_SIN_FECHA"),
+    "Pagada sin fecha",
+  );
+  assert.equal(utils.estadoOperativoPagoLabel("PENDIENTE"), "Pendiente");
+  assert.equal(utils.estadoOperativoPagoLabel("CANCELADA"), "Cancelada");
+  assert.equal(utils.estadoOperativoPagoLabel("VENCIDA"), "Vencida");
+});
+
+test("el veredicto del pago separa el pago limpio de los que exigen accion", () => {
+  assert.equal(utils.estadoOperativoPagoTone("PAGADA"), "emerald");
+  assert.equal(utils.estadoOperativoPagoTone("PAGADA_SIN_LIQUIDAR"), "orange");
+  assert.equal(utils.estadoOperativoPagoTone("PAGADA_SIN_EVIDENCIA"), "red");
+  assert.equal(utils.estadoOperativoPagoTone("PAGADA_SIN_FECHA"), "amber");
+  assert.equal(utils.estadoOperativoPagoTone("PENDIENTE"), "amber");
+  assert.equal(utils.estadoOperativoPagoTone("CANCELADA"), "rose");
+  assert.equal(utils.estadoOperativoPagoTone("VENCIDA"), "red");
+  assert.equal(utils.estadoOperativoPagoTone("SIN_ORDEN"), "slate");
+});
+
+test("un veredicto desconocido se muestra neutro y conserva su texto", () => {
+  assert.equal(utils.estadoOperativoPagoTone("INVENTADO"), "slate");
+  assert.equal(utils.estadoOperativoPagoLabel("INVENTADO"), "INVENTADO");
+});
+
+test("solo los veredictos con discrepancia llevan marcador", () => {
+  // El marcador lo decide el VEREDICTO, no una comparacion que el cliente
+  // hace de los hechos.
+  assert.equal(utils.estadoOperativoPagoAviso("PAGADA"), "");
+  assert.equal(utils.estadoOperativoPagoAviso("PENDIENTE"), "");
+  assert.equal(utils.estadoOperativoPagoAviso("INVENTADO"), "");
+  assert.notEqual(utils.estadoOperativoPagoAviso("PAGADA_SIN_LIQUIDAR"), "");
+  assert.notEqual(utils.estadoOperativoPagoAviso("PAGADA_SIN_EVIDENCIA"), "");
+  assert.notEqual(utils.estadoOperativoPagoAviso("PAGADA_SIN_FECHA"), "");
+});
+
+test("el origen del pago es la EVIDENCIA, no un estado del pago", () => {
+  // `SIN_PAGO` no significa "sin pago": significa "sin evidencia".
+  assert.equal(utils.origenPagoLabel("IZIPAY"), "Izipay");
+  assert.equal(utils.origenPagoLabel("MANUAL"), "Manual");
+  assert.equal(utils.origenPagoLabel("SIN_PAGO"), "Sin evidencia");
+  assert.equal(utils.origenPagoTone("SIN_PAGO"), "amber");
 });

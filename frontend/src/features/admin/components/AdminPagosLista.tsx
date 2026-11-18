@@ -38,6 +38,9 @@ import {
   estadoAprobacionManualTone,
   estadoCompraLabel,
   estadoCompraTone,
+  estadoOperativoPagoAviso,
+  estadoOperativoPagoLabel,
+  estadoOperativoPagoTone,
   estadoOrdenLabel,
   estadoOrdenTone,
   estadoTransaccionLabel,
@@ -76,6 +79,13 @@ import {
  * The wrapper of the backend carries EXPLICIT fields only: the payment
  * metadata, the session token, the provider message and the transaction id
  * are not modelled, so they can never be rendered.
+ *
+ * The table shows ONE state per row: the operator verdict the backend
+ * computes (`estado_operativo`), with the origin of the evidence as a
+ * secondary line. The three facts the verdict is made of — the commercial
+ * state of the purchase, the state of the order and the payment date — stop
+ * competing in the list and stay reachable in the DRILLDOWN, where they are
+ * the audit trail of the decision. The client NEVER recomputes the verdict.
  */
 export function AdminPagosLista() {
   const control = useAdminControlLista();
@@ -171,37 +181,24 @@ export function AdminPagosLista() {
       ),
     },
     {
-      clave: "origen_pago",
-      etiqueta: "Origen",
+      clave: "estado_pago",
+      etiqueta: "Estado del pago",
       render: (item) => (
-        <AdminEstadoBadge
-          etiqueta={origenPagoLabel(item.origen_pago)}
-          tono={origenPagoTone(item.origen_pago)}
-        />
-      ),
-    },
-    {
-      clave: "estado_compra",
-      etiqueta: "Estado compra",
-      render: (item) => (
-        <AdminEstadoBadge
-          etiqueta={estadoCompraLabel(item.estado_compra)}
-          tono={estadoCompraTone(item.estado_compra)}
-        />
-      ),
-    },
-    {
-      clave: "estado_orden",
-      etiqueta: "Estado orden",
-      render: (item) =>
-        item.estado_orden ? (
+        <div className="flex flex-col gap-1">
           <AdminEstadoBadge
-            etiqueta={estadoOrdenLabel(item.estado_orden)}
-            tono={estadoOrdenTone(item.estado_orden)}
+            etiqueta={estadoOperativoPagoLabel(item.estado_operativo)}
+            tono={estadoOperativoPagoTone(item.estado_operativo)}
           />
-        ) : (
-          <span className="text-xs text-slate-400">Sin orden</span>
-        ),
+          {/*
+            The EVIDENCE travels under the verdict as a secondary line: it is
+            a fact about the PROOF of the payment, not a second payment
+            state, so it never competes with the verdict.
+          */}
+          <span className="text-[11px] font-medium text-slate-500">
+            Evidencia: {origenPagoLabel(item.origen_pago)}
+          </span>
+        </div>
+      ),
     },
     {
       clave: "pagada",
@@ -232,7 +229,7 @@ export function AdminPagosLista() {
       <AdminPageHeader
         eyebrow="Administración operativa"
         title="Pagos"
-        description="Compras y órdenes de pago del evento activo con su estado comercial y su estado de orden. Los montos provienen del snapshot congelado de la compra."
+        description="Compras y órdenes de pago del evento activo con el estado del pago y su evidencia. Los montos provienen del snapshot congelado de la compra."
         icon={CreditCard}
         size="compact"
       />
@@ -282,11 +279,12 @@ export function AdminPagosLista() {
               <AdminFiltroSelect
                 etiqueta="Tipo"
                 valor={control.estado.filtros.tipo ?? ""}
-                opciones={[
-                  { valor: "INICIAL", etiqueta: "Inicial" },
-                  { valor: "AMPLIACION", etiqueta: "Ampliación" },
-                  { valor: "PASE", etiqueta: "Pase de fiesta" },
-                ]}
+                opciones={(catalogo?.estados.tipo_compra ?? []).map(
+                  (valor) => ({
+                    valor,
+                    etiqueta: tipoCompraLabel(valor),
+                  }),
+                )}
                 onChange={(valor) => control.onFiltro("tipo", valor)}
               />
               <AdminFiltroRangoFechas
@@ -311,8 +309,8 @@ export function AdminPagosLista() {
                   </span>
                 </div>
                 <AdminEstadoBadge
-                  etiqueta={estadoCompraLabel(item.estado_compra)}
-                  tono={estadoCompraTone(item.estado_compra)}
+                  etiqueta={estadoOperativoPagoLabel(item.estado_operativo)}
+                  tono={estadoOperativoPagoTone(item.estado_operativo)}
                 />
               </div>
               <div className="flex flex-wrap gap-2 text-[11px] text-slate-600">
@@ -325,11 +323,9 @@ export function AdminPagosLista() {
                 <span className="rounded-full bg-slate-100 px-2 py-1">
                   {formatearMonto(item.total)}
                 </span>
-                {item.estado_orden && (
-                  <span className="rounded-full bg-slate-100 px-2 py-1">
-                    Orden: {estadoOrdenLabel(item.estado_orden)}
-                  </span>
-                )}
+                <span className="rounded-full bg-slate-100 px-2 py-1">
+                  Evidencia: {origenPagoLabel(item.origen_pago)}
+                </span>
               </div>
             </div>
           )}
@@ -386,8 +382,36 @@ export function AdminPagosLista() {
                   );
                 }
 
+                // The marker of the discrepancy comes from the VERDICT: the
+                // backend already decided that the facts do not line up.
+                const aviso = estadoOperativoPagoAviso(pago.estado_operativo);
+
                 return (
                   <div className="space-y-5">
+                    {/*
+                      The VERDICT is the head of the drilldown: it answers
+                      "is this payment done?" before the facts that support
+                      it.
+                    */}
+                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                        Estado del pago
+                      </p>
+                      <div className="mt-2">
+                        <AdminEstadoBadge
+                          etiqueta={estadoOperativoPagoLabel(
+                            pago.estado_operativo,
+                          )}
+                          tono={estadoOperativoPagoTone(pago.estado_operativo)}
+                        />
+                      </div>
+                      {aviso ? (
+                        <p className="mt-2 text-[11px] font-medium text-slate-700">
+                          {aviso}
+                        </p>
+                      ) : null}
+                    </div>
+
                     <div className="grid gap-3 sm:grid-cols-2">
                       {[
                         {
@@ -404,28 +428,8 @@ export function AdminPagosLista() {
                           valor: pago.producto_nombre,
                         },
                         {
-                          etiqueta: "Estado de la compra",
-                          valor: estadoCompraLabel(pago.estado_compra),
-                        },
-                        {
-                          etiqueta: "Estado de la orden",
-                          valor: pago.estado_orden
-                            ? estadoOrdenLabel(pago.estado_orden)
-                            : "—",
-                        },
-                        {
-                          etiqueta: "Origen del pago",
-                          valor: origenPagoLabel(pago.origen_pago),
-                        },
-                        {
                           etiqueta: "Total",
                           valor: formatearMonto(pago.total),
-                        },
-                        {
-                          etiqueta: "Pagada el",
-                          valor: pago.pagada_en
-                            ? formatearFecha(pago.pagada_en)
-                            : "—",
                         },
                         {
                           etiqueta: "Creada",
@@ -444,6 +448,74 @@ export function AdminPagosLista() {
                           </p>
                         </div>
                       ))}
+                    </div>
+
+                    {/*
+                      The FACTS the verdict is made of. They live here — and
+                      only here — so they stay the audit trail of the
+                      decision without competing with the verdict in the
+                      list.
+                    */}
+                    <div>
+                      <h3 className="mb-2 text-[10px] font-black uppercase tracking-[0.25em] text-[#312e8e]">
+                        Evidencia y estados
+                      </h3>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {[
+                          {
+                            etiqueta: "Estado de la compra",
+                            valor: (
+                              <AdminEstadoBadge
+                                etiqueta={estadoCompraLabel(pago.estado_compra)}
+                                tono={estadoCompraTone(pago.estado_compra)}
+                              />
+                            ),
+                          },
+                          {
+                            etiqueta: "Estado de la orden",
+                            valor: pago.estado_orden ? (
+                              <AdminEstadoBadge
+                                etiqueta={estadoOrdenLabel(pago.estado_orden)}
+                                tono={estadoOrdenTone(pago.estado_orden)}
+                              />
+                            ) : (
+                              <span className="text-sm font-bold text-slate-900">
+                                Sin orden
+                              </span>
+                            ),
+                          },
+                          {
+                            etiqueta: "Evidencia",
+                            valor: (
+                              <AdminEstadoBadge
+                                etiqueta={origenPagoLabel(pago.origen_pago)}
+                                tono={origenPagoTone(pago.origen_pago)}
+                              />
+                            ),
+                          },
+                          {
+                            etiqueta: "Fecha de pago",
+                            valor: (
+                              <span className="text-sm font-bold text-slate-900">
+                                {pago.pagada_en
+                                  ? formatearFecha(pago.pagada_en)
+                                  : "—"}
+                              </span>
+                            ),
+                          },
+                        ].map((bloque) => (
+                          <div
+                            key={bloque.etiqueta}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                          >
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                              {bloque.etiqueta}
+                            </p>
+                            <div className="mt-1">{bloque.valor}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div>

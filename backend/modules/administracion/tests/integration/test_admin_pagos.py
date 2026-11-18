@@ -1,5 +1,9 @@
 """Integration tests for the administration payment surfaces (A5, A6)."""
 
+import uuid
+from datetime import datetime, timezone
+from decimal import Decimal
+
 import pytest
 
 from modules.administracion.tests.factories import (
@@ -7,10 +11,64 @@ from modules.administracion.tests.factories import (
     make_forbidden_keys,
     make_list_query,
 )
+from modules.commerce.domain.constants import EstadoCompraChoices
+from modules.commerce.domain.models import Compra
+from modules.pagos.domain.constants import IzipayStatus, OrdenPagoStatus
+from modules.pagos.domain.models import OrdenPago, TransaccionPago
+from modules.salesianos_fest.domain.constants import TipoCompraChoices
+from modules.salesianos_fest.domain.models import CompraInscripcion
 
 
 URL_LISTA = "/api/administracion/pagos"
 URL_DETALLE = "/api/administracion/pagos/{orden_pago_id}"
+
+FECHA_PAGO = datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc)
+
+
+def _crear_compra(inscripcion, *, con_evidencia: bool, con_fecha: bool):
+    """
+    Create one purchase of the active event with the given payment facts.
+
+    The order is always paid: the caller decides whether it carries the
+    correlated evidence and whether it carries the payment date.
+    """
+    total = Decimal("30.00")
+    orden = OrdenPago.objects.create(
+        numero=f"ORD-VERDICTO-{uuid.uuid4().hex[:8].upper()}",
+        monto_total=total,
+        moneda="PEN",
+        estado=OrdenPagoStatus.PAGADA,
+        pagada_en=FECHA_PAGO if con_fecha else None,
+    )
+    compra = Compra.objects.create(
+        responsable=inscripcion.responsable,
+        descripcion="Compra de veredicto",
+        total=total,
+        estado=EstadoCompraChoices.PAGADA,
+        orden_pago=orden,
+    )
+    CompraInscripcion.objects.create(
+        compra=compra,
+        inscripcion=inscripcion,
+        tipo=TipoCompraChoices.INICIAL,
+        cantidad=1,
+        precio_unitario=total,
+        total=total,
+    )
+
+    if con_evidencia:
+        TransaccionPago.objects.create(
+            orden_pago=orden,
+            transaction_id=f"TXN-VERDICTO-{uuid.uuid4().hex[:8].upper()}",
+            order_number=orden.numero,
+            amount=total,
+            currency="PEN",
+            status=IzipayStatus.EXITO,
+            response_code="0000",
+            metodo_pago="TARJETA",
+        )
+
+    return compra, orden
 
 
 @pytest.mark.django_db
@@ -110,6 +168,7 @@ def test_filtros_y_busqueda_de_pagos(
     [
         ("estado_compra", "NO_EXISTE"),
         ("estado_orden", "NO_EXISTE"),
+        ("estado_operativo", "NO_EXISTE"),
         ("tipo", "NO_EXISTE"),
         ("desde", "ayer"),
         ("ordering", "total; DROP TABLE pagos"),
@@ -184,6 +243,107 @@ def test_detalle_desconocido_responde_404(
 
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
+
+
+@pytest.mark.django_db
+def test_lista_publica_el_veredicto_operativo(
+    api_client, usuario_admin_staff, escenario_operativo
+):
+    """
+    GIVEN: the purchases of the operational scenario
+    WHEN:  GET /api/administracion/pagos
+    THEN:  every row publishes the OPERATOR VERDICT of its payment.
+    """
+    response = api_client.get(URL_LISTA, **make_auth_header(usuario_admin_staff))
+
+    assert response.status_code == 200
+    items = response.json()["data"]["items"]
+    por_compra = {item["compra_id"]: item for item in items}
+
+    assert por_compra[str(escenario_operativo["compra_inicial"].id)][
+        "estado_operativo"
+    ] == "PAGADA"
+    assert {
+        item["estado_operativo"] for item in items
+    } == {
+        "PAGADA",
+        "PAGADA_SIN_LIQUIDAR",
+        "VENCIDA",
+        "CANCELADA",
+    }
+
+
+@pytest.mark.django_db
+def test_filtro_por_veredicto_operativo(
+    api_client, usuario_admin_staff, escenario_operativo
+):
+    """
+    GIVEN: the purchases of the operational scenario
+    WHEN:  GET /api/administracion/pagos?estado_operativo=...
+    THEN:  the filter answers EXACTLY the rows whose published verdict is
+            that code.
+    """
+    headers = make_auth_header(usuario_admin_staff)
+
+    pagadas = api_client.get(
+        URL_LISTA, **headers, data=make_list_query(estado_operativo="PAGADA")
+    ).json()["data"]
+    assert pagadas["total"] == 2
+    assert {item["estado_operativo"] for item in pagadas["items"]} == {"PAGADA"}
+
+    sin_liquidar = api_client.get(
+        URL_LISTA,
+        **headers,
+        data=make_list_query(estado_operativo="PAGADA_SIN_LIQUIDAR"),
+    ).json()["data"]
+    assert sin_liquidar["total"] == 1
+    assert {item["estado_operativo"] for item in sin_liquidar["items"]} == {
+        "PAGADA_SIN_LIQUIDAR"
+    }
+
+    vencidas = api_client.get(
+        URL_LISTA, **headers, data=make_list_query(estado_operativo="VENCIDA")
+    ).json()["data"]
+    assert vencidas["total"] == 1
+
+
+@pytest.mark.django_db
+def test_filtro_por_veredicto_sin_evidencia_y_sin_fecha(
+    api_client, usuario_admin_staff, escenario_operativo
+):
+    """
+    GIVEN: a paid order WITHOUT evidence and a paid, evidenced order WITHOUT
+           a payment date
+    WHEN:  the list is filtered by the operator verdict
+    THEN:  each verdict answers EXACTLY its own row, and the rows that are
+            fully paid stay out of both.
+    """
+    inscripcion = escenario_operativo["inscripcion_1"]
+    _crear_compra(inscripcion, con_evidencia=False, con_fecha=True)
+    _crear_compra(inscripcion, con_evidencia=True, con_fecha=False)
+
+    headers = make_auth_header(usuario_admin_staff)
+
+    sin_evidencia = api_client.get(
+        URL_LISTA,
+        **headers,
+        data=make_list_query(estado_operativo="PAGADA_SIN_EVIDENCIA"),
+    ).json()["data"]
+    assert sin_evidencia["total"] == 1
+    assert sin_evidencia["items"][0]["estado_operativo"] == "PAGADA_SIN_EVIDENCIA"
+
+    sin_fecha = api_client.get(
+        URL_LISTA,
+        **headers,
+        data=make_list_query(estado_operativo="PAGADA_SIN_FECHA"),
+    ).json()["data"]
+    assert sin_fecha["total"] == 1
+    assert sin_fecha["items"][0]["estado_operativo"] == "PAGADA_SIN_FECHA"
+
+    pagadas = api_client.get(
+        URL_LISTA, **headers, data=make_list_query(estado_operativo="PAGADA")
+    ).json()["data"]
+    assert pagadas["total"] == 2
 
 
 @pytest.mark.django_db

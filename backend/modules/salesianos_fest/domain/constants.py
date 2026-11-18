@@ -85,6 +85,22 @@ class EstadoEquipoChoices(models.TextChoices):
     EQUIPO_CANCELADO = "EQUIPO_CANCELADO", "Cancelado"
 
 
+class EstadoCapacidadEquipoChoices(models.TextChoices):
+    """Estado de la capacidad de un equipo frente al tope de su disciplina.
+
+    Es un discriminador de UI, no un estado persistido: no se guarda en la
+    base de datos. El backend lo deriva del conteo de participaciones activas
+    y del tope duro de la disciplina (`Disciplina.max_jugadores`) — el mismo
+    umbral que el alta de una participación respeta al escribir.
+
+    CON_CUPOS  — el equipo todavía tiene lugar: su plantilla no llega al tope.
+    AL_LIMITE  — el equipo alcanzó el tope de jugadores de su disciplina.
+    """
+
+    CON_CUPOS = "CON_CUPOS", "Con cupos"
+    AL_LIMITE = "AL_LIMITE", "Al límite"
+
+
 class EstadoInscripcionPersonaChoices(models.TextChoices):
     """Estado del vínculo entre persona e inscripción."""
 

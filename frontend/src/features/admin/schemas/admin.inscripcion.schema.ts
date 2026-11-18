@@ -30,10 +30,16 @@ export const AdminEquipoListItemSchema = z.object({
   categoria_nombre: z.string().nullable(),
   inscripcion_id: z.string(),
   inscripcion_ref: z.string(),
+  /** The administrative state of the registration that owns the team. */
+  inscripcion_estado: z.string(),
   estado: z.string(),
   jugadores_registrados: z.number(),
+  /** The minimum a team needs to compete — NOT a denominator. */
   minimo_deportivo: z.number(),
-  faltantes: z.number(),
+  /** The hard cap of the discipline of the team. */
+  maximo_deportivo: z.number(),
+  /** The server-computed capacity verdict: CON_CUPOS | AL_LIMITE. */
+  estado_capacidad: z.string(),
   estado_roster: z.string(),
   created_at: z.string(),
 });
@@ -71,10 +77,12 @@ export const AdminParticipanteListItemSchema = z.object({
   persona_nombre: z.string(),
   persona_documento: z.string(),
   inscripcion_id: z.string(),
+  /** The state of the link between the person and the registration: A | R. */
   estado: z.string(),
+  /** The server-computed verdict of the pool — the PRIMARY state of the row. */
   estado_pool: z.string(),
+  /** The reason of the block; it travels with the verdict. */
   motivo_bloqueo: z.string().nullable(),
-  tiene_cupo_activo: z.boolean(),
   disciplinas: z.array(z.string()),
   created_at: z.string(),
 });

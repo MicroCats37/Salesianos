@@ -19,7 +19,12 @@ from modules.administracion.presentation.schemas.admin_pago_schemas import (
 
 
 class AdminEquipoListItemOut(BaseSchema):
-    """A team with its roster completeness."""
+    """A team with its roster completeness and its capacity.
+
+    The minimum and the maximum of the discipline are two DIFFERENT facts:
+    neither of them is the denominator of the other, and the capacity verdict
+    (`estado_capacidad`) is computed by the server.
+    """
 
     id: str
     nombre: str
@@ -28,10 +33,12 @@ class AdminEquipoListItemOut(BaseSchema):
     categoria_nombre: Optional[str] = None
     inscripcion_id: str
     inscripcion_ref: str
+    inscripcion_estado: str
     estado: str
     jugadores_registrados: int
     minimo_deportivo: int
-    faltantes: int
+    maximo_deportivo: int
+    estado_capacidad: str
     estado_roster: str
     created_at: datetime
 
@@ -59,7 +66,11 @@ class AdminEquipoDetalleOut(AdminEquipoListItemOut):
 
 
 class AdminParticipanteListItemOut(BaseSchema):
-    """A registered person and their pool eligibility."""
+    """A registered person and their pool eligibility.
+
+    The pool verdict (`estado_pool`) is the primary state of the row; the
+    redundant `tiene_cupo_activo` is NOT published.
+    """
 
     inscripcion_persona_id: str
     persona_id: str
@@ -69,7 +80,6 @@ class AdminParticipanteListItemOut(BaseSchema):
     estado: str
     estado_pool: str
     motivo_bloqueo: Optional[str] = None
-    tiene_cupo_activo: bool
     disciplinas: list[str] = []
     created_at: datetime
 

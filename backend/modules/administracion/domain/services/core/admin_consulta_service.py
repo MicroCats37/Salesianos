@@ -14,6 +14,10 @@ reads their selectors and their domain constants.
 """
 from injector import inject
 
+from modules.administracion.domain.constants import (
+    ROSTER_ESTADOS,
+    TIPOS_COMPRA_ADMIN,
+)
 from modules.administracion.domain.results.admin_catalogos_results import (
     AdminCatalogoItemResult,
     AdminCatalogoPaqueteResult,
@@ -38,13 +42,15 @@ from modules.administracion.domain.selectors.admin_resumen_selector import (
 )
 from modules.commerce.domain.constants import EstadoCompraChoices
 from modules.eventos.domain.models import Evento
-from modules.pagos.domain.constants import OrdenPagoStatus
+from modules.pagos.domain.constants import EstadoOperativoPago, OrdenPagoStatus
 from modules.salesianos_fest.domain.constants import (
     AutorizacionFiestaChoices,
     EstadoAcreditacionChoices,
     EstadoAsignacionCupoChoices,
+    EstadoCapacidadEquipoChoices,
     EstadoEquipoChoices,
     EstadoInscripcionChoices,
+    EstadoParticipacionChoices,
     EstadoPoolChoices,
     ResultadoAccesoChoices,
     RolParticipanteChoices,
@@ -240,6 +246,11 @@ class AdminConsultaService:
                 acceso=self._valores(ResultadoAccesoChoices),
                 pool=self._valores(EstadoPoolChoices),
                 rol_participante=self._valores(RolParticipanteChoices),
+                roster=list(ROSTER_ESTADOS),
+                estado_participacion=self._valores(EstadoParticipacionChoices),
+                tipo_compra=list(TIPOS_COMPRA_ADMIN),
+                estado_operativo_pago=self._valores(EstadoOperativoPago),
+                estado_capacidad_equipo=self._valores(EstadoCapacidadEquipoChoices),
             ),
         )
 

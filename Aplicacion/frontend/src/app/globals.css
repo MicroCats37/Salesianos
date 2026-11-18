@@ -1,0 +1,841 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* === Salesianos MVP Institutional Palette === */
+  /* Institutional blue (CIP-inspired, but our brand) */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand-specific */
+  --color-institutional: var(--institutional);
+  --color-institutional-dark: var(--institutional-dark);
+  --color-gold: var(--gold);
+
+  /* Auth / brand palette */
+  --color-brand-cyan: var(--brand-cyan);
+  --color-brand-deep-navy: var(--brand-deep-navy);
+  --color-brand-deep-blue: var(--brand-deep-blue);
+  --color-brand-deep-blue-mid: var(--brand-deep-blue-mid);
+  --color-brand-deep-night: var(--brand-deep-night);
+
+  /* Surface for auth card glass backplates */
+  --color-surface-form-amber: var(--surface-form-amber);
+  --color-surface-form-amber-border: var(--surface-form-amber-border);
+  --color-shadow-gold: var(--shadow-gold);
+  --color-shadow-gold-strong: var(--shadow-gold-strong);
+
+  /* Radii */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-3xl: 3rem;
+
+  /* Fonts */
+  --font-sans: var(--font-plus-jakarta-sans);
+  --font-heading: var(--font-plus-jakarta-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Animations */
+  --animate-orb-float: orb-float 18s ease-in-out infinite;
+  --animate-orb-float-slow: orb-float-slow 25s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.7s ease-out;
+  --animate-pulse-slow: pulse-slow 4s ease-in-out infinite;
+}
+
+:root {
+  /* Base */
+  --background: #f4f6fb;
+  --foreground: #17214b;
+
+  /* Brand: Institutional Blue */
+  --primary: #312e8e;
+  --primary-foreground: #ffffff;
+  --institutional: #312e8e;
+  --institutional-dark: #25236f;
+
+  /* Accent: Gold/Dorado */
+  --accent: #f4c64e;
+  --accent-foreground: #17214b;
+  --gold: #f4c64e;
+
+  /* Brand expanded */
+  --brand-cyan: #22d3ee;
+  --brand-cyan-soft: #c98a1f;
+  --brand-deep-navy: #17214b;
+  --brand-deep-blue: #1a1857;
+  --brand-deep-blue-mid: #211e70;
+  --brand-deep-night: #0c0c1f;
+
+  /* Surfaces (light glass / soft amber) */
+  --surface-form-amber: #fff9df;
+  --surface-form-amber-border: rgba(244, 197, 74, 0.4);
+
+  /* Glows */
+  --shadow-gold: rgba(244, 197, 74, 0.45);
+  --shadow-gold-strong: rgba(244, 197, 74, 0.55);
+
+  /* Secondary: Lighter blue */
+  --secondary: #6976ff;
+  --secondary-foreground: #ffffff;
+
+  /* Surface */
+  --card: #ffffff;
+  --card-foreground: #17214b;
+  --popover: #ffffff;
+  --popover-foreground: #17214b;
+
+  /* Muted */
+  --muted: #f1f5fb;
+  --muted-foreground: #626195;
+
+  /* States */
+  --success: #10b981;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #17214b;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Borders */
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #312e8e;
+
+  /* Sidebar — Salesianos brand colors */
+  --sidebar-background: #f8f9fc;
+  --sidebar-foreground: #17214b;
+  --sidebar-primary: #312e8e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8eaf4;
+  --sidebar-accent-foreground: #17214b;
+  --sidebar-border: #d1d5e0;
+  --sidebar-ring: #312e8e;
+
+  /* Radii base */
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: #0c0c1f;
+  --foreground: #f4f6fb;
+  --primary: #6976ff;
+  --primary-foreground: #0c0c1f;
+  --institutional: #6976ff;
+  --institutional-dark: #312e8e;
+  --accent: #f4c64e;
+  --accent-foreground: #0c0c1f;
+  --card: #16162e;
+  --card-foreground: #f4f6fb;
+  --border: #2a2a4a;
+  --input: #2a2a4a;
+  --ring: #6976ff;
+  --muted: #1a1a36;
+  --muted-foreground: #a0a3c4;
+
+  /* Sidebar dark */
+  --sidebar-background: #16162e;
+  --sidebar-foreground: #f4f6fb;
+  --sidebar-primary: #6976ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #252550;
+  --sidebar-accent-foreground: #f4f6fb;
+  --sidebar-border: #2a2a4a;
+  --sidebar-ring: #6976ff;
+}
+
+@utility bg-auth-deep-gradient {
+  background-image: linear-gradient(
+    160deg,
+    var(--brand-deep-blue) 0%,
+    var(--brand-deep-blue-mid) 45%,
+    var(--brand-deep-night) 100%
+  );
+}
+
+@utility text-brand-cyan {
+  color: var(--brand-cyan);
+}
+
+@utility text-gold-soft {
+  color: var(--brand-cyan-soft, #c98a1f);
+}
+
+@utility text-brand-deep-navy {
+  color: var(--brand-deep-navy);
+}
+
+@utility shadow-glow-brand {
+  box-shadow: 0 0 24px var(--shadow-gold);
+}
+
+@utility shadow-glow-brand-strong {
+  box-shadow: 0 0 24px var(--shadow-gold-strong);
+}
+
+@utility surface-form-amber {
+  background-color: var(--surface-form-amber);
+  border-color: var(--surface-form-amber-border);
+}
+
+@utility surface-page-gradient {
+  background-image: linear-gradient(
+    180deg,
+    #f6f4ee 0%,
+    #ffffff 30%,
+    #ffffff 100%
+  );
+}
+
+@utility text-eyebrow-brand {
+  font-size: 0.625rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: var(--primary);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scroll-snap-type: y proximity;
+    scroll-behavior: smooth;
+    scroll-padding-top: 0;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-y: scroll;
+  }
+  .event-snap {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.025em;
+  }
+}
+
+/* === BRAND-GRADIENT UTILITIES === */
+
+@utility hero-gradient {
+  background:
+    radial-gradient(
+      ellipse 90% 70% at 50% 0%,
+      rgba(49, 46, 142, 0.95) 0%,
+      rgba(33, 30, 112, 1) 50%,
+      rgba(12, 12, 31, 1) 100%
+    ), linear-gradient(135deg, #211e70 0%, #1557b8 100%);
+  position: relative;
+  isolation: isolate;
+}
+
+@utility hero-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 20% 30%,
+      rgba(105, 118, 255, 0.25) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 70%,
+      rgba(0, 189, 231, 0.2) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 50% 100%,
+      rgba(244, 198, 78, 0.15) 0%,
+      transparent 60%
+    );
+  pointer-events: none;
+  z-index: -1;
+}
+
+@utility section-gradient-warm {
+  background: linear-gradient(180deg, #f4f6fb 0%, #eef1f8 100%);
+}
+
+@utility card-elevated {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 1px 2px rgba(49, 46, 142, 0.06),
+    0 4px 12px rgba(49, 46, 142, 0.08),
+    0 16px 40px -8px rgba(49, 46, 142, 0.12);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@utility card-elevated-hover {
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 4px 8px rgba(49, 46, 142, 0.08),
+      0 16px 32px rgba(49, 46, 142, 0.14),
+      0 32px 64px -16px rgba(49, 46, 142, 0.18);
+  }
+}
+
+@utility card-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xl);
+}
+
+@utility text-gradient-brand {
+  background: linear-gradient(135deg, #312e8e 0%, #6976ff 50%, #00bde7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-gradient-gold {
+  background: linear-gradient(135deg, #f4c64e 0%, #ffd700 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-gradient-festival {
+  background: linear-gradient(135deg, #ec4899 0%, #6366f1 45%, #22d3ee 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility btn-brand-gradient {
+  background: linear-gradient(135deg, #312e8e 0%, #25236f 100%);
+  box-shadow:
+    0 4px 14px rgba(49, 46, 142, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  color: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  &:hover {
+    background: linear-gradient(135deg, #25236f 0%, #1a1857 100%);
+    box-shadow:
+      0 8px 24px rgba(49, 46, 142, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/* === ORBS === */
+@keyframes orb-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  25% {
+    transform: translate(15vw, -10vh) scale(1.2);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-10vw, 15vh) scale(1.1);
+    opacity: 0.5;
+  }
+  75% {
+    transform: translate(-15vw, -5vh) scale(1.15);
+    opacity: 0.6;
+  }
+}
+
+@keyframes orb-float-slow {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+  33% {
+    transform: translate(-20vw, 10vh) scale(1.3);
+    opacity: 0.6;
+  }
+  66% {
+    transform: translate(15vw, -20vh) scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+@utility animate-orb-float {
+  animation: orb-float 20s ease-in-out infinite;
+}
+@utility animate-orb-float-slow {
+  animation: orb-float-slow 30s ease-in-out infinite;
+}
+
+@keyframes festival-ribbon-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@utility animate-festival-ribbon {
+  animation: festival-ribbon-marquee 20s linear infinite;
+}
+
+@media (max-width: 640px) {
+  .animate-festival-ribbon {
+    animation-duration: 18s;
+  }
+}
+
+/* === FADE UP === */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@utility animate-fade-up {
+  animation: fade-up 0.8s ease-out;
+}
+@utility animate-fade-up-delay-1 {
+  animation: fade-up 0.8s ease-out 0.15s both;
+}
+@utility animate-fade-up-delay-2 {
+  animation: fade-up 0.8s ease-out 0.3s both;
+}
+@utility animate-fade-up-delay-3 {
+  animation: fade-up 0.8s ease-out 0.45s both;
+}
+
+/* === PULSE SLOW (for stats highlight) === */
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+@utility animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* === FORM INPUTS — shadcn with extra polish === */
+
+@utility input-brand {
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  &:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(49, 46, 142, 0.1);
+    outline: none;
+  }
+}
+
+@utility label-brand {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  letter-spacing: 0.01em;
+}
+
+/* === HERO TEXT REVEAL === */
+@keyframes hero-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.96);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@utility animate-hero-reveal {
+  animation: hero-reveal 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* === SHINE SWEEP (used on CTA buttons) === */
+@keyframes shine-sweep {
+  0% {
+    transform: translateX(-100%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+
+@utility btn-shine {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    animation: shine-sweep 3s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+}
+
+/* Smooth scroll for anchor navigation */
+html {
+  scroll-behavior: smooth;
+}
+
+/* === PORTADA: MARQUEE === */
+@keyframes portada-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 5px;
+  &:hover {
+    background: var(--institutional-dark);
+  }
+}
+
+/* Selection */
+::selection {
+  background: rgba(49, 46, 142, 0.2);
+  color: var(--institutional-dark);
+}
+
+/* === DISCRIMINATOR CARD STYLE === */
+@utility discipline-card {
+  background: linear-gradient(
+    135deg,
+    rgba(49, 46, 142, 0.04) 0%,
+    rgba(0, 189, 231, 0.04) 100%
+  );
+  border: 1px solid rgba(49, 46, 142, 0.15);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  &:hover {
+    border-color: rgba(49, 46, 142, 0.4);
+    background: linear-gradient(
+      135deg,
+      rgba(49, 46, 142, 0.08) 0%,
+      rgba(0, 189, 231, 0.08) 100%
+    );
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 40px -8px rgba(49, 46, 142, 0.2);
+  }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-orb-float,
+  .animate-orb-float-slow,
+  .animate-fade-up,
+  .animate-fade-up-delay-1,
+  .animate-fade-up-delay-2,
+  .animate-fade-up-delay-3,
+  .animate-pulse-slow,
+  .animate-hero-reveal,
+  .animate-festival-ribbon {
+    animation: none;
+  }
+}
+
+/* Festival animated title — Salesianos (gold) / FEST (cyan) pulse */
+@keyframes goldPulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    text-shadow:
+      0 0 12px rgba(244, 197, 74, 0.55),
+      0 2px 0 rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.04);
+    text-shadow:
+      0 0 22px rgba(244, 197, 74, 0.85),
+      0 0 4px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@keyframes cyanPulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    text-shadow:
+      0 0 12px rgba(34, 211, 238, 0.55),
+      0 2px 0 rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    transform: translateY(2px) scale(1.06);
+    text-shadow:
+      0 0 24px rgba(34, 211, 238, 0.85),
+      0 0 4px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[goldPulse"],
+  [class*="animate-[cyanPulse"] {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   LOGIN PAGE TOKENS & UTILITIES
+   ============================================================ */
+
+:root {
+  /* Login page background gradient */
+  --login-bg-start: #211e70;
+  --login-bg-mid: #312e8e;
+  --login-bg-end: #1557b8;
+
+  /* Visual panel overlay layers */
+  --vp-overlay-base: rgba(10, 10, 26, 0.6);
+  --vp-overlay-tint: rgba(49, 46, 142, 0.7);
+  --vp-vignette-inner: transparent;
+  --vp-vignette-outer: rgba(0, 0, 0, 0.7);
+  --vp-gradient-bottom: rgba(10, 10, 30, 0.95);
+  --vp-gradient-mid: rgba(10, 10, 30, 0.4);
+
+  /* Auth card glassmorphism */
+  --auth-card-bg: rgba(255, 255, 255, 0.95);
+  --auth-card-border: rgba(255, 255, 255, 0.2);
+  --auth-card-shadow: rgba(0, 0, 0, 0.2);
+
+  /* Brand gold (accents, highlights) */
+  --color-gold: #f4c64e;
+  --color-gold-light: #f4d55a;
+  --color-gold-dim: rgba(244, 198, 78, 0.2);
+  --color-gold-glow: rgba(244, 197, 74, 0.8);
+
+  /* Orbs */
+  --color-orb-blue: #6976ff;
+  --color-orb-cyan: #00b7ff;
+
+  /* Form input pill */
+  --input-pill-height: 3.5rem;
+  --input-pill-pl: 3.25rem;
+  --input-pill-pr: 3.5rem;
+  --input-pill-radius: 1.5rem;
+
+  /* Login submit button */
+  --btn-login-gradient-from: #312e8e;
+  --btn-login-gradient-to: #1a1857;
+  --btn-login-shadow: rgba(49, 46, 142, 0.3);
+  --btn-login-shadow-hover: rgba(49, 46, 142, 0.4);
+}
+
+@layer utilities {
+  /* Login page background */
+  .login-bg {
+    background: linear-gradient(
+      132deg,
+      var(--login-bg-start) 0%,
+      var(--login-bg-mid) 48%,
+      var(--login-bg-end) 100%
+    );
+  }
+
+  /* Visual panel: full-height split with right-edge fade into form */
+  .vp-panel {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Strong vignette: darkens edges for text contrast */
+  .vp-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse at center,
+      var(--vp-vignette-inner) 25%,
+      rgba(0, 0, 0, 0.55) 70%,
+      var(--vp-vignette-outer) 100%
+    );
+  }
+
+  /* Auth card with glassmorphism — keep transparent so it does not occlude the form panel */
+  .auth-card {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Login input pill */
+  .input-pill {
+    height: var(--input-pill-height);
+    padding-left: var(--input-pill-pl);
+    padding-right: var(--input-pill-pr);
+    border-radius: var(--input-pill-radius);
+  }
+
+  /* Login label brand style */
+  .label-brand-xs {
+    font-size: 0.625rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-left: 0.25rem;
+    display: block;
+  }
+
+  /* Gold text accent */
+  .text-gold {
+    color: var(--color-gold);
+  }
+  .text-gold-light {
+    color: var(--color-gold-light);
+  }
+
+  /* Gold background dim */
+  .bg-gold-dim {
+    background-color: var(--color-gold-dim);
+  }
+
+  /* Gold badge dot */
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--color-gold);
+  }
+
+  /* Login submit button — richer gradient over washed-out version */
+  .btn-login {
+    background: linear-gradient(
+      135deg,
+      var(--btn-login-gradient-from) 0%,
+      var(--btn-login-gradient-to) 100%
+    );
+    box-shadow:
+      0 4px 14px var(--btn-login-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    color: white;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-login:hover:not(:disabled) {
+    background: linear-gradient(135deg, #25236f 0%, #1a1857 100%);
+    box-shadow:
+      0 8px 24px var(--btn-login-shadow-hover),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+  .btn-login:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  /* Tab pill active state */
+  .tab-active {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* Feature pill (visual panel) */
+  .feature-pill {
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.375rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Carousel indicator */
+  .carousel-dot {
+    height: 6px;
+    border-radius: 9999px;
+    transition: all 0.3s ease;
+  }
+  .carousel-dot-active {
+    width: 32px;
+    background-color: white;
+  }
+  .carousel-dot-inactive {
+    width: 6px;
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+  .carousel-dot-inactive:hover {
+    background-color: rgba(255, 255, 255, 0.6);
+  }
+}

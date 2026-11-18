@@ -7,6 +7,8 @@ import { useAdminControlLista } from "../hooks/useAdminControlLista";
 import { useAdminEquipos } from "../hooks/useAdminEquipos";
 import type { AdminEquipoListItem } from "../schemas";
 import {
+  estadoCapacidadEquipoLabel,
+  estadoCapacidadEquipoTone,
   estadoEquipoLabel,
   estadoEquipoTone,
   rosterLabel,
@@ -17,7 +19,10 @@ import {
   ORDEN_EQUIPOS,
   ORDEN_POR_DEFECTO_EQUIPOS,
 } from "../utils/admin.orden.utils";
-import { formatearFecha } from "../utils/admin.resumen.utils";
+import {
+  estadoInscripcionLabel,
+  formatearFecha,
+} from "../utils/admin.resumen.utils";
 import { AdminAccessDenied } from "./AdminAccessDenied";
 import { AdminEstadoBadge } from "./AdminEstadoBadge";
 import { AdminFiltroSelect } from "./AdminFiltroSelect";
@@ -25,11 +30,26 @@ import { type AdminColumna, AdminListaOperativa } from "./AdminListaOperativa";
 import { AdminPageHeader } from "./AdminPageHeader";
 
 /**
+ * The registered players of a team, in words.
+ *
+ * It is a FORMATTING helper, never a rule: the count and the capacity verdict
+ * arrive from the server and the client never compares them.
+ */
+function jugadores(registrados: number): string {
+  return `${registrados} ${registrados === 1 ? "jugador" : "jugadores"}`;
+}
+
+/**
  * AdminEquiposLista — the teams table (A7).
  *
- * The completeness of a roster (COMPLETO / INCOMPLETO) is DERIVED on the
- * server: the client never compares `jugadores_registrados` with
- * `minimo_deportivo` to decide it.
+ * The completeness of a roster (COMPLETO / INCOMPLETO) and the CAPACITY of the
+ * team (CON_CUPOS / AL_LIMITE) are DERIVED on the server: the client never
+ * compares `jugadores_registrados` with `minimo_deportivo` or with
+ * `maximo_deportivo` to decide them.
+ *
+ * The minimum and the maximum are TWO facts, not the two ends of a fraction:
+ * the minimum is what a team needs to COMPETE and the maximum is the hard cap
+ * of the discipline, so they are rendered as a count with its own context.
  */
 export function AdminEquiposLista() {
   const control = useAdminControlLista();
@@ -77,16 +97,36 @@ export function AdminEquiposLista() {
       clave: "inscripcion",
       etiqueta: "Inscripción",
       render: (item) => (
-        <span className="text-xs text-slate-600">{item.inscripcion_ref}</span>
+        <div className="flex flex-col">
+          <span className="text-xs text-slate-600">{item.inscripcion_ref}</span>
+          <span className="text-[11px] text-slate-500">
+            {estadoInscripcionLabel(item.inscripcion_estado)}
+          </span>
+        </div>
       ),
     },
     {
-      clave: "roster",
+      clave: "plantilla",
       etiqueta: "Plantilla",
       render: (item) => (
-        <span className="font-bold text-slate-800">
-          {item.jugadores_registrados}/{item.minimo_deportivo}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-bold text-slate-800">
+            {jugadores(item.jugadores_registrados)}
+          </span>
+          <span className="text-[11px] text-slate-500">
+            mín {item.minimo_deportivo} · máx {item.maximo_deportivo}
+          </span>
+        </div>
+      ),
+    },
+    {
+      clave: "estado_capacidad",
+      etiqueta: "Capacidad",
+      render: (item) => (
+        <AdminEstadoBadge
+          etiqueta={estadoCapacidadEquipoLabel(item.estado_capacidad)}
+          tono={estadoCapacidadEquipoTone(item.estado_capacidad)}
+        />
       ),
     },
     {
@@ -129,7 +169,7 @@ export function AdminEquiposLista() {
       <AdminPageHeader
         eyebrow="Administración operativa"
         title="Equipos"
-        description="Equipos del evento activo con su disciplina, su categoría y la completitud de su plantilla."
+        description="Equipos del evento activo con su disciplina, su categoría, el mínimo y el máximo de jugadores y su estado de capacidad."
         icon={Trophy}
         size="compact"
       />
@@ -181,10 +221,10 @@ export function AdminEquiposLista() {
               <AdminFiltroSelect
                 etiqueta="Plantilla"
                 valor={control.estado.filtros.roster ?? ""}
-                opciones={[
-                  { valor: "COMPLETO", etiqueta: "Completo" },
-                  { valor: "INCOMPLETO", etiqueta: "Incompleto" },
-                ]}
+                opciones={(catalogo?.estados.roster ?? []).map((valor) => ({
+                  valor,
+                  etiqueta: rosterLabel(valor),
+                }))}
                 onChange={(valor) => control.onFiltro("roster", valor)}
               />
             </>
@@ -200,17 +240,24 @@ export function AdminEquiposLista() {
                   </span>
                   <span className="text-[11px] text-slate-500">
                     {item.disciplina_sigla} · {item.categoria_nombre ?? "—"} ·{" "}
-                    {item.inscripcion_ref}
+                    {item.inscripcion_ref} ·{" "}
+                    {estadoInscripcionLabel(item.inscripcion_estado)}
                   </span>
                 </div>
                 <AdminEstadoBadge
-                  etiqueta={rosterLabel(item.estado_roster)}
-                  tono={rosterTone(item.estado_roster)}
+                  etiqueta={estadoCapacidadEquipoLabel(item.estado_capacidad)}
+                  tono={estadoCapacidadEquipoTone(item.estado_capacidad)}
                 />
               </div>
               <div className="flex flex-wrap gap-2 text-[11px] text-slate-600">
                 <span className="rounded-full bg-slate-100 px-2 py-1">
-                  Plantilla {item.jugadores_registrados}/{item.minimo_deportivo}
+                  Plantilla {jugadores(item.jugadores_registrados)}
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-1">
+                  mín {item.minimo_deportivo} · máx {item.maximo_deportivo}
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-1">
+                  {rosterLabel(item.estado_roster)}
                 </span>
                 <span className="rounded-full bg-slate-100 px-2 py-1">
                   {estadoEquipoLabel(item.estado)}

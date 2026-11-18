@@ -69,7 +69,22 @@ export const AdminPagoListItemSchema = z.object({
   estado_compra: z.string(),
   estado_orden: z.string().nullable(),
   pagada_en: z.string().nullable(),
+  /**
+   * The origin of the EVIDENCE of the payment: IZIPAY | MANUAL | SIN_PAGO.
+   *
+   * It is NOT a payment state: `SIN_PAGO` means "there is nothing to
+   * verify", so the interface labels it "Sin evidencia".
+   */
   origen_pago: z.string(),
+  /**
+   * The OPERATOR VERDICT of the payment — the one answer to "is this payment
+   * done?", computed by the backend. The client NEVER recomputes it.
+   *
+   * The code is NOT narrowed: an unknown verdict must render neutrally
+   * instead of breaking the whole table. It may not be EMPTY, though: a row
+   * without a verdict has no state to show.
+   */
+  estado_operativo: z.string().min(1),
   monto_orden: z.number().nullable(),
   moneda_orden: z.string().nullable(),
   /** Active nominative rights of the batch — `0` for a sports purchase. */

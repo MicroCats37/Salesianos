@@ -7,6 +7,7 @@
  * Endpoints:
  *   POST /compras/{compra_id}/iniciar-pago  - open the provider checkout
  *   POST /pagos/izipay/confirmar            - relay the provider payload once
+ *   GET  /pagos/transacciones/{id}           - read the state of an attempt
  *
  * No secrets are sent from the frontend. All sensitive data (buyer info,
  * amount) is derived server-side from the authenticated user's Persona record.
@@ -20,6 +21,7 @@ import type {
   IniciarPagoResponse,
   IzipayConfirmIn,
   IzipayConfirmResponse,
+  TransaccionEstadoResponse,
 } from "../schemas/pago.schema";
 
 /**
@@ -52,6 +54,26 @@ export async function confirmarPagoIzipay(
   const { data } = await api.post<IzipayConfirmResponse>(
     "/pagos/izipay/confirmar",
     payload,
+  );
+  return data;
+}
+
+/**
+ * Read the state of the payment attempt of a transaction.
+ *
+ * It consumes the EXISTING read endpoint: no new endpoint is created and no
+ * provider-facing call is made from the browser. The endpoint is restricted to
+ * the owner of the order (or an administrator).
+ *
+ * It is the recovery channel of the checkout: when the provider relay is
+ * uncertain, the browser reads the state of the transaction it prepared
+ * instead of trusting a relay that may never arrive.
+ */
+export async function obtenerEstadoTransaccion(
+  transactionId: string,
+): Promise<TransaccionEstadoResponse> {
+  const { data } = await api.get<TransaccionEstadoResponse>(
+    `/pagos/transacciones/${transactionId}`,
   );
   return data;
 }

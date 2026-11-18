@@ -170,6 +170,17 @@ class TransaccionPago(BaseModel):
             models.Index(fields=["orden_pago", "status"], name="ix_transpago_orden_status"),
             models.Index(fields=["orden_pago", "created_at"], name="ix_transpago_orden_created"),
         ]
+        # The one-live-attempt guard: a PENDIENTE transaction is an ATTEMPT,
+        # not a charge, and an order carries at most ONE of them. The partial
+        # condition leaves every closed attempt (EXITO, FALLIDO, CANCELADO)
+        # untouched — the audit trail of the order is never rewritten.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["orden_pago"],
+                condition=models.Q(status=IzipayStatus.PENDIENTE),
+                name="uniq_transpago_activo_orden",
+            ),
+        ]
 
     def __str__(self):
         return f"Transaccion {self.transaction_id} - {self.status}"

@@ -157,7 +157,7 @@ function PanelParticipantes() {
     },
     {
       clave: "estado",
-      etiqueta: "Estado",
+      etiqueta: "Vínculo",
       render: (item) => (
         <span className="text-xs text-slate-600">
           {estadoPersonaLabel(item.estado)}
@@ -166,21 +166,19 @@ function PanelParticipantes() {
     },
     {
       clave: "estado_pool",
-      etiqueta: "Estado pool",
+      etiqueta: "Estado del cupo",
       render: (item) => (
-        <AdminEstadoBadge
-          etiqueta={estadoPoolLabel(item.estado_pool)}
-          tono={estadoPoolTone(item.estado_pool)}
-        />
-      ),
-    },
-    {
-      clave: "cupo",
-      etiqueta: "Cupo activo",
-      render: (item) => (
-        <span className="text-xs font-bold text-slate-800">
-          {item.tiene_cupo_activo ? "Sí" : "No"}
-        </span>
+        <div className="flex flex-col">
+          <AdminEstadoBadge
+            etiqueta={estadoPoolLabel(item.estado_pool)}
+            tono={estadoPoolTone(item.estado_pool)}
+          />
+          {item.motivo_bloqueo && (
+            <span className="text-[11px] text-slate-500">
+              {item.motivo_bloqueo}
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -189,15 +187,6 @@ function PanelParticipantes() {
       render: (item) => (
         <span className="text-xs text-slate-600">
           {item.disciplinas.length > 0 ? item.disciplinas.join(", ") : "—"}
-        </span>
-      ),
-    },
-    {
-      clave: "motivo",
-      etiqueta: "Motivo de bloqueo",
-      render: (item) => (
-        <span className="text-[11px] text-slate-500">
-          {item.motivo_bloqueo ?? "—"}
         </span>
       ),
     },
@@ -241,7 +230,7 @@ function PanelParticipantes() {
       controles={
         <>
           <AdminFiltroSelect
-            etiqueta="Estado pool"
+            etiqueta="Estado del cupo"
             valor={control.estado.filtros.estado_pool ?? ""}
             opciones={(catalogo?.estados.pool ?? []).map((valor) => ({
               valor,
@@ -289,12 +278,12 @@ function PanelParticipantes() {
               tono={estadoPoolTone(item.estado_pool)}
             />
           </div>
+          {item.motivo_bloqueo && (
+            <p className="text-[11px] text-slate-500">{item.motivo_bloqueo}</p>
+          )}
           <div className="flex flex-wrap gap-2 text-[11px] text-slate-600">
             <span className="rounded-full bg-slate-100 px-2 py-1">
-              {estadoPersonaLabel(item.estado)}
-            </span>
-            <span className="rounded-full bg-slate-100 px-2 py-1">
-              Cupo {item.tiene_cupo_activo ? "activo" : "sin cupo"}
+              Vínculo {estadoPersonaLabel(item.estado)}
             </span>
             {item.disciplinas.length > 0 && (
               <span className="rounded-full bg-slate-100 px-2 py-1">
@@ -375,7 +364,7 @@ function PanelParticipaciones() {
     },
     {
       clave: "estado",
-      etiqueta: "Estado",
+      etiqueta: "Fila de roster",
       render: (item) => (
         <span className="text-xs text-slate-600">
           {estadoParticipacionLabel(item.estado)}
@@ -444,12 +433,14 @@ function PanelParticipaciones() {
             onChange={(valor) => control.onFiltro("rol", valor)}
           />
           <AdminFiltroSelect
-            etiqueta="Estado"
+            etiqueta="Fila de roster"
             valor={control.estado.filtros.estado ?? ""}
-            opciones={[
-              { valor: "A", etiqueta: "Activa" },
-              { valor: "R", etiqueta: "Retirada" },
-            ]}
+            opciones={(catalogo?.estados.estado_participacion ?? []).map(
+              (valor) => ({
+                valor,
+                etiqueta: estadoParticipacionLabel(valor),
+              }),
+            )}
             onChange={(valor) => control.onFiltro("estado", valor)}
           />
         </>

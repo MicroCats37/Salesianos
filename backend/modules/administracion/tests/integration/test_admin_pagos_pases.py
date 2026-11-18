@@ -32,7 +32,7 @@ from modules.administracion.tests.factories import (
     make_forbidden_keys,
     make_list_query,
 )
-from modules.pagos.domain.models import TransaccionPago
+from modules.pagos.domain.models import AprobacionPagoManual, TransaccionPago
 from modules.salesianos_fest.domain.models import PaseBeneficiario
 
 URL_LISTA = "/api/administracion/pagos"
@@ -221,6 +221,28 @@ def test_el_origen_del_pago_es_derivado(
     )
     assert (
         _por_compra(items, escenario_pases["compra_pendiente"].id)["origen_pago"]
+        == "SIN_PAGO"
+    )
+
+
+@pytest.mark.django_db
+def test_el_origen_manual_exige_monto_y_moneda_de_la_orden(
+    api_client, usuario_admin_staff, escenario_pases
+):
+    """A mismatched manual approval is not evidence for this order."""
+    aprobacion = AprobacionPagoManual.objects.get(
+        orden_pago=escenario_pases["compra_manual"].orden_pago
+    )
+    aprobacion.monto = Decimal("1.00")
+    aprobacion.save(update_fields=["monto", "updated_at"])
+
+    response = api_client.get(
+        URL_LISTA, **make_auth_header(usuario_admin_staff)
+    )
+
+    assert response.status_code == 200, response.content
+    assert (
+        _por_compra(_items(response), escenario_pases["compra_manual"].id)["origen_pago"]
         == "SIN_PAGO"
     )
 

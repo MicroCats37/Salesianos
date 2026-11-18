@@ -60,6 +60,9 @@ from modules.salesianos_fest.domain.selectors.aceptacion_inscripcion_selector im
 from modules.salesianos_fest.domain.services.core.asignacion_service import (
     AsignacionCoreService,
 )
+from modules.salesianos_fest.domain.services.core.capacidad_equipo_service import (
+    CapacidadEquipoService,
+)
 
 
 def _nombre_completo(nombres: str, apellidos: str) -> str:
@@ -405,7 +408,14 @@ class AdminInscripcionSelector:
 
         resultado: list[AdminEquipoDetalleResult] = []
         for equipo in equipos:
-            jugadores, minimo = roster.get(str(equipo.id), (0, equipo.disciplina.min_jugadores or 0))
+            jugadores, minimo, maximo = roster.get(
+                str(equipo.id),
+                (
+                    0,
+                    equipo.disciplina.min_jugadores or 0,
+                    equipo.disciplina.max_jugadores or 0,
+                ),
+            )
             resultado.append(
                 AdminEquipoDetalleResult(
                     id=str(equipo.id),
@@ -415,10 +425,15 @@ class AdminInscripcionSelector:
                     categoria_nombre=equipo.categoria.nombre if equipo.categoria else None,
                     inscripcion_id=str(inscripcion.id),
                     inscripcion_ref=_referencia_corta(inscripcion.id),
+                    inscripcion_estado=inscripcion.estado,
                     estado=equipo.estado,
                     jugadores_registrados=jugadores,
                     minimo_deportivo=minimo,
-                    faltantes=max(0, minimo - jugadores),
+                    maximo_deportivo=maximo,
+                    estado_capacidad=CapacidadEquipoService.estado_capacidad(
+                        jugadores=jugadores,
+                        maximo=maximo,
+                    ),
                     estado_roster=(
                         "COMPLETO" if jugadores >= minimo else "INCOMPLETO"
                     ),
@@ -429,15 +444,24 @@ class AdminInscripcionSelector:
 
         return resultado
 
-    def _roster_por_equipo(self, equipo_ids: list) -> dict[str, tuple[int, int]]:
-        """Return `(jugadores, minimo)` of every team of the given ids."""
+    def _roster_por_equipo(self, equipo_ids: list) -> dict[str, tuple[int, int, int]]:
+        """Return `(jugadores, minimo, maximo)` of every team of the given ids.
+
+        It mirrors `AdminEquipoSelector._roster_por_equipo`: the drilldown of a
+        registration and the teams table MUST agree about the capacity of a
+        team.
+        """
         if not equipo_ids:
             return {}
 
         filas = (
             Equipo.objects
             .filter(id__in=equipo_ids)
-            .values("id", "disciplina__min_jugadores")
+            .values(
+                "id",
+                "disciplina__min_jugadores",
+                "disciplina__max_jugadores",
+            )
             .annotate(
                 jugadores=Count(
                     "participaciones",
@@ -450,6 +474,7 @@ class AdminInscripcionSelector:
             str(fila["id"]): (
                 fila["jugadores"] or 0,
                 fila["disciplina__min_jugadores"] or 0,
+                fila["disciplina__max_jugadores"] or 0,
             )
             for fila in filas
         }

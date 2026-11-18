@@ -110,6 +110,31 @@ class PagoNotificacionNoVerificableError(ConflictError):
         )
 
 
+class PagoIntentoEnConflictoError(ConflictError):
+    """
+    The checkout session of this attempt was superseded (409, retryable).
+
+    While its provider session was being opened, another preparation of the
+    same order retired it. The caller must NOT receive that session — it
+    belongs to a dead attempt — so the request is refused with a conflict
+    the caller can retry: the retry opens a fresh attempt of its own.
+
+    It reuses the transversal concurrency code of the public catalog
+    (`RESOURCE_CHANGED`): the public message is owned by
+    `core/exceptions.py`, never by this module.
+    """
+
+    code = "RESOURCE_CHANGED"
+
+    def __init__(self):
+        self.code = self.code
+        super().__init__(
+            "Otra sesión de pago de esta orden está siendo preparada. "
+            "Inténtalo nuevamente.",
+            code=self.code,
+        )
+
+
 # ── Aprobación manual de pago (administrador) ──────────────────────────────
 
 class PagoNoVerificadoError(ConflictError):

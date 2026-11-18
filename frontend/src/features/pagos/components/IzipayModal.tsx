@@ -13,25 +13,41 @@
  * 6. The backend verifies the payment and owns the commercial settlement: it
  *    marks the purchase paid and allocates the rights. The browser never sends
  *    a commercial-confirmation request.
- * 7. On a verified payment → refresh the authoritative state (onSuccess) and
+ * 7. When the relay is UNCERTAIN — the popup closed without a conclusive
+ *    answer, or the relay request itself failed — the browser reads the state
+ *    of the transaction it prepared (GET /pagos/transacciones/{id}) with a
+ *    BOUNDED polling. The relay is never the only confirmation channel.
+ * 8. On a verified payment → refresh the authoritative state (onSuccess) and
  *    close.
+ *
+ * Every failure the operator can act upon is rendered with the PUBLIC message
+ * of the API (never a raw HTTP status string) and every closing of the modal
+ * releases the provider checkout EXPLICITLY.
  */
 
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getErrorMessage } from "@/errors";
 import type { IzipayCallback } from "../schemas/pago.schema";
 import {
   confirmarPagoIzipay,
   iniciarPagoIzipay,
+  obtenerEstadoTransaccion,
 } from "../services/pago.service";
+import { observarCierreCheckout } from "../utils/checkout.observador";
+import { sondearEstadoTransaccion } from "../utils/checkout.recuperacion";
+import {
+  type ErrorPreparacion,
+  errorDeEnvoltura,
+  errorDeExcepcion,
+} from "../utils/preparacion.error";
 import { settlementTone } from "../utils/settlement";
 
 // ── Provider SDK contract ─────────────────────────────────────────────────────
@@ -201,6 +217,29 @@ function buildAddressData(raw: {
   };
 }
 
+// ── Phases of the checkout ────────────────────────────────────────────────────
+
+/**
+ * State of the checkout inside the modal.
+ *
+ * - `preparando` — the backend is preparing the attempt.
+ * - `abierto` — the provider popup is open.
+ * - `recuperando` — the relay was uncertain: the state of the prepared
+ *   transaction is being read.
+ * - `error` — a typed failure the operator can act upon is rendered.
+ */
+type FaseCheckout = "preparando" | "abierto" | "recuperando" | "error";
+
+/**
+ * Grace period given to the provider callback before the checkout is
+ * considered CLOSED without a relay.
+ *
+ * The provider releases what it rendered before it invokes the callback, so
+ * the DOM signal arrives first. The grace period lets the callback win the
+ * race: a checkout that was paid normally never enters the recovery.
+ */
+const PERIODO_GRACIA_MS = 1500;
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 export interface IzipayModalProps {
@@ -228,30 +267,132 @@ export function IzipayModal({
   compraId,
   onSuccess,
 }: IzipayModalProps) {
-  const [loading, setLoading] = useState(false);
+  const [fase, setFase] = useState<FaseCheckout>("preparando");
+  const [errorPreparacion, setErrorPreparacion] =
+    useState<ErrorPreparacion | null>(null);
   const checkoutRef = useRef<IzipayCheckout | null>(null);
   /**
    * One-shot guards. The checkout performs exactly two requests:
    * - `launchedRef` — one provider session per modal opening.
    * - `relayedRef` — one relay of the provider payload per session.
+   * - `relayResueltoRef` — the relay reached a CONCLUSIVE answer, so the
+   *   recovery of an uncertain relay must stop.
    */
   const launchedRef = useRef(false);
   const relayedRef = useRef(false);
+  const relayResueltoRef = useRef(false);
+  /** Stops the observer of the container of the checkout. */
+  const observerRef = useRef<(() => void) | null>(null);
+  /** Grace period pending — it must not survive the closing of the modal. */
+  const graciaRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Token of the recovery in flight — a newer token cancels the older one. */
+  const recuperacionRef = useRef(0);
+
+  /**
+   * EXPLICIT teardown of the provider checkout.
+   *
+   * The popup owns resources: the session of the attempt and the DOM it
+   * rendered. Closing the modal — or unmounting it — MUST release them, or a
+   * stale checkout survives the flow it belonged to.
+   */
+  const teardownCheckout = useCallback(() => {
+    observerRef.current?.();
+    observerRef.current = null;
+
+    // A grace period pending belongs to a checkout that no longer exists.
+    if (graciaRef.current !== null) {
+      clearTimeout(graciaRef.current);
+      graciaRef.current = null;
+    }
+
+    const checkout = checkoutRef.current;
+    checkoutRef.current = null;
+
+    try {
+      checkout?.Unmount?.();
+    } catch {
+      // A provider that fails to release itself must not break the flow.
+    }
+  }, []);
+
+  /**
+   * Recovers a payment whose relay was UNCERTAIN.
+   *
+   * It reads the state of the transaction THIS checkout prepared — the relay
+   * cannot be the only confirmation channel. The polling is bounded and it
+   * stops as soon as the relay resolves or the modal is closed.
+   */
+  const iniciarRecuperacion = useCallback(
+    async (transactionId: string) => {
+      const token = recuperacionRef.current + 1;
+      recuperacionRef.current = token;
+
+      setFase("recuperando");
+
+      const resultado = await sondearEstadoTransaccion(
+        transactionId,
+        obtenerEstadoTransaccion,
+        {
+          cancelado: () =>
+            recuperacionRef.current !== token || relayResueltoRef.current,
+        },
+      );
+
+      // A newer recovery (or a closed modal) owns the outcome now.
+      if (recuperacionRef.current !== token) return;
+
+      if (resultado.estado === "exito") {
+        toast.success("Pago confirmado. Actualizando tu inscripción...");
+        try {
+          await onSuccess();
+        } catch {
+          // The next navigation reads the authoritative state again.
+        }
+        onClose();
+        return;
+      }
+
+      if (resultado.estado === "rechazado") {
+        toast.error(resultado.mensaje || "El pago no fue aprobado por Izipay.");
+        onClose();
+        return;
+      }
+
+      if (resultado.estado === "cancelado") return;
+
+      // The bound was reached without a conclusive answer: the payment is
+      // NOT proven. The operator reads it and decides what to do next.
+      setErrorPreparacion({
+        code: null,
+        message:
+          "No se pudo verificar el pago. Revisa el estado de tu inscripción o inténtalo nuevamente.",
+      });
+      setFase("error");
+    },
+    [onSuccess, onClose],
+  );
 
   const handleLaunchIzipay = useCallback(async () => {
     if (launchedRef.current || !compraId) return;
     launchedRef.current = true;
-    setLoading(true);
+    setFase("preparando");
+    setErrorPreparacion(null);
+
     try {
       // Step 1: Get session token from backend
       const prepareRes = await iniciarPagoIzipay(compraId);
       const prepareData = prepareRes.data;
 
       if (!prepareRes.success || !prepareData?.token) {
-        const msg =
-          prepareRes.error?.message || "No se pudo generar el token de pago.";
-        toast.error(msg);
-        onClose();
+        // The envelope carries the TYPED error of the API: the operator reads
+        // its public message, never a raw HTTP status string.
+        setErrorPreparacion(
+          errorDeEnvoltura(prepareRes.error) ?? {
+            code: null,
+            message: "No se pudo generar el token de pago.",
+          },
+        );
+        setFase("error");
         return;
       }
 
@@ -260,8 +401,11 @@ export function IzipayModal({
       // Step 2: Wait for SDK global
       const sdkReady = await waitForIzipaySdk();
       if (!sdkReady || !window.Izipay) {
-        toast.error("El SDK de Izipay no se ha cargado correctamente.");
-        onClose();
+        setErrorPreparacion({
+          code: null,
+          message: "El SDK de Izipay no se ha cargado correctamente.",
+        });
+        setFase("error");
         return;
       }
 
@@ -323,8 +467,8 @@ export function IzipayModal({
           sdkInitError instanceof Error
             ? sdkInitError.message
             : "Error al inicializar Izipay.";
-        toast.error(msg);
-        onClose();
+        setErrorPreparacion({ code: null, message: msg });
+        setFase("error");
         return;
       }
 
@@ -335,12 +479,18 @@ export function IzipayModal({
         if (relayedRef.current) return;
         relayedRef.current = true;
 
+        // The popup is gone: the observer of the container is not needed.
+        observerRef.current?.();
+        observerRef.current = null;
+
         const methodUsed =
           providerPayload.response?.payMethod ??
           textoOpcional(providerPayload.paymentMethod) ??
           "Izipay";
 
         if (providerPayload.code !== "00") {
+          // A definitive rejection of the provider: there is nothing to poll.
+          relayResueltoRef.current = true;
           toast.error(
             providerPayload.message || "El pago no fue aprobado por Izipay.",
           );
@@ -358,6 +508,7 @@ export function IzipayModal({
           const confirm = confirmRes.data;
 
           if (!confirmRes.success || !confirm?.success) {
+            relayResueltoRef.current = true;
             toast.error(
               confirmRes.error?.message ||
                 confirm?.response_message ||
@@ -366,6 +517,8 @@ export function IzipayModal({
             onClose();
             return;
           }
+
+          relayResueltoRef.current = true;
 
           // The backend owns the commercial settlement and reports whether the
           // purchase and its rights are already active. A pending settlement
@@ -391,12 +544,13 @@ export function IzipayModal({
             // The next navigation reads the authoritative state again.
           }
           onClose();
-        } catch (err: unknown) {
-          toast.error(
-            `Pago con ${methodUsed} detectado, pero falló la confirmación. ${getErrorMessage(err)}`,
-            { duration: 8000 },
+        } catch {
+          // The relay FAILED: the payment may or may not have been recorded.
+          // The relay is not the only confirmation channel → recover.
+          toast.warning(
+            `Pago con ${methodUsed} detectado. La confirmación no respondió; verificando el estado del pago...`,
           );
-          onClose();
+          void iniciarRecuperacion(d.transaction_id);
         }
       };
 
@@ -407,25 +561,39 @@ export function IzipayModal({
           keyRSA: "RSA",
           callbackResponse: callbackResponsePayment,
         });
+        setFase("abierto");
       } catch (sdkLoadError: unknown) {
         const msg =
           sdkLoadError instanceof Error
             ? sdkLoadError.message
             : "Error al abrir el formulario de pago.";
-        toast.error(msg);
-        onClose();
+        setErrorPreparacion({ code: null, message: msg });
+        setFase("error");
+        return;
       }
+
+      // Step 7: Watch the popup. When the provider STOPS rendering the
+      // checkout and no relay arrived, the relay is UNCERTAIN: the browser
+      // reads the state of the transaction it prepared.
+      observerRef.current = observarCierreCheckout(
+        document.getElementById("izipay-checkout"),
+        () => {
+          // The provider releases the DOM before it invokes the callback:
+          // the grace period lets a normal relay win the race.
+          graciaRef.current = setTimeout(() => {
+            graciaRef.current = null;
+            if (relayedRef.current) return;
+            void iniciarRecuperacion(d.transaction_id);
+          }, PERIODO_GRACIA_MS);
+        },
+      );
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Error al iniciar el pago con Izipay.";
-      toast.error(msg);
-      onClose();
-    } finally {
-      setLoading(false);
+      // The preparation failed with an HTTP error: the operator reads the
+      // PUBLIC message of the API through the shared error handler.
+      setErrorPreparacion(errorDeExcepcion(err));
+      setFase("error");
     }
-  }, [compraId, onClose, onSuccess]);
+  }, [compraId, onClose, onSuccess, iniciarRecuperacion]);
 
   // Launch on open — exactly once per opening.
   useEffect(() => {
@@ -440,20 +608,27 @@ export function IzipayModal({
     if (!isOpen) {
       launchedRef.current = false;
       relayedRef.current = false;
+      relayResueltoRef.current = false;
+      // A recovery in flight does not survive the closing of the modal.
+      recuperacionRef.current += 1;
+      setFase("preparando");
+      setErrorPreparacion(null);
     }
   }, [isOpen]);
 
-  // Cleanup on unmount/close
+  // Release the provider checkout when the modal closes.
+  useEffect(() => {
+    if (!isOpen) {
+      teardownCheckout();
+    }
+  }, [isOpen, teardownCheckout]);
+
+  // Release the provider checkout when the component unmounts.
   useEffect(() => {
     return () => {
-      try {
-        checkoutRef.current?.Unmount?.();
-      } catch {
-        // Ignore cleanup errors
-      }
-      checkoutRef.current = null;
+      teardownCheckout();
     };
-  }, []);
+  }, [teardownCheckout]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -465,12 +640,41 @@ export function IzipayModal({
           <DialogTitle>Pasarela de Pago Izipay</DialogTitle>
         </DialogHeader>
 
-        {loading && (
+        {fase === "preparando" && (
           <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[32px] shadow-2xl gap-4">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
             <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
               Iniciando pasarela...
             </p>
+          </div>
+        )}
+
+        {fase === "recuperando" && (
+          <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[32px] shadow-2xl gap-4">
+            <Loader2 className="h-12 w-12 text-primary animate-spin" />
+            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+              Verificando el pago...
+            </p>
+          </div>
+        )}
+
+        {fase === "error" && errorPreparacion && (
+          <div
+            role="alert"
+            className="flex flex-col items-center justify-center gap-4 p-8 bg-white rounded-[32px] shadow-2xl"
+          >
+            <AlertCircle className="h-10 w-10 text-destructive" />
+            <p className="text-center text-sm font-semibold text-gray-700">
+              {errorPreparacion.message}
+            </p>
+            {errorPreparacion.code && (
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Código: {errorPreparacion.code}
+              </p>
+            )}
+            <Button variant="outline" onClick={onClose}>
+              Cerrar
+            </Button>
           </div>
         )}
 

@@ -23,6 +23,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from modules.commerce.domain.models import Compra
 from modules.commerce.domain.constants import EstadoCompraChoices
@@ -297,7 +298,7 @@ class Command(BaseCommand):
                 defaults={
                     "amount": compra_pagada.total,
                     "currency": "PEN",
-                    "status": "CAPTURED",
+                    "status": "EXITO",
                     "transaction_id": f"TXN-{dni}-001",
                     "order_number": orden_pago.numero,
                 },
@@ -352,6 +353,12 @@ class Command(BaseCommand):
         }
         orden_pago_estado = estado_map.get(estado, OrdenPagoStatus.PENDIENTE)
 
+        # A PAID order carries the moment it was paid: the payment date is
+        # part of the DECLARED successful payment data, never an implicit null.
+        pagada_en = (
+            timezone.now() if orden_pago_estado == OrdenPagoStatus.PAGADA else None
+        )
+
         # Build metadata snapshot using only METADATA_ALLOWED_KEYS
         metadata = {
             "source": "fest",
@@ -372,7 +379,14 @@ class Command(BaseCommand):
             op_created = False
             # Update metadata on reuse
             orden_pago.metadata = metadata
-            orden_pago.save(update_fields=["metadata", "updated_at"])
+            # Backfill the payment date of a paid order seeded before the
+            # payment date was part of the declared payment data.
+            if (
+                orden_pago.estado == OrdenPagoStatus.PAGADA
+                and orden_pago.pagada_en is None
+            ):
+                orden_pago.pagada_en = timezone.now()
+            orden_pago.save(update_fields=["metadata", "pagada_en", "updated_at"])
         else:
             # Create OrdenPago (no 'compra' field on OrdenPago — OneToOne is owned by Compra)
             orden_pago, op_created = OrdenPago.objects.get_or_create(
@@ -383,6 +397,7 @@ class Command(BaseCommand):
                     "monto_total": total,
                     "moneda": "PEN",
                     "estado": orden_pago_estado,
+                    "pagada_en": pagada_en,
                     "metadata": metadata,
                 },
             )

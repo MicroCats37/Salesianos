@@ -25,9 +25,7 @@ number of pass purchases.
 Read-only by construction: no method in this selector writes.
 """
 from datetime import date
-from decimal import Decimal
-
-from django.db.models import Count, IntegerField, OuterRef, Q, Subquery
+from django.db.models import Count, Exists, IntegerField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 
 from modules.administracion.domain.exceptions import AdminResourceNotFoundError
@@ -43,13 +41,22 @@ from modules.administracion.domain.results.admin_pago_results import (
 from modules.administracion.domain.schemas.admin_paginacion_schemas import (
     AdminPaginacionParams,
 )
+from modules.commerce.domain.constants import EstadoCompraChoices
 from modules.commerce.domain.models import Compra
 from modules.pagos.domain.constants import (
     EstadoAprobacionPagoManual,
+    EstadoOperativoPago,
     IzipayStatus,
     OrigenPago,
+    OrdenPagoStatus,
 )
 from modules.pagos.domain.models import AprobacionPagoManual, TransaccionPago
+from modules.pagos.domain.services.core.estado_operativo_pago_service import (
+    EstadoOperativoPagoService,
+)
+from modules.pagos.domain.services.core.evidencia_pago_service import (
+    EvidenciaPagoService,
+)
 from modules.salesianos_fest.domain.constants import EstadoPaseBeneficiarioChoices
 from modules.salesianos_fest.domain.models import (
     CompraInscripcion,
@@ -82,6 +89,7 @@ class AdminPagoSelector:
         *,
         estado_compra: str | None = None,
         estado_orden: str | None = None,
+        estado_operativo: str | None = None,
         tipo: str | None = None,
         desde: date | None = None,
         hasta: date | None = None,
@@ -99,6 +107,8 @@ class AdminPagoSelector:
             evento_id: the ACTIVE event (resolved server-side).
             estado_compra: commercial state of the purchase.
             estado_orden: state of the payment order.
+            estado_operativo: operator verdict of the payment (the ONE
+                answer to "is this payment done?").
             tipo: INICIAL / AMPLIACION (sports) or PASE (pass batch).
             desde: only purchases created on or after this date.
             hasta: only purchases created on or before this date.
@@ -115,6 +125,9 @@ class AdminPagoSelector:
 
         if estado_orden:
             qs = qs.filter(orden_pago__estado=estado_orden)
+
+        if estado_operativo:
+            qs = self._filtrar_estado_operativo(qs, estado_operativo)
 
         if tipo:
             qs = self._filtrar_tipo(qs, tipo)
@@ -267,6 +280,88 @@ class AdminPagoSelector:
         return qs.filter(compra_inscripcion__tipo=tipo)
 
     @staticmethod
+    def _filtrar_estado_operativo(qs, estado_operativo: str):
+        """
+        Filter by the OPERATOR VERDICT of the payment.
+
+        The filter is the SQL MIRROR of the rules of
+        `EstadoOperativoPagoService`: the rows it returns are EXACTLY the rows
+        whose published `estado_operativo` is this code. The precedence is
+        reproduced in the SAME order, so a row NEVER answers two codes and the
+        filter never contradicts the published verdict.
+
+        The evidence is the CORRELATED one (same order, same amount, same
+        currency), exactly like `EvidenciaPagoService`: two EXISTS
+        subqueries, never a query per row.
+        """
+        qs = qs.annotate(
+            evidencia_izipay=Exists(
+                TransaccionPago.objects.filter(
+                    orden_pago_id=OuterRef("orden_pago_id"),
+                    status=IzipayStatus.EXITO,
+                    amount=OuterRef("orden_pago__monto_total"),
+                    currency=OuterRef("orden_pago__moneda"),
+                )
+            ),
+            evidencia_manual=Exists(
+                AprobacionPagoManual.objects.filter(
+                    orden_pago_id=OuterRef("orden_pago_id"),
+                    estado=EstadoAprobacionPagoManual.APROBADA,
+                    monto=OuterRef("orden_pago__monto_total"),
+                    moneda=OuterRef("orden_pago__moneda"),
+                )
+            ),
+        )
+
+        con_evidencia = Q(evidencia_izipay=True) | Q(evidencia_manual=True)
+        sin_evidencia = Q(evidencia_izipay=False) & Q(evidencia_manual=False)
+
+        orden_pagado = Q(orden_pago__estado=OrdenPagoStatus.PAGADA)
+        orden_vencido = Q(orden_pago__estado=OrdenPagoStatus.VENCIDA)
+        orden_cancelado = Q(orden_pago__estado=OrdenPagoStatus.CANCELADA)
+        orden_pendiente = Q(orden_pago__estado=OrdenPagoStatus.PENDIENTE)
+        compra_pagada = Q(estado=EstadoCompraChoices.PAGADA)
+        compra_cancelada = Q(estado=EstadoCompraChoices.CANCELADA)
+        con_orden = Q(orden_pago__isnull=False)
+
+        condiciones = {
+            EstadoOperativoPago.SIN_ORDEN: Q(orden_pago__isnull=True),
+            EstadoOperativoPago.PAGADA_SIN_LIQUIDAR: orden_pagado & ~compra_pagada,
+            EstadoOperativoPago.PAGADA_SIN_EVIDENCIA: (
+                orden_pagado & compra_pagada & sin_evidencia
+            ),
+            EstadoOperativoPago.PAGADA_SIN_FECHA: (
+                orden_pagado
+                & compra_pagada
+                & con_evidencia
+                & Q(orden_pago__pagada_en__isnull=True)
+            ),
+            EstadoOperativoPago.PAGADA: (
+                orden_pagado
+                & compra_pagada
+                & con_evidencia
+                & Q(orden_pago__pagada_en__isnull=False)
+            ),
+            EstadoOperativoPago.VENCIDA: orden_vencido,
+            EstadoOperativoPago.CANCELADA: (
+                orden_cancelado
+                | (
+                    compra_cancelada
+                    & con_orden
+                    & ~Q(
+                        orden_pago__estado__in=[
+                            OrdenPagoStatus.PAGADA,
+                            OrdenPagoStatus.VENCIDA,
+                        ]
+                    )
+                )
+            ),
+            EstadoOperativoPago.PENDIENTE: orden_pendiente & ~compra_cancelada,
+        }
+
+        return qs.filter(condiciones[estado_operativo])
+
+    @staticmethod
     def _filtrar_busqueda(qs, q: str):
         """Free text over the order number, the buyer and the pass name."""
         return qs.filter(
@@ -375,39 +470,7 @@ class AdminPagoSelector:
         if not ordenes:
             return {}
 
-        orden_ids = list(ordenes.keys())
-
-        manuales = {
-            str(orden_pago_id)
-            for orden_pago_id in AprobacionPagoManual.objects
-            .filter(
-                orden_pago_id__in=orden_ids,
-                estado=EstadoAprobacionPagoManual.APROBADA,
-            )
-            .values_list("orden_pago_id", flat=True)
-        }
-
-        exitosas = TransaccionPago.objects.filter(
-            orden_pago_id__in=orden_ids,
-            status=IzipayStatus.EXITO,
-        ).values_list("orden_pago_id", "amount", "currency")
-
-        izipay = {
-            str(orden_pago_id)
-            for orden_pago_id, amount, currency in exitosas
-            if AdminPagoSelector._correlaciona(ordenes.get(str(orden_pago_id)), amount, currency)
-        }
-
-        origenes: dict[str, str] = {}
-        for orden_id in orden_ids:
-            if orden_id in manuales:
-                origenes[orden_id] = OrigenPago.MANUAL
-            elif orden_id in izipay:
-                origenes[orden_id] = OrigenPago.IZIPAY
-            else:
-                origenes[orden_id] = OrigenPago.SIN_PAGO
-
-        return origenes
+        return EvidenciaPagoService.origenes_por_ordenes(ordenes)
 
     @staticmethod
     def _beneficiarios_por_compra(
@@ -471,16 +534,6 @@ class AdminPagoSelector:
         ]
 
     @staticmethod
-    def _correlaciona(orden, amount, currency) -> bool:
-        """Return True when a provider attempt matches its order exactly."""
-        if orden is None:
-            return False
-        return (
-            Decimal(str(amount)) == Decimal(str(orden.monto_total))
-            and currency == orden.moneda
-        )
-
-    @staticmethod
     def _aprobaciones(orden_pago_id: str) -> list[AdminAprobacionManualResult]:
         """Return the manual approval history of an order (audit trail)."""
         from modules.usuarios.domain.models import Usuario
@@ -537,6 +590,7 @@ class AdminPagoSelector:
         composicion = composicion or AdminPagoComposiciónResult()
         origenes = origenes or {}
         conteo = beneficiarios or AdminPaseBeneficiarioConteoResult()
+        origen = origenes.get(str(compra.orden_pago_id), OrigenPago.SIN_PAGO)
 
         return AdminPagoListItemResult(
             compra_id=str(compra.id),
@@ -555,7 +609,13 @@ class AdminPagoSelector:
             estado_compra=compra.estado,
             estado_orden=orden.estado if orden else None,
             pagada_en=orden.pagada_en if orden else None,
-            origen_pago=origenes.get(str(compra.orden_pago_id), OrigenPago.SIN_PAGO),
+            origen_pago=origen,
+            estado_operativo=EstadoOperativoPagoService.calcular(
+                estado_orden=orden.estado if orden else None,
+                estado_compra=compra.estado,
+                origen_pago=origen,
+                pagada_en=orden.pagada_en if orden else None,
+            ),
             monto_orden=float(orden.monto_total) if orden else None,
             moneda_orden=orden.moneda if orden else None,
             beneficiarios_activos=conteo.activos,

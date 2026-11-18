@@ -34,6 +34,11 @@ class AdminEstadosCatalogosResult(BaseModel):
 
     The values come from the domain constants of the OWNING modules — the
     admin area never declares a second vocabulary.
+
+    The last four vocabularies are the ones the client used to INVENT: the
+    completeness of a roster, the state of a participation, the commercial
+    kind of a purchase row and the operator verdict of a payment. They are
+    published here so no filter dropdown hardcodes its own options.
     """
 
     inscripcion: list[str]
@@ -46,6 +51,11 @@ class AdminEstadosCatalogosResult(BaseModel):
     acceso: list[str]
     pool: list[str]
     rol_participante: list[str]
+    roster: list[str]
+    estado_participacion: list[str]
+    tipo_compra: list[str]
+    estado_operativo_pago: list[str]
+    estado_capacidad_equipo: list[str]
 
 
 class AdminCatalogosResult(BaseModel):

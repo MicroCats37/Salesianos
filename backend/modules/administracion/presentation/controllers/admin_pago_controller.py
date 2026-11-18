@@ -92,6 +92,14 @@ class AdminPagoController:
             None, description="Estado comercial de la compra."
         ),
         estado_orden: str | None = Query(None, description="Estado de la orden."),
+        estado_operativo: str | None = Query(
+            None,
+            description=(
+                "Veredicto operativo del pago: SIN_ORDEN, PAGADA, "
+                "PAGADA_SIN_LIQUIDAR, PAGADA_SIN_EVIDENCIA, PAGADA_SIN_FECHA, "
+                "PENDIENTE, CANCELADA o VENCIDA."
+            ),
+        ),
         tipo: str | None = Query(None, description="INICIAL o AMPLIACION."),
         desde: str | None = Query(None, description="Fecha inicial (ISO)."),
         hasta: str | None = Query(None, description="Fecha final (ISO)."),
@@ -107,6 +115,10 @@ class AdminPagoController:
         The endpoint is READ-ONLY and answers the canonical paginated shape.
         The amounts come from the FROZEN commercial snapshot of the purchase.
 
+        Every row publishes the OPERATOR VERDICT of its payment
+        (`estado_operativo`): the ONE answer to "is this payment done?". The
+        facts it derives from keep travelling as the audit trail.
+
         The response NEVER carries `metadata`, `token_sesion`,
         `response_message` nor `transaction_id`: the wrapper declares only the
         explicit, safe fields.
@@ -121,6 +133,7 @@ class AdminPagoController:
             ordering=ordering,
             estado_compra=estado_compra,
             estado_orden=estado_orden,
+            estado_operativo=estado_operativo,
             tipo=tipo,
             desde=desde,
             hasta=hasta,

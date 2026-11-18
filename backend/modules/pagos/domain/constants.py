@@ -20,6 +20,35 @@ class OrdenPagoStatus(models.TextChoices):
     VENCIDA = "VENCIDA", "Vencida"
 
 
+class EstadoOperativoPago(models.TextChoices):
+    """
+    Operator verdict of a payment order — the ONE answer to "is this payment
+    done?".
+
+    The verdict is DERIVED, never typed by anybody: `pagos` owns it, and every
+    surface that publishes a payment state publishes THIS one instead of
+    making the reader compare three sibling facts.
+
+    SIN_ORDEN            — the purchase has no payment order yet.
+    PAGADA               — paid, settled, evidenced and dated.
+    PAGADA_SIN_LIQUIDAR  — the money is in but the rights are not activated.
+    PAGADA_SIN_EVIDENCIA — paid but NOT verifiable (no correlated evidence).
+    PAGADA_SIN_FECHA     — paid and evidenced, but without a payment date.
+    PENDIENTE            — the payment has not happened yet.
+    CANCELADA            — the order or the purchase was cancelled.
+    VENCIDA              — the order expired.
+    """
+
+    SIN_ORDEN = "SIN_ORDEN", "Sin orden"
+    PAGADA = "PAGADA", "Pagada"
+    PAGADA_SIN_LIQUIDAR = "PAGADA_SIN_LIQUIDAR", "Pagada sin liquidar"
+    PAGADA_SIN_EVIDENCIA = "PAGADA_SIN_EVIDENCIA", "Pagada sin evidencia"
+    PAGADA_SIN_FECHA = "PAGADA_SIN_FECHA", "Pagada sin fecha"
+    PENDIENTE = "PENDIENTE", "Pendiente"
+    CANCELADA = "CANCELADA", "Cancelada"
+    VENCIDA = "VENCIDA", "Vencida"
+
+
 class SettlementStatus(models.TextChoices):
     """
     Public state of the commercial settlement driven by a verified payment.
@@ -110,18 +139,14 @@ class EstadoVerificacionPago(models.TextChoices):
 
 # A PENDIENTE TransaccionPago is an ATTEMPT, not a charge: it only records
 # that a provider session was opened for an order. Re-opening the checkout
-# must not pile up attempts, so the active attempt is reused while it is
-# still usable and the superseded ones are expired.
-#
-# Reuse window of an active attempt. It MUST stay below the validity of the
-# provider session it holds: a session that is no longer usable must never
-# be handed back to the browser.
-INTENTO_REUTILIZABLE_MINUTOS = 5
+# NEVER replays a provider session: the live attempt is retired and a fresh
+# one — with its own provider session and its own transaction identity — is
+# created for the new checkout.
 
-# Metadata key that holds the provider session token of an attempt. It lets
-# the backend reuse the SAME provider session — and therefore the same
-# transaction id — instead of opening a second charge opportunity for the
-# same order. It is dropped as soon as the attempt is confirmed.
+# Metadata key that holds the provider session token of an attempt. The
+# session belongs to the attempt that opened it: it is handed to the browser
+# exactly once and it is never replayed for another checkout. It is dropped
+# as soon as the attempt is confirmed.
 CLAVE_TOKEN_SESION = "token_sesion"
 
 

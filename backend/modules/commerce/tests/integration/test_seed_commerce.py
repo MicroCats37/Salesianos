@@ -18,7 +18,11 @@ from django.conf import settings
 from modules.commerce.domain.models import Compra
 from modules.commerce.domain.constants import EstadoCompraChoices
 from modules.pagos.domain.models import OrdenPago, TransaccionPago
-from modules.pagos.domain.constants import OrdenPagoStatus, METADATA_ALLOWED_KEYS
+from modules.pagos.domain.constants import (
+    IzipayStatus,
+    METADATA_ALLOWED_KEYS,
+    OrdenPagoStatus,
+)
 from modules.salesianos_fest.domain.models import (
     Inscripcion,
     CompraInscripcion,
@@ -304,6 +308,33 @@ def test_seed_commerce_creates_paid_expansion_with_transaction(seed_catalog, moc
         assert CompraInscripcion.objects.filter(
             compra=compra, tipo=TipoCompraChoices.AMPLIACION
         ).exists()
+
+
+@pytest.mark.django_db
+def test_seed_commerce_declara_el_pago_exitoso_con_su_fecha(seed_catalog, mock_debug_true):
+    """
+    GIVEN: seed_catalog fixture
+    WHEN:  Running seed_commerce
+    THEN: the PAID scenario declares a SUCCESSFUL provider transaction that
+           CORRELATES with its order, and the order carries its payment date
+    """
+    call_command("seed_commerce")
+
+    pagadas = Compra.objects.filter(estado=EstadoCompraChoices.PAGADA)
+    assert pagadas.count() == 3
+    for compra in pagadas:
+        orden = compra.orden_pago
+        assert orden.estado == OrdenPagoStatus.PAGADA
+        assert orden.pagada_en is not None
+
+        transaccion = TransaccionPago.objects.get(orden_pago=orden)
+        assert transaccion.status == IzipayStatus.EXITO
+        assert transaccion.amount == orden.monto_total
+        assert transaccion.currency == orden.moneda
+
+    # The unpaid scenarios NEVER carry a payment date.
+    for compra in Compra.objects.filter(estado=EstadoCompraChoices.PENDIENTE):
+        assert compra.orden_pago.pagada_en is None
 
 
 @pytest.mark.django_db

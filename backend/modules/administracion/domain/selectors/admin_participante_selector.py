@@ -151,7 +151,6 @@ class AdminParticipanteSelector:
                     estado=fila.estado,
                     estado_pool=estado,
                     motivo_bloqueo=motivo,
-                    tiene_cupo_activo=bool(fila.tiene_cupo_activo),
                     disciplinas=disciplinas.get(str(fila.id), []),
                     created_at=fila.created_at,
                 )
@@ -189,7 +188,6 @@ class AdminParticipanteSelector:
                     estado=fila.estado,
                     estado_pool=estado,
                     motivo_bloqueo=motivo,
-                    tiene_cupo_activo=bool(fila.tiene_cupo_activo),
                     disciplinas=disciplinas.get(str(fila.id), []),
                     created_at=fila.created_at,
                 )
@@ -288,7 +286,10 @@ class AdminParticipanteSelector:
     def _anotar_pool(qs):
         """Annotate a participant queryset with the pool derivations.
 
-        - `tiene_cupo_activo` — the person holds an ACTIVE cup assignment,
+        - `tiene_cupo_activo` — the person holds an ACTIVE cup assignment. It
+          stays a QUERY annotation (the `con_cupo` filter and the pool
+          verdict need it) but it is NOT published in the item: it is
+          provably equivalent to `estado_pool == LISTO`.
         - `pagados` — the paid capacity of the registration,
         - `asignados` — the paid capacity already assigned,
         - `disponible` — the free paid capacity of the registration.

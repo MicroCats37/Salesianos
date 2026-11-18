@@ -121,10 +121,12 @@ class AdminInscripcionPresenter:
             categoria_nombre=result.categoria_nombre,
             inscripcion_id=result.inscripcion_id,
             inscripcion_ref=result.inscripcion_ref,
+            inscripcion_estado=result.inscripcion_estado,
             estado=result.estado,
             jugadores_registrados=result.jugadores_registrados,
             minimo_deportivo=result.minimo_deportivo,
-            faltantes=result.faltantes,
+            maximo_deportivo=result.maximo_deportivo,
+            estado_capacidad=result.estado_capacidad,
             estado_roster=result.estado_roster,
             created_at=result.created_at,
         )
@@ -168,7 +170,6 @@ class AdminInscripcionPresenter:
             estado=result.estado,
             estado_pool=result.estado_pool,
             motivo_bloqueo=result.motivo_bloqueo,
-            tiene_cupo_activo=result.tiene_cupo_activo,
             disciplinas=result.disciplinas,
             created_at=result.created_at,
         )

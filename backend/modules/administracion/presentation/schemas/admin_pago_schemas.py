@@ -33,6 +33,11 @@ class AdminPagoListItemOut(BaseSchema):
     ONE row is ONE purchase with exactly ONE supported composition: a sports
     registration (`inscripcion_id`) OR a pass batch (`pase_id`). The two
     identities are never both present.
+
+    `estado_operativo` is the OPERATOR VERDICT of the payment — the ONE answer
+    to "is this payment done?", computed by `pagos`. The facts it derives from
+    (`estado_compra`, `estado_orden`, `origen_pago`, `pagada_en`) keep
+    travelling as the audit trail of the decision.
     """
 
     compra_id: str
@@ -50,6 +55,14 @@ class AdminPagoListItemOut(BaseSchema):
     estado_orden: Optional[str] = None
     pagada_en: Optional[datetime] = None
     origen_pago: str = "SIN_PAGO"
+    estado_operativo: str = Field(
+        ...,
+        description=(
+            "Veredicto operativo del pago: SIN_ORDEN, PAGADA, "
+            "PAGADA_SIN_LIQUIDAR, PAGADA_SIN_EVIDENCIA, PAGADA_SIN_FECHA, "
+            "PENDIENTE, CANCELADA o VENCIDA."
+        ),
+    )
     monto_orden: Optional[float] = None
     moneda_orden: Optional[str] = None
     beneficiarios_activos: int = 0

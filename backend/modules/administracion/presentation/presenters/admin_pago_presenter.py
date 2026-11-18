@@ -59,6 +59,7 @@ class AdminPagoPresenter:
             estado_orden=result.estado_orden,
             pagada_en=result.pagada_en,
             origen_pago=result.origen_pago,
+            estado_operativo=result.estado_operativo,
             monto_orden=result.monto_orden,
             moneda_orden=result.moneda_orden,
             beneficiarios_activos=result.beneficiarios_activos,

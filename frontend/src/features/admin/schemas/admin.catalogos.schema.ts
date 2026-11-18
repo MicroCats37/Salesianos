@@ -40,6 +40,16 @@ export const AdminEstadosCatalogosSchema = z.object({
   acceso: z.array(z.string()),
   pool: z.array(z.string()),
   rol_participante: z.array(z.string()),
+  /** The completeness of a roster: COMPLETO | INCOMPLETO. */
+  roster: z.array(z.string()),
+  /** The state of a participation in a team: A | R. */
+  estado_participacion: z.array(z.string()),
+  /** The commercial kind of a purchase row: INICIAL | AMPLIACION | PASE. */
+  tipo_compra: z.array(z.string()),
+  /** The operator verdict of a payment. */
+  estado_operativo_pago: z.array(z.string()),
+  /** The capacity verdict of a team: CON_CUPOS | AL_LIMITE. */
+  estado_capacidad_equipo: z.array(z.string()),
 });
 
 export type AdminEstadosCatalogos = z.infer<typeof AdminEstadosCatalogosSchema>;

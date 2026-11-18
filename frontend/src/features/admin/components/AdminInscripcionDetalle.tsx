@@ -15,6 +15,8 @@ import { useAdminInscripcionDetalle } from "../hooks/useAdminInscripciones";
 import {
   estadoAsignacionLabel,
   estadoAsignacionTone,
+  estadoCapacidadEquipoLabel,
+  estadoCapacidadEquipoTone,
   estadoCompraLabel,
   estadoCompraTone,
   estadoOrdenLabel,
@@ -234,9 +236,18 @@ export function AdminInscripcionDetalle({
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-700">
-                        Plantilla {equipo.jugadores_registrados}/
-                        {equipo.minimo_deportivo}
+                        Plantilla {equipo.jugadores_registrados} · mín{" "}
+                        {equipo.minimo_deportivo} · máx{" "}
+                        {equipo.maximo_deportivo}
                       </span>
+                      <AdminEstadoBadge
+                        etiqueta={estadoCapacidadEquipoLabel(
+                          equipo.estado_capacidad,
+                        )}
+                        tono={estadoCapacidadEquipoTone(
+                          equipo.estado_capacidad,
+                        )}
+                      />
                       <AdminEstadoBadge
                         etiqueta={equipo.estado_roster}
                         tono={
@@ -349,10 +360,7 @@ export function AdminInscripcionDetalle({
                         Persona
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                        Estado pool
-                      </TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                        Cupo activo
+                        Estado del cupo
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-wider text-slate-500">
                         Disciplinas
@@ -371,13 +379,19 @@ export function AdminInscripcionDetalle({
                           </span>
                         </TableCell>
                         <TableCell className="py-3 text-xs">
-                          <AdminEstadoBadge
-                            etiqueta={estadoPoolLabel(participante.estado_pool)}
-                            tono={estadoPoolTone(participante.estado_pool)}
-                          />
-                        </TableCell>
-                        <TableCell className="py-3 text-xs">
-                          {participante.tiene_cupo_activo ? "Sí" : "No"}
+                          <div className="flex flex-col">
+                            <AdminEstadoBadge
+                              etiqueta={estadoPoolLabel(
+                                participante.estado_pool,
+                              )}
+                              tono={estadoPoolTone(participante.estado_pool)}
+                            />
+                            {participante.motivo_bloqueo && (
+                              <span className="text-[11px] text-slate-500">
+                                {participante.motivo_bloqueo}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="py-3 text-xs">
                           {participante.disciplinas.length > 0
@@ -410,11 +424,12 @@ export function AdminInscripcionDetalle({
                         tono={estadoPoolTone(participante.estado_pool)}
                       />
                     </div>
+                    {participante.motivo_bloqueo && (
+                      <p className="mt-2 text-[11px] text-slate-500">
+                        {participante.motivo_bloqueo}
+                      </p>
+                    )}
                     <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-600">
-                      <span className="rounded-full bg-slate-100 px-2 py-1">
-                        Cupo activo:{" "}
-                        {participante.tiene_cupo_activo ? "Sí" : "No"}
-                      </span>
                       <span className="rounded-full bg-slate-100 px-2 py-1">
                         Disciplinas:{" "}
                         {participante.disciplinas.length > 0

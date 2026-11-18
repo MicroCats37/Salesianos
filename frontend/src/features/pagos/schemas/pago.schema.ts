@@ -150,3 +150,52 @@ export interface IniciarPagoOut {
 }
 
 export type IniciarPagoResponse = ApiResponse<IniciarPagoOut>;
+
+// ── Transaction status (GET /pagos/transacciones/{transaction_id}) ────────────
+
+/**
+ * Status of a payment attempt — backend `IzipayStatus`.
+ *
+ * - `PENDIENTE` — the attempt is live: the provider session was opened but no
+ *   conclusive answer was recorded yet.
+ * - `EXITO` — the payment was verified and recorded.
+ * - `FALLIDO` — the attempt failed.
+ * - `CANCELADO` — the attempt was cancelled.
+ */
+export type TransaccionEstado = "PENDIENTE" | "EXITO" | "FALLIDO" | "CANCELADO";
+
+/**
+ * Output of the transaction-status endpoint — backend `TransaccionPagoOut`.
+ *
+ * It is the READ side of an attempt. The browser uses it to recover a payment
+ * whose provider relay was uncertain: the relay cannot be the only
+ * confirmation channel.
+ */
+export interface TransaccionEstadoOut {
+  /** Transaction UUID. */
+  id: string;
+  /** `OrdenPago` UUID the attempt belongs to. */
+  orden_pago_id: string;
+  /** 14-digit idempotency key of the attempt. */
+  transaction_id: string;
+  /** 10-digit order number of the attempt. */
+  order_number: string;
+  /** Snapshotted amount of the attempt. */
+  amount: number;
+  /** ISO currency code. */
+  currency: string;
+  /** State of the attempt. */
+  status: TransaccionEstado;
+  /** Provider response code. */
+  response_code: string | null;
+  /** Provider response message. */
+  response_message: string | null;
+  /** Payment method used. */
+  metodo_pago: string | null;
+  /** Creation timestamp. */
+  created_at: string;
+  /** Last update timestamp. */
+  updated_at: string;
+}
+
+export type TransaccionEstadoResponse = ApiResponse<TransaccionEstadoOut>;

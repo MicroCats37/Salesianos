@@ -7,10 +7,20 @@ its discipline (`modules.salesianos_fest.domain.models.Disciplina`). The
 derivation happens HERE, in SQL, with a HAVING clause over the aggregate —
 never in the frontend (`contract/api-wrapper-presenter-contract.md` §7).
 
+The CAPACITY state of the team (`CON_CUPOS` / `AL_LIMITE`) is derived too,
+against the hard cap of the discipline (`max_jugadores`). Its precedence is
+owned by `salesianos_fest` (`CapacidadEquipoService`); this selector only
+ASSEMBLES the facts — the administration area never decides a rule of another
+module.
+
 Read-only by construction: no method in this selector writes.
 """
 from django.db.models import Count, F, Q
 
+from modules.administracion.domain.constants import (
+    ROSTER_COMPLETO,
+    ROSTER_INCOMPLETO,
+)
 from modules.administracion.domain.results.admin_inscripcion_results import (
     AdminEquipoListItemResult,
 )
@@ -19,9 +29,9 @@ from modules.administracion.domain.schemas.admin_paginacion_schemas import (
 )
 from modules.salesianos_fest.domain.constants import EstadoParticipacionChoices
 from modules.salesianos_fest.domain.models import Equipo
-
-ROSTER_COMPLETO = "COMPLETO"
-ROSTER_INCOMPLETO = "INCOMPLETO"
+from modules.salesianos_fest.domain.services.core.capacidad_equipo_service import (
+    CapacidadEquipoService,
+)
 
 
 def _referencia_corta(identificador) -> str:
@@ -85,9 +95,13 @@ class AdminEquipoSelector:
 
         items: list[AdminEquipoListItemResult] = []
         for fila in filas:
-            jugadores, minimo = roster_map.get(
+            jugadores, minimo, maximo = roster_map.get(
                 str(fila.id),
-                (0, fila.disciplina.min_jugadores or 0),
+                (
+                    0,
+                    fila.disciplina.min_jugadores or 0,
+                    fila.disciplina.max_jugadores or 0,
+                ),
             )
             items.append(
                 AdminEquipoListItemResult(
@@ -98,10 +112,15 @@ class AdminEquipoSelector:
                     categoria_nombre=fila.categoria.nombre if fila.categoria else None,
                     inscripcion_id=str(fila.inscripcion_id),
                     inscripcion_ref=_referencia_corta(fila.inscripcion_id),
+                    inscripcion_estado=fila.inscripcion.estado,
                     estado=fila.estado,
                     jugadores_registrados=jugadores,
                     minimo_deportivo=minimo,
-                    faltantes=max(0, minimo - jugadores),
+                    maximo_deportivo=maximo,
+                    estado_capacidad=CapacidadEquipoService.estado_capacidad(
+                        jugadores=jugadores,
+                        maximo=maximo,
+                    ),
                     estado_roster=(
                         ROSTER_COMPLETO if jugadores >= minimo else ROSTER_INCOMPLETO
                     ),
@@ -134,15 +153,19 @@ class AdminEquipoSelector:
         return anotado.filter(jugadores__lt=F("disciplina__min_jugadores"))
 
     @staticmethod
-    def _roster_por_equipo(equipo_ids: list) -> dict[str, tuple[int, int]]:
-        """Return `(jugadores, minimo)` of every team of the given ids."""
+    def _roster_por_equipo(equipo_ids: list) -> dict[str, tuple[int, int, int]]:
+        """Return `(jugadores, minimo, maximo)` of every team of the given ids."""
         if not equipo_ids:
             return {}
 
         filas = (
             Equipo.objects
             .filter(id__in=equipo_ids)
-            .values("id", "disciplina__min_jugadores")
+            .values(
+                "id",
+                "disciplina__min_jugadores",
+                "disciplina__max_jugadores",
+            )
             .annotate(
                 jugadores=Count(
                     "participaciones",
@@ -155,6 +178,7 @@ class AdminEquipoSelector:
             str(fila["id"]): (
                 fila["jugadores"] or 0,
                 fila["disciplina__min_jugadores"] or 0,
+                fila["disciplina__max_jugadores"] or 0,
             )
             for fila in filas
         }

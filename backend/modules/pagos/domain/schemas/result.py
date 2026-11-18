@@ -8,6 +8,27 @@ from modules.pagos.domain.constants import SettlementStatus
 
 
 @dataclass
+class OrdenConMultiplesIntentosVivos:
+    """
+    A payment order that carries MORE THAN ONE live attempt.
+
+    A live attempt is a PENDIENTE TransaccionPago: it only records that a
+    provider session was opened for the order. More than one live attempt
+    means the one-live-attempt invariant is already broken in the data, so
+    the database guard that refuses a second live attempt cannot be installed
+    until the rows are resolved explicitly by the team.
+
+    The report is READ-ONLY: a payment attempt is an audit record and it may
+    be money in flight — nothing is ever retired, cancelled or deleted here.
+    """
+
+    orden_pago_id: str
+    numero_orden: str
+    intentos_vivos: int
+    transaction_ids: list[str]
+
+
+@dataclass
 class SettlementResult:
     """
     Outcome of a commercial settlement attempt for a paid order.

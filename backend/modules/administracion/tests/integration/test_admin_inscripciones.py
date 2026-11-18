@@ -557,6 +557,13 @@ def test_detalle_incluye_el_plantilla_de_cada_equipo(
     assert equipos["Las Panteras"]["estado_roster"] == "COMPLETO"
     assert equipos["Las Panteras"]["participaciones"][0]["disciplina_sigla"] == "VM"
 
+    # The drilldown agrees with the teams table about the capacity.
+    assert equipos["Los Tigres"]["minimo_deportivo"] == 2
+    assert equipos["Los Tigres"]["maximo_deportivo"] == 11
+    assert equipos["Los Tigres"]["estado_capacidad"] == "CON_CUPOS"
+    assert equipos["Los Tigres"]["inscripcion_estado"] == "RECIBIDA"
+    assert "faltantes" not in equipos["Los Tigres"]
+
 
 @pytest.mark.django_db
 def test_detalle_con_id_inexistente_responde_404(

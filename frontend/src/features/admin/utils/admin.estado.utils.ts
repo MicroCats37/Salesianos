@@ -78,6 +78,25 @@ const ROSTER_LABEL: Record<string, string> = {
   INCOMPLETO: "Incompleto",
 };
 
+/**
+ * The CAPACITY verdict of a team — the answer to "does this team still have
+ * room?".
+ *
+ * The vocabulary is the one of `EstadoCapacidadEquipoChoices`
+ * (`backend/modules/salesianos_fest/domain/constants.py`). The backend owns
+ * the PRECEDENCE that produces it; the client only renders the code it was
+ * told and NEVER compares the players with the cap itself.
+ */
+const ESTADO_CAPACIDAD_EQUIPO_TONE: Record<string, AdminTone> = {
+  CON_CUPOS: "emerald",
+  AL_LIMITE: "orange",
+};
+
+const ESTADO_CAPACIDAD_EQUIPO_LABEL: Record<string, string> = {
+  CON_CUPOS: "Con cupos",
+  AL_LIMITE: "Al límite",
+};
+
 const ESTADO_ACREDITACION_TONE: Record<string, AdminTone> = {
   PENDIENTE: "amber",
   ACTIVA: "emerald",
@@ -194,6 +213,62 @@ const ESTADO_TRANSACCION_LABEL: Record<string, string> = {
   CANCELADO: "Cancelado",
 };
 
+/**
+ * The OPERATOR VERDICT of a payment — the ONE answer to "is this payment
+ * done?".
+ *
+ * The vocabulary is the one of `EstadoOperativoPago`
+ * (`backend/modules/pagos/domain/constants.py`). The backend owns the
+ * PRECEDENCE that produces it; the client only renders the code it was told
+ * and NEVER recomputes it.
+ */
+const ESTADO_OPERATIVO_PAGO_TONE: Record<string, AdminTone> = {
+  SIN_ORDEN: "slate",
+  PAGADA: "emerald",
+  PAGADA_SIN_LIQUIDAR: "orange",
+  PAGADA_SIN_EVIDENCIA: "red",
+  PAGADA_SIN_FECHA: "amber",
+  PENDIENTE: "amber",
+  CANCELADA: "rose",
+  VENCIDA: "red",
+};
+
+const ESTADO_OPERATIVO_PAGO_LABEL: Record<string, string> = {
+  SIN_ORDEN: "Sin orden",
+  PAGADA: "Pagada",
+  PAGADA_SIN_LIQUIDAR: "Pagada sin liquidar",
+  PAGADA_SIN_EVIDENCIA: "Pagada sin evidencia",
+  PAGADA_SIN_FECHA: "Pagada sin fecha",
+  PENDIENTE: "Pendiente",
+  CANCELADA: "Cancelada",
+  VENCIDA: "Vencida",
+};
+
+/**
+ * The NOTE of the codes that name a discrepancy between the facts.
+ *
+ * The marker comes from the VERDICT, never from a comparison the client
+ * makes: the backend already decided that the facts do not line up (it
+ * answered `PAGADA_SIN_…` instead of `PAGADA`), so the client only renders
+ * the sentence of the code it was given. A code without an entry has no
+ * marker.
+ */
+const AVISO_ESTADO_OPERATIVO_PAGO: Record<string, string> = {
+  PAGADA_SIN_LIQUIDAR:
+    "La orden está pagada pero la compra no está liquidada: los derechos todavía no se activaron.",
+  PAGADA_SIN_EVIDENCIA:
+    "La orden está pagada pero no hay evidencia correlacionada que la respalde.",
+  PAGADA_SIN_FECHA:
+    "La orden está pagada y respaldada, pero no registra la fecha del pago.",
+};
+
+/**
+ * The origin of the payment EVIDENCE — NOT a payment state.
+ *
+ * `SIN_PAGO` means "there is nothing to verify", so the label says
+ * "Sin evidencia" and never "Sin pago": a row without evidence is not
+ * necessarily a row without a payment.
+ */
 const ORIGEN_PAGO_TONE: Record<string, AdminTone> = {
   IZIPAY: "emerald",
   MANUAL: "violet",
@@ -203,7 +278,7 @@ const ORIGEN_PAGO_TONE: Record<string, AdminTone> = {
 const ORIGEN_PAGO_LABEL: Record<string, string> = {
   IZIPAY: "Izipay",
   MANUAL: "Manual",
-  SIN_PAGO: "Sin pago",
+  SIN_PAGO: "Sin evidencia",
 };
 
 const ESTADO_APROBACION_MANUAL_TONE: Record<string, AdminTone> = {
@@ -274,6 +349,21 @@ export function rosterTone(estado: string): AdminTone {
 /** Label of the derived roster completeness. */
 export function rosterLabel(estado: string): string {
   return etiqueta(ROSTER_LABEL, estado);
+}
+
+/**
+ * Tone of the capacity verdict of a team.
+ *
+ * An unknown verdict is rendered neutrally: the UI never invents a semantic
+ * it was not told.
+ */
+export function estadoCapacidadEquipoTone(estado: string): AdminTone {
+  return tono(ESTADO_CAPACIDAD_EQUIPO_TONE, estado);
+}
+
+/** Label of the capacity verdict of a team ("Al límite" when it is full). */
+export function estadoCapacidadEquipoLabel(estado: string): string {
+  return etiqueta(ESTADO_CAPACIDAD_EQUIPO_LABEL, estado);
 }
 
 /** Tone of an accreditation state. */
@@ -371,12 +461,37 @@ export function estadoTransaccionLabel(estado: string): string {
   return etiqueta(ESTADO_TRANSACCION_LABEL, estado);
 }
 
+/**
+ * Tone of the operator verdict of a payment.
+ *
+ * An unknown verdict is rendered neutrally: the UI never invents a semantic
+ * it was not told.
+ */
+export function estadoOperativoPagoTone(estado: string): AdminTone {
+  return tono(ESTADO_OPERATIVO_PAGO_TONE, estado);
+}
+
+/** Label of the operator verdict of a payment. */
+export function estadoOperativoPagoLabel(estado: string): string {
+  return etiqueta(ESTADO_OPERATIVO_PAGO_LABEL, estado);
+}
+
+/**
+ * Note of the verdict codes that name a discrepancy between the facts.
+ *
+ * It is EMPTY for a verdict without a discrepancy: the marker belongs to the
+ * codes that name one.
+ */
+export function estadoOperativoPagoAviso(estado: string): string {
+  return AVISO_ESTADO_OPERATIVO_PAGO[estado] ?? "";
+}
+
 /** Tone of the origin of the payment evidence (IZIPAY, MANUAL, SIN_PAGO). */
 export function origenPagoTone(origen: string): AdminTone {
   return tono(ORIGEN_PAGO_TONE, origen);
 }
 
-/** Label of the origin of the payment evidence. */
+/** Label of the origin of the payment evidence ("Sin evidencia" when none). */
 export function origenPagoLabel(origen: string): string {
   return etiqueta(ORIGEN_PAGO_LABEL, origen);
 }

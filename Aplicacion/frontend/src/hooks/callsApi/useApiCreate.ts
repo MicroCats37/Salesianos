@@ -34,7 +34,12 @@ export function useApiCreate<TData = unknown, TVariables = unknown>({
         const payload = buildApiPayload(variables);
         const response: AxiosResponse<unknown> = await api.post(url, payload);
         const envelope = response.data as { message?: string } | null;
-        if (showSuccessToast && envelope && typeof envelope.message === "string" && envelope.message.length > 0) {
+        if (
+          showSuccessToast &&
+          envelope &&
+          typeof envelope.message === "string" &&
+          envelope.message.length > 0
+        ) {
           notify.success(envelope.message);
         }
         return schema ? schema.parse(response.data) : (response.data as TData);

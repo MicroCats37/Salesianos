@@ -50,7 +50,11 @@ export function useApiDelete<TData = unknown, TPayload = never>({
         const response: AxiosResponse<unknown> = await api.delete(url);
         if (showSuccessToast) {
           const envelope = response.data as { message?: string } | null;
-          if (envelope && typeof envelope.message === "string" && envelope.message.length > 0) {
+          if (
+            envelope &&
+            typeof envelope.message === "string" &&
+            envelope.message.length > 0
+          ) {
             notify.success(envelope.message);
           }
         }

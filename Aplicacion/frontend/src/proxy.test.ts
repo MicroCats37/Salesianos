@@ -66,18 +66,18 @@ describe("proxy — assets", () => {
 });
 
 describe("proxy — /administracion/**", () => {
-  it("rechaza al visitante anónimo y lo devuelve a la portada", () => {
+  it("rechaza al visitante anónimo y lo devuelve al login", () => {
     const respuesta = proxy(construirRequest("/administracion"));
 
     expect(respuesta.status).toBe(307);
-    expect(destino(respuesta)).toBe(`${ORIGEN}/`);
+    expect(destino(respuesta)).toBe(`${ORIGEN}/login`);
   });
 
   it("rechaza al visitante anónimo en una sección profunda", () => {
     const respuesta = proxy(construirRequest("/administracion/usuarios"));
 
     expect(respuesta.status).toBe(307);
-    expect(destino(respuesta)).toBe(`${ORIGEN}/`);
+    expect(destino(respuesta)).toBe(`${ORIGEN}/login`);
   });
 
   it("deja pasar al visitante autenticado", () => {
@@ -101,13 +101,40 @@ describe("proxy — /administracion/**", () => {
 });
 
 describe("proxy — /login con credencial", () => {
-  it("deja pasar al visitante autenticado (ruta pública)", () => {
+  it("manda al visitante autenticado a su cuenta", () => {
     const respuesta = proxy(construirRequest("/login", "token-de-prueba"));
 
-    // `/login` está en `PUBLIC_PATHS`, así que la comprobación de las rutas
-    // públicas ocurre ANTES que la del token: la rama que redirigía a
-    // `/dashboard` es inalcanzable. Este test congela el comportamiento REAL
-    // en curso, no el que se supone en el código.
+    expect(respuesta.status).toBe(307);
+    expect(destino(respuesta)).toBe(`${ORIGEN}/mi-cuenta`);
+  });
+});
+
+describe("proxy — enlaces de invitado", () => {
+  it("deja pasar la gestión de un pase sin credencial", () => {
+    const respuesta = proxy(construirRequest("/pases/gestionar/token-abc"));
+
+    expect(respuesta.status).toBe(200);
+    expect(destino(respuesta)).toBeNull();
+  });
+
+  it("deja pasar la consulta de un pedido sin credencial", () => {
+    const respuesta = proxy(construirRequest("/tienda/pedidos/token-abc"));
+
+    expect(respuesta.status).toBe(200);
+    expect(destino(respuesta)).toBeNull();
+  });
+});
+
+describe("proxy — rutas públicas del mapa nuevo", () => {
+  it.each([
+    "/informacion",
+    "/pases",
+    "/tienda",
+    "/recuperar-compra",
+    "/registro",
+  ])("deja pasar %s sin credencial", (ruta) => {
+    const respuesta = proxy(construirRequest(ruta));
+
     expect(respuesta.status).toBe(200);
     expect(destino(respuesta)).toBeNull();
   });

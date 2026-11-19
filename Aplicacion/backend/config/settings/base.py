@@ -48,13 +48,30 @@ LOCAL_APPS = [
     'import_export',
 
     "core",
-    # Torneos eliminatorios — depende de eventos + salesianos_fest, por eso
-    # se registra después de ambos.
-    # Superficie de administración operativa — read-only, sin modelos ni
-    # migraciones propias (agrega los datos de los módulos de negocio).
-    # modules.pagos is temporarily disabled in Fase 1 due to FK dependency
-    # on modules.inscripciones.Inscripcion. Will be re-enabled in Fase 4
-    # when the payment boundary is redesigned.
+    # ── Apps de dominio (A0 · reconciliación FND-01) ───────────────────────
+    # Sólo se registran las apps COMPLETADAS. El orden respeta el GRAFO DE
+    # MIGRACIONES del objetivo, que es la autoridad:
+    #   `usuarios` (AUTH_USER_MODEL + grupos funcionales)
+    #     → `pagos`    (swappable_dependency(AUTH_USER_MODEL))
+    #       → `commerce` (FK a `pagos` y a `usuarios`)
+    # `eventos` no depende de ninguna app de dominio, por eso va delante.
+    # Una app INACABADA no se registra: su modelo no existe todavía y el
+    # registro sólo puede referring a una app completada y verificada.
+    #
+    # Reconciliación A0 de DOM-01 y DOM-04 (2026-11-19):
+    #   `salesianos_fest` (DOM-01) → depende de `eventos.0001` y
+    #                               `usuarios.0002`; se registra DESPUÉS de
+    #                               `commerce` por petición explícita de DOM-01
+    #                               (A0-01), que es el orden del grafo.
+    #   `marketplace`      (DOM-04) → depende de `eventos.0001`.
+    # Ninguna app INACABADA (`pases`, `beneficios`, `validaciones`,
+    # `patrocinadores`, `competencias`, `administracion`) se registra.
+    "modules.eventos",
+    "modules.usuarios",
+    "modules.pagos",
+    "modules.commerce",
+    "modules.salesianos_fest",
+    "modules.marketplace",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -106,6 +123,20 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 STORAGES = {
+    # ── `default` (A0 · reconciliación DOM-04, petición A0-04) ─────────────
+    # Django 5 exige la entrada `default`: sin ella `default_storage` NO
+    # existe y `ImageField`/los módulos que escriben media fallan con
+    # `InvalidStorageError: Could not find config for 'default' in
+    # settings.STORAGES`. No es un fallo de negocio: ningún módulo puede
+    # persistir imágenes.
+    #
+    # El backend es el `FileSystemStorage` LOCAL de Django: escribe bajo
+    # `MEDIA_ROOT`, que es el VOLUMEN PERSISTENTE del contrato de media
+    # (FREEZE-MD-1.0.0 · FR-06 §2.1). No se inventa almacenamiento en la
+    # nube, ni rutas, ni credenciales.
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
@@ -116,20 +147,71 @@ TIME_ZONE = "America/Lima"
 USE_I18N = True
 USE_TZ = True
 
-# ── Static& Media ───────────────────────────────────────────
+# ── Static & Media ───────────────────────────────────────────
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# ── Media (multimedia) ───────────────────────────────────────
+# Freeze: FREEZE-MD-1.0.0 · evidence/contracts/FR-06-media.md
+# Contrato: core/media.py (allowlist, tamaño, firma, ruta y protocolo).
+#
+# MEDIA_ROOT es un VOLUMEN PERSISTENTE: guarda estado durable de negocio,
+# no es un caché. MEDIA_URL se sirve sin CDN (DEC-14).
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Allowlist MIME. `image/svg+xml` está EXCLUIDO a propósito: puede llevar
+# script embebido.
+MEDIA_ALLOWED_MIME_TYPES = env.list(
+    "MEDIA_ALLOWED_MIME_TYPES",
+    default=["image/jpeg", "image/png", "image/webp"],
+)
+
+# Tamaño máximo por archivo: 5 MiB.
+MEDIA_MAX_SIZE_BYTES = env.int("MEDIA_MAX_SIZE_BYTES", default=5 * 1024 * 1024)
+
+# Dominios autorizados como primer segmento de la ruta
+# MEDIA_ROOT/<dominio>/<entidad_id>/<uuid><ext>.
+MEDIA_DOMAINS = env.list(
+    "MEDIA_DOMAINS",
+    default=["productos", "patrocinadores"],
+)
+
+# Límites de dimensión en píxeles. Los límites EXACTOS por tipo están
+# PENDIENTES de ratificación (GOV-01-OPEN-10, owner A0 + A5). Con 0 la
+# comprobación no se ejecuta; con un valor > 0 el hook de core/media.py
+# rechaza los archivos fuera de rango (pixel bomb).
+MEDIA_MIN_DIMENSION = env.int("MEDIA_MIN_DIMENSION", default=0)
+MEDIA_MAX_DIMENSION = env.int("MEDIA_MAX_DIMENSION", default=0)
+
+# Copia de seguridad del volumen de media. La POLÍTICA está PENDIENTE de
+# ratificación (GOV-01-OPEN-09, owner A0 + producto): este módulo no inventa
+# rutas, credenciales ni ventanas. El interruptor permite activar la copia
+# cuando la política esté definida; por defecto no hay copia y el
+# comportamiento es explícito, no silencioso.
+MEDIA_BACKUP_ENABLED = env.bool("MEDIA_BACKUP_ENABLED", default=False)
+MEDIA_BACKUP_ROOT = env("MEDIA_BACKUP_ROOT", default="")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ── Auth ─────────────────────────────────────────────────────
 
+# El modelo de usuario del objetivo es `usuarios.Usuario` (FR-03 §1.2).
+#
+# ORDEN: se fija ANTES de la primera migración del objetivo. Un cambio de
+# `AUTH_USER_MODEL` sobre una base ya migrada con `auth.User` exige una base
+# nueva (o cirugía de migraciones de `auth`); la base del objetivo está vacía.
+AUTH_USER_MODEL = "usuarios.Usuario"
+
 # ── Evento activo (FEST) ─────────────────────────────────────
-# Inscripciones FEST — único evento activo por edición.
-# El frontend NO envía `evento_id`: el backend lo resuelve desde esta constante.
-EVENTO_ACTIVO_NOMBRE = env("EVENTO_ACTIVO_NOMBRE", default="Salesianos FEST 2026")
+# `EVENTO_ACTIVO_NOMBRE` SE RETIRA (FREEZE-ED-1.0.0 · FR-02 §2.4 · D-01).
+#
+# El supuesto de scope "un evento activo por nombre" queda reemplazado por el
+# ORDEN ÚNICO de resolución de edición que vive en el módulo `eventos`
+# (edición explícita → edición activa del actor → única `PUBLICADA` → error).
+# No hay reemplazo en settings: el scope se resuelve en el dominio, y un
+# setting global volvería a introducir exactamente el supuesto que FR-02 §2.4
+# rechaza.
 
 # ── JWT (django-ninja-jwt) ───────────────────────────────────
 NINJA_JWT = {
@@ -143,8 +225,21 @@ NINJA_JWT = {
 
 # ── Django Ninja Extra ───────────────────────────────────────
 NINJA_EXTRA = {
+    # ── Extensión de DI (A0 · reconciliación FND-01) ───────────────────────
+    # Sólo los módulos de DI de las apps COMPLETADAS. El orden importa: las
+    # dependencias se registran antes que sus dependientes
+    # (`usuarios` → `pagos` → `commerce`); `eventos` es independiente.
+    # Ningún módulo de un dominio inacabado se registra: su wiring no existe.
     "INJECTOR_MODULES": [
-        # modules.pagos.di.PagosModule disabled — pagos app disabled in Fase 1
+        "modules.usuarios.di.UsuariosModule",
+        "modules.eventos.di.EventosModule",
+        "modules.pagos.di.PagosModule",
+        "modules.commerce.di.CommerceModule",
+        # DOM-01 (A0-01) · DOM-04 (A0-02): sólo los módulos de DI de apps
+        # COMPLETADAS. El orden mantiene las dependencias delante de sus
+        # dependientes (`usuarios` → `pagos` → `commerce`).
+        "modules.salesianos_fest.di.SalesianosFestModule",
+        "modules.marketplace.di.MarketplaceModule",
     ]
 }
 

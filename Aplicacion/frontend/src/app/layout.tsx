@@ -3,8 +3,7 @@ import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import Providers from "@/providers/ReactQueryProvider";
+import { AppProviders } from "@/providers/AppProviders";
 
 /**
  * Izipay Web Core 2.0 SDK — loaded once, before page becomes interactive.
@@ -28,6 +27,7 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://salesianosfest.pe",
@@ -63,10 +63,10 @@ export default function RootLayout({
         )}
       </head>
       <body className="h-full antialiased" suppressHydrationWarning>
-        <Providers>
-          <TooltipProvider>{children}</TooltipProvider>
-          <Toaster />
-        </Providers>
+        <AppProviders>
+          {children}
+          <Toaster position="bottom-right" richColors closeButton />
+        </AppProviders>
       </body>
     </html>
   );

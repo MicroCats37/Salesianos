@@ -30,7 +30,11 @@ function maybeToastSuccess(
 ): void {
   if (!showSuccessToast) return;
   const envelope = response.data as { message?: string } | null;
-  if (envelope && typeof envelope.message === "string" && envelope.message.length > 0) {
+  if (
+    envelope &&
+    typeof envelope.message === "string" &&
+    envelope.message.length > 0
+  ) {
     notify.success(envelope.message);
   }
 }
@@ -126,7 +130,9 @@ export function useApiUpdate<TData, TVariables>(
             data: payload,
           });
           maybeToastSuccess(response, showSuccessToast);
-          return schema ? schema.parse(response.data) : (response.data as TData);
+          return schema
+            ? schema.parse(response.data)
+            : (response.data as TData);
         } catch (error) {
           const apiError = handleApiError(error);
           if (showToast) notify.error(apiError.message);

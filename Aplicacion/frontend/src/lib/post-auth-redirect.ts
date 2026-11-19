@@ -1,6 +1,12 @@
 "use client";
 
-import { POST_AUTH_REDIRECT_KEY } from "@/components/event/PreinscribirCta";
+/**
+ * The sessionStorage key that holds the destination to reach after signing in.
+ *
+ * It lived in the `PreinscribirCta` component, which the rebuild replaced;
+ * the key belongs to the redirect contract, not to a piece of presentation.
+ */
+export const POST_AUTH_REDIRECT_KEY = "salesianos-post-auth-redirect";
 
 /**
  * Consume the post-auth redirect destination previously stashed in

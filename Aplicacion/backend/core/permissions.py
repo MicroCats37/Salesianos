@@ -21,11 +21,28 @@ and no migration is required.
 Contract: `contract/api-wrapper-presenter-contract.md` §8 — the public message
 of a denial comes from the global error catalog in `core/exceptions.py`, never
 from the permission class.
+
+Authority of 401 vs 403 (FREEZE-ENV-1.0.0 · FR-01 §4.4):
+
+    401 AUTHENTICATION_REQUIRED — el actor NO está autenticado.
+    403 ACTION_NOT_ALLOWED      — el actor está autenticado y NO tiene permiso.
+
+La autenticación se resuelve ANTES que la autorización: la API declara
+`auth=JWTAuth()` (`config/api.py`), así que un cliente anónimo recibe 401 y
+nunca llega a la comprobación de permisos. Una ruta pública que además exige
+un permiso (`auth=None` + `permissions=[...]`) responde 403, porque en ese
+caso la autenticación nunca se exigió.
 """
 from typing import Any
 
 from django.http import HttpRequest
-from ninja_extra.permissions import BasePermission
+from ninja_extra.permissions import (
+    AllowAny,
+    BasePermission,
+    IsAuthenticated,
+    IsAuthenticatedOrReadOnly,
+    IsAdminUser,
+)
 
 from core.capacidades import (
     CAP_ACREDITACIONES_ESCRIBIR,
@@ -185,6 +202,10 @@ class RequirePromoverSuperusuario(RequireCapability):
 
 __all__ = [
     "SystemPermissions",
+    "AllowAny",
+    "IsAuthenticated",
+    "IsAuthenticatedOrReadOnly",
+    "IsAdminUser",
     "RequireAdmin",
     "RequireCapability",
     "RequireAdminVer",

@@ -39,10 +39,7 @@ export const InputText: React.FC<InputComponentProps> = ({
       maxLength={field.maxLength}
       inputMode={field.inputMode}
       pattern={field.pattern}
-      className={cn(
-        hasIcon ? "pl-10" : "",
-        field.className || "",
-      )}
+      className={cn(hasIcon ? "pl-10" : "", field.className || "")}
       {...register(field.name, registerOptions)}
     />
   );

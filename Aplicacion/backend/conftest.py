@@ -41,7 +41,25 @@ def client(db):
     return Client()
 
 
-# ── Ninja-style TestClient fixtures (opcional para tests más controlados) ──
+# ── Clientes de prueba HTTP (FREEZE-TC-1.0.0) ───────────────────────────────
+#
+# FREEZE-TC-1.0.0 (evidence/contracts/FR-01 §7.2) fija el cliente por tipo de
+# controller:
+#
+#   controller `async def` (regla por defecto del proyecto)
+#       → ninja_extra.testing.TestAsyncClient(api)
+#   controller `def` síncrono
+#       → ninja_extra.testing.TestClient(api)  (o ninja.testing.TestClient)
+#
+# PROHIBIDO, sin excepción, contra un controller `async def`:
+# `ninja.testing.TestClient` y `ninja_extra.testing.TestClient`. El primero
+# además es incompatible con `NinjaExtraAPI` (`build_routers`). La alternativa
+# síncrona permitida para controllers async es `django.test.Client`.
+#
+# La deuda documentada (GOV-01-OPEN-01): el texto de
+# `contract/TEST_ARCHITECTURE_CONTRACT.md` §2 y §10.5 sigue mandando el cliente
+# síncrono; su enmienda corresponde a GAP-2 (A0 + producto) y NO se modifica
+# `contract/**` desde aquí.
 
 def _get_ninja_api():
     """Obtiene la instancia de NinjaExtraAPI para usar en tests."""
@@ -62,13 +80,13 @@ def _get_override_dict():
 
 @pytest.fixture
 def test_sync_client(db):
-    """Ninja TestClient sin autenticación.
+    """Cliente Django (síncrono) sin autenticación.
 
-    Útil para tests que quieren el cliente de Ninja (no Django test Client).
+    Es la alternativa síncrona PERMITIDA por FREEZE-TC-1.0.0 para controllers
+    `async def`: maneja las corrutinas internamente.
     """
-    from ninja.testing import TestClient
-    api = _get_ninja_api()
-    return TestClient(api)
+    from django.test import Client
+    return Client()
 
 
 @pytest.fixture
@@ -79,10 +97,10 @@ def api():
 
 @pytest.fixture
 def test_async_client(db):
-    """Ninja TestAsyncClient sin autenticación.
+    """Cliente asíncrono OBLIGATORIO para controllers `async def`.
 
-    Para tests async del módulo finanzas.
+    `ninja_extra.testing.TestAsyncClient` espera la corrutina del controller;
+    `ninja.testing.TestAsyncClient` no es el cliente que fija FREEZE-TC-1.0.0.
     """
-    from ninja.testing import TestAsyncClient
-    api = _get_ninja_api()
-    return TestAsyncClient(api)
+    from ninja_extra.testing import TestAsyncClient
+    return TestAsyncClient(_get_ninja_api())

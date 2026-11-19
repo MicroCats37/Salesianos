@@ -1,3 +1,28 @@
+"""Public error catalog and the single HTTP error translation point.
+
+Freeze: `FREEZE-ENV-1.0.0`
+Evidence: `Aplicacion/task/salesianos-fest-rebuild/evidence/contracts/FR-01-envelope-error-pagination.md`
+Contract: `contract/api-wrapper-presenter-contract.md` §8 ·
+         `contract/django-app-architecture-contract.md` §10 (Exceptions)
+
+Ownership (A0, paquete FND-01): this module is the ONLY place that turns an
+exception into an HTTP response. Controllers never build error responses.
+
+Two invariants travel with this module:
+
+1. **The public message always comes from the catalog.** A domain exception
+   declares a stable machine-readable `code`; the public Spanish prose lives in
+   `PUBLIC_ERROR_MESSAGES`. A code that is not in the catalog falls back to a
+   generic message derived from the HTTP status — never to `str(exc)`.
+2. **Raw exception text never reaches the client.** UUIDs, internal ids,
+   request ids, SQL constraints, traces, filesystem paths, provider payloads,
+   credentials and raw exception messages are logged server-side and never
+   serialized into the response.
+
+Field-level errors travel in `error.field_errors` (the ONLY field-error
+channel). `error.details` carries non-field context only.
+"""
+
 import logging
 from django.db import IntegrityError
 from django.core.exceptions import (
@@ -16,7 +41,7 @@ from ninja_extra.exceptions import (
 )
 from pydantic import ValidationError as PydanticValidationError
 from django.http import HttpRequest
-from .utils import format_errors, humanize_validation_errors
+from .utils import humanize_validation_errors
 from .responses import error_response
 
 # Configuración del logger para errores internos inesperados
@@ -32,6 +57,71 @@ logger = logging.getLogger(__name__)
 # secretos ni texto crudo de excepciones: el detalle técnico se queda en los
 # logs del servidor.
 PUBLIC_ERROR_MESSAGES = {
+    # ── Transversales del contrato de wrappers (§8) ─────────────────────────
+    # Categorías HTTP congeladas en FR-01 §4.4. Son el fallback de cualquier
+    # excepción cuyo código no esté en el catálogo: el mensaje es genérico
+    # pero SIEMPRE es prosa pública segura.
+    "AUTHENTICATION_REQUIRED": (
+        "Debes iniciar sesión para acceder a este recurso."
+    ),
+    "AUTH_ERROR": (
+        "No se pudieron validar las credenciales."
+    ),
+    "ACTION_NOT_ALLOWED": (
+        "No tienes autorización para realizar esta acción."
+    ),
+    "PERMISSION_DENIED": (
+        "No tienes autorización para realizar esta acción."
+    ),
+    "ADMIN_REQUIRED": (
+        "Esta acción está reservada para los administradores del evento."
+    ),
+    "RESOURCE_NOT_FOUND": (
+        "No se encontró el recurso solicitado."
+    ),
+    "NOT_FOUND": (
+        "No se encontró el recurso solicitado."
+    ),
+    "CIP_NOT_FOUND": (
+        "No se encontró la información solicitada."
+    ),
+    "VALIDATION_ERROR": (
+        "La solicitud no es válida."
+    ),
+    "INVALID_REQUEST": (
+        "La solicitud contiene parámetros no válidos."
+    ),
+    "BUSINESS_ERROR": (
+        "La solicitud no es válida."
+    ),
+    "CONFLICT": (
+        "Conflicto con el estado actual del recurso."
+    ),
+    "INTERNAL_ERROR": (
+        "Ocurrió un error inesperado. Inténtalo nuevamente."
+    ),
+    # ── Multimedia (FREEZE-MD-1.0.0 · FR-06 §2.3, §2.4) ───────────────────
+    # Códigos estables del contrato de media. La firma de contenido que no
+    # corresponde al MIME declarado se rechaza con MEDIA_TIPO_NO_PERMITIDO
+    # (FR-06 §2.3), no con un código propio.
+    "MEDIA_TIPO_NO_PERMITIDO": (
+        "El tipo de archivo enviado no está permitido."
+    ),
+    "MEDIA_TAMANO_EXCEDIDO": (
+        "El archivo enviado excede el tamaño permitido."
+    ),
+    "MEDIA_TOKEN_NO_RESUELTO": (
+        "La referencia de archivo no se encontró en la petición."
+    ),
+    "MEDIA_ARCHIVO_HUERFANO": (
+        "La petición incluye archivos que no fueron referenciados."
+    ),
+    "MEDIA_TOKEN_DUPLICADO": (
+        "La petición incluye archivos duplicados."
+    ),
+    "MEDIA_DIMENSIONES_INVALIDAS": (
+        "Las dimensiones del archivo enviado no están permitidas."
+    ),
     # ── Pagos / Izipay ─────────────────────────────────────────────────────────
     "PAGO_NO_AUTORIZADO": (
         "No tiene autorización para realizar esta acción."
@@ -94,21 +184,6 @@ PUBLIC_ERROR_MESSAGES = {
     "GENERO_NO_PERMITIDO": (
         "La disciplina seleccionada no es compatible con el género de la persona."
     ),
-    # ── Autenticación / autorización ─────────────────────────────────────────
-    # Categorías transversales del contrato de wrappers (§8). Los mensajes son
-    # prosa fija: nunca interpolan ids, UUIDs ni texto crudo de excepciones.
-    "AUTHENTICATION_REQUIRED": (
-        "Debes iniciar sesión para acceder a este recurso."
-    ),
-    "ACTION_NOT_ALLOWED": (
-        "No tienes autorización para realizar esta acción."
-    ),
-    "ADMIN_REQUIRED": (
-        "Esta acción está reservada para los administradores del evento."
-    ),
-    "RESOURCE_NOT_FOUND": (
-        "No se encontró el recurso solicitado."
-    ),
     # ── Identidad / personas ──────────────────────────────────────────────────
     # 404 — el documento consultado NO corresponde a una `Persona` registrada.
     # El mensaje no confirma ni desmiente datos de cuentas, contactos ni
@@ -120,13 +195,6 @@ PUBLIC_ERROR_MESSAGES = {
     # cerrado del módulo de identidad (DNI, CE, PAS).
     "TIPO_DOCUMENTO_INVALIDO": (
         "El tipo de documento no es válido."
-    ),
-    # ── Petición inválida (parámetros de consulta) ───────────────────────────
-    # Categoría "Validation" (422). Cubre los rechazos del contrato de
-    # paginación/ordenamiento del área de administración: `ordering` fuera de
-    # la lista blanca, `page`/`page_size` con valores no numéricos, etc.
-    "INVALID_REQUEST": (
-        "La solicitud contiene parámetros no válidos."
     ),
     # ── Evento activo ausente (404) ─────────────────────────────────────────
     # El área de administración opera SIEMPRE sobre el evento activo del
@@ -250,11 +318,342 @@ PUBLIC_ERROR_MESSAGES = {
     "PASE_CANCELACION_REQUIERE_ADMINISTRACION": (
         "La cancelación de una compra de pases la realiza un administrador."
     ),
+    # ── Alcance de edición (FND-02 · FREEZE-ED-1.0.0) ───────────────────────
+    # A0-01 del paquete FND-02. Los códigos ya viajan estables en `error.code`;
+    # aquí sólo se les da la prosa pública segura. Ninguna de estas prosa
+    # interpola slugs, UUIDs, nombres ni años: la lista de candidatas de
+    # `EDICION_AMBIGUA` viaja en la excepción del dominio (`candidatas`), no
+    # en el texto público (decisión `D-FND-02-08`, ver la evidencia de FND-01).
+    # 404 — no existe / no se puede resolver la edición pedida.
+    "EDICION_NO_ENCONTRADA": (
+        "No se encontró la edición solicitada."
+    ),
+    "EDICION_NO_PUBLICADA": (
+        "La edición solicitada no está publicada."
+    ),
+    "EDICION_NO_RESUELTA": (
+        "No se pudo resolver una edición para el alcance solicitado."
+    ),
+    "EVENTO_NO_ENCONTRADO": (
+        "No se encontró el evento solicitado."
+    ),
+    # 409 — conflicto de negocio con la edición.
+    "EDICION_AMBIGUA": (
+        "Hay más de una edición posible para el alcance solicitado."
+    ),
+    "EDICION_SLUG_DUPLICADO": (
+        "Ya existe una edición con ese identificador en el evento."
+    ),
+    "EDICION_PUBLICADA_DUPLICADA": (
+        "El evento ya tiene una edición publicada."
+    ),
+    "MODULO_NO_HABILITADO": (
+        "Esta funcionalidad no está habilitada en la edición."
+    ),
+    # ── Identidad / fuente externa (FND-03 · FREEZE-ID-1.0.0) ───────────────
+    # A0-01 del paquete FND-03. 503/504 son RECUPERABLES: el cliente puede
+    # reintentar. El mensaje nunca dice si el documento existe.
+    "FUENTE_EXTERNA_NO_DISPONIBLE": (
+        "La fuente externa de documentos no está disponible. Inténtalo nuevamente."
+    ),
+    "FUENTE_EXTERNA_TIMEOUT": (
+        "La fuente externa de documentos no respondió a tiempo. Inténtalo nuevamente."
+    ),
+    # 422 — la fuente externa no devolvió datos suficientes.
+    "PERSONA_DATOS_INCOMPLETOS": (
+        "La fuente externa no devolvió datos suficientes para esa identidad."
+    ),
+    # 409 — el documento ya está vinculado a una cuenta.
+    "PERSONA_DUPLICADA": (
+        "Ese documento ya está vinculado a una cuenta."
+    ),
+    # ── Idempotencia y confirmación de pago (FND-04 · FREEZE-CM-1.0.0) ──────
+    # A0-04 del paquete FND-04. 409 — la clave identifica UNA intención: reused
+    # con otro payload es un error del cliente, no una repetición tolerada.
+    "IDEMPOTENCY_KEY_REUTILIZADA": (
+        "La clave de idempotencia ya se usó con una operación diferente."
+    ),
+    "IDEMPOTENCY_KEY_INVALIDA": (
+        "La clave de idempotencia no es válida."
+    ),
+    # 409 — la orden no admite una confirmación en su estado actual.
+    "ORDEN_PAGO_NO_PAGABLE": (
+        "La orden de pago no admite una confirmación en su estado actual."
+    ),
+    # 422 — el total declarado no coincide con el total derivado de las líneas.
+    "COMPRA_TOTAL_INCOHERENTE": (
+        "El total de la compra no coincide con sus líneas."
+    ),
+    "COMPRA_REFERENCIA_INVALIDA": (
+        "La referencia de la compra no es válida."
+    ),
+    # 404 — la compra referenciada no existe.
+    "COMPRA_NO_ENCONTRADA": (
+        "No se encontró la compra solicitada."
+    ),
+    # ── Inscripciones / catálogo de inscripción (DOM-01 · FREEZE-PS-1.0.0) ──
+    # A0-03 del paquete DOM-01. Los códigos viajan estables en `error.code`;
+    # aquí sólo se les da la prosa pública segura. Ninguna prosa interpola
+    # slugs, UUIDs, ids internos, precios ni nombres de personas.
+    # 409 — el paquete no es comprable en el alcance pedido (no existe, está
+    # retirado o no tiene precio vigente). No se inventa un precio de reserva.
+    "PAQUETE_NO_VIGENTE": (
+        "El paquete seleccionado no está disponible para esta edición."
+    ),
+    # 422 — la disciplina no pertenece a la edición o no está incluida en el
+    # paquete. El padrón NO lo elige el cliente.
+    "DISCIPLINA_NO_PERMITIDA": (
+        "La disciplina seleccionada no está permitida para este paquete."
+    ),
+    # 422 — la inscripción declara dos equipos para la misma disciplina.
+    "EQUIPO_DUPLICADO": (
+        "No puede declarar dos equipos para la misma disciplina."
+    ),
+    # 404 — la inscripción solicitada no existe.
+    "INSCRIPCION_NO_ENCONTRADA": (
+        "No se encontró la inscripción solicitada."
+    ),
+    # 403 — el actor no es el responsable de la inscripción. Ser
+    # administrador NO sustituye la titularidad.
+    "INSCRIPCION_NO_AUTORIZADA": (
+        "No tienes autorización para gestionar esta inscripción."
+    ),
+    # 422 — la cuenta autenticada no tiene una persona vinculada: una cuenta
+    # técnica no puede ser responsable de una inscripción.
+    "COMPRADOR_SIN_PERSONA": (
+        "La cuenta no tiene una persona vinculada."
+    ),
+    # ── Marketplace / catálogo de productos (DOM-04 · FREEZE-MD-1.0.0) ─────
+    # A0-06 del paquete DOM-04. Prosa FIJA propuesta por el propio paquete:
+    # no expone slugs, ids, rutas de disco ni montos.
+    # 404 — el producto no existe dentro del alcance de edición.
+    "PRODUCTO_NO_ENCONTRADO": (
+        "No se encontró el producto solicitado."
+    ),
+    # 409 — ya existe un producto con el mismo slug en la misma edición.
+    "PRODUCTO_SLUG_DUPLICADO": (
+        "Ya existe un producto con ese identificador en la edición."
+    ),
+    # 409 — el producto no está disponible para la operación solicitada.
+    "PRODUCTO_NO_DISPONIBLE": (
+        "El producto seleccionado no está disponible."
+    ),
+    # 422 — la categoría indicada pertenece a OTRA edición que el producto.
+    "PRODUCTO_CATEGORIA_INCOHERENTE": (
+        "La categoría indicada pertenece a otra edición."
+    ),
+    # 404 — la categoría de producto solicitada no existe en el alcance.
+    "CATEGORIA_PRODUCTO_NO_ENCONTRADA": (
+        "No se encontró la categoría de producto solicitada."
+    ),
+    # 409 — ya existe una categoría con el mismo slug en la misma edición.
+    "CATEGORIA_PRODUCTO_SLUG_DUPLICADO": (
+        "Ya existe una categoría con ese identificador en la edición."
+    ),
+    # 404 — la imagen indicada no pertenece al producto del alcance.
+    "PRODUCTO_IMAGEN_NO_ENCONTRADA": (
+        "No se encontró la imagen de producto solicitada."
+    ),
+    # 422 — la oferta no es coherente (precio negativo o ventana invertida).
+    "OFERTA_INVALIDA": (
+        "La oferta indicada no es válida."
+    ),
+    # 422 — la galería no es coherente (más de una imagen principal).
+    "GALERIA_INVALIDA": (
+        "La galería del producto no es válida."
+    ),
 }
+
+# Fallback genérico por status HTTP (FR-01 §4.4). Se usa cuando el código de
+# la excepción NO está en el catálogo público: la respuesta sigue siendo
+# segura y tipada, pero el mensaje es genérico y el detalle técnico queda
+# únicamente en los logs del servidor.
+GENERIC_PUBLIC_MESSAGES = {
+    400: "La solicitud no es válida.",
+    401: "Debes iniciar sesión para acceder a este recurso.",
+    403: "No tienes autorización para realizar esta acción.",
+    404: "No se encontró el recurso solicitado.",
+    405: "El método no está permitido para este recurso.",
+    409: "Conflicto con el estado actual del recurso.",
+    413: "El archivo enviado excede el tamaño permitido.",
+    415: "El tipo de contenido enviado no es compatible.",
+    422: "La solicitud no es válida.",
+    # 503/504 — dependencia externa no disponible o lenta: el mensaje es
+    # genérico y recuperable, nunca dice qué dependencia falló (A0-05, FND-04).
+    503: "Un servicio externo no está disponible. Inténtalo nuevamente.",
+    504: "Un servicio externo no respondió a tiempo. Inténtalo nuevamente.",
+    500: "Ocurrió un error inesperado. Inténtalo nuevamente.",
+}
+
+# Mensaje genérico para un error de campo cuyo texto original no se puede
+# exponer de forma segura.
+GENERIC_FIELD_MESSAGE = "Revisa el valor de este campo."
+
+# Códigos de error de campo derivados de los tipos de error de Pydantic.
+FIELD_ERROR_CODES = {
+    "missing": "REQUIRED",
+    "extra_forbidden": "UNEXPECTED_FIELD",
+}
+
+# Códigos de error de Django traducidos a prosa pública segura. El mensaje
+# original de Django puede interpolar el valor que falló, así que NUNCA se
+# expone: se usa el código del error para elegir una prosa fija.
+DJANGO_VALIDATION_MESSAGES = {
+    "required": "Este campo es obligatorio.",
+    "null": "Este campo no admite un valor vacío.",
+    "blank": "Este campo es obligatorio.",
+    "unique": "Ya existe un registro con este valor.",
+    "unique_together": "Ya existe un registro con esta combinación de valores.",
+    "invalid_choice": "El valor seleccionado no es válido.",
+    "invalid": "El valor indicado no es válido.",
+    "min_value": "El valor indicado es menor al permitido.",
+    "max_value": "El valor indicado es mayor al permitido.",
+    "min_length": "El texto indicado es más corto de lo permitido.",
+    "max_length": "El texto indicado es más largo de lo permitido.",
+}
+
+# Prefijos de ubicación que Pydantic/Ninja anteponen al `loc` de un error.
+# Se descartan para que la ruta del campo sea la del payload (FR-01 §4.2).
+_LOCATION_PREFIXES = ("body", "query", "path", "header", "cookie", "files")
+
+
+# ── Helpers de traducción (A0) ───────────────────────────────────────────────
+
+
+def public_message_for(code: str, status: int) -> str:
+    """The public message for a stable error code.
+
+    Never returns raw exception text: the catalog wins, and a code that is not
+    catalogued falls back to the generic message of the HTTP status.
+    """
+    message = PUBLIC_ERROR_MESSAGES.get(code)
+    if message:
+        return message
+    return GENERIC_PUBLIC_MESSAGES.get(status, GENERIC_PUBLIC_MESSAGES[500])
+
+
+def _field_path(loc) -> str:
+    """Build the dotted field path of a validation error.
+
+    `beneficiarios.0.documento` — the location prefix (`body`, `query`, …) is
+    dropped because it describes the transport, not the payload.
+    """
+    parts = [str(part) for part in (loc or ()) if part is not None]
+    if parts and parts[0] in _LOCATION_PREFIXES:
+        parts = parts[1:]
+    if not parts:
+        return "non_field_errors"
+    return ".".join(parts)
+
+
+def field_errors_from_pydantic(errors: list) -> list[dict]:
+    """Convert Pydantic errors into the frozen `field_errors` shape.
+
+    The `input` value is never requested (`include_input=False` upstream), so
+    no user value can be echoed back.
+    """
+    entries: list[dict] = []
+    for error in errors or []:
+        if not isinstance(error, dict):
+            continue
+        path = _field_path(error.get("loc"))
+        if path == "non_field_errors":
+            continue
+        entries.append(
+            {
+                "field": path,
+                "code": FIELD_ERROR_CODES.get(error.get("type"), "INVALID_VALUE"),
+                "message": str(error.get("msg") or GENERIC_FIELD_MESSAGE),
+            }
+        )
+    return entries
+
+
+def field_errors_from_django(exc: DjangoValidationError) -> list[dict]:
+    """Convert a Django `ValidationError` into the frozen `field_errors` shape.
+
+    Django interpolates the offending value into its default messages, so the
+    original text is never exposed: the public message is chosen from the
+    error CODE.
+    """
+    entries: list[dict] = []
+    error_dict = getattr(exc, "error_dict", None)
+    if not error_dict:
+        return entries
+    for field, errors in error_dict.items():
+        for error in errors:
+            code = getattr(error, "code", None)
+            entries.append(
+                {
+                    "field": str(field),
+                    "code": str(code) if code else "INVALID_VALUE",
+                    "message": DJANGO_VALIDATION_MESSAGES.get(
+                        code, GENERIC_FIELD_MESSAGE
+                    ),
+                }
+            )
+    return entries
+
+
+def _split_details(details: dict | None) -> tuple[dict | None, list[dict]]:
+    """Split a flat `{field: message}` mapping into (details, field_errors).
+
+    `non_field_errors` stays in `details`; every other key becomes a field
+    error. This is the conversion FR-01 §4.2 assigns to the error boundary.
+    """
+    if not details:
+        return None, []
+
+    non_field = details.get("non_field_errors")
+    remaining = {k: v for k, v in details.items() if k != "non_field_errors"}
+
+    details_out = {"non_field_errors": non_field} if non_field else None
+    field_errors = [
+        {
+            "field": str(key),
+            "code": "INVALID_VALUE",
+            "message": str(value),
+        }
+        for key, value in remaining.items()
+    ]
+    return details_out, field_errors
+
+
+def _safe_field_errors_from_mapping(message) -> list[dict]:
+    """Field errors for an `HttpError` whose message is a mapping or a list.
+
+    Used when the exception code is NOT catalogued: the per-field prose is
+    replaced by the generic safe message so nothing authored ad-hoc escapes.
+    """
+    entries: list[dict] = []
+    if isinstance(message, dict):
+        for key, value in message.items():
+            if key == "non_field_errors":
+                continue
+            entries.append(
+                {"field": str(key), "code": "INVALID_VALUE", "message": GENERIC_FIELD_MESSAGE}
+            )
+    elif isinstance(message, list):
+        for item in message:
+            if isinstance(item, dict):
+                field = item.get("loc") or item.get("field")
+                entries.append(
+                    {
+                        "field": _field_path(field if isinstance(field, (list, tuple)) else None),
+                        "code": str(item.get("type") or "INVALID_VALUE"),
+                        "message": GENERIC_FIELD_MESSAGE,
+                    }
+                )
+    return entries
 
 
 class NotFoundError(HttpError):
-    """Excepción para recursos no encontrados (404)."""
+    """Excepción para recursos no encontrados (404).
+
+    El texto que se construye aquí es SOLO técnico: la respuesta pública la
+    decide el catálogo a partir de `code`. `resource` y `detail` nunca salen
+    al cliente.
+    """
 
     code: str = "NOT_FOUND"
 
@@ -341,7 +740,6 @@ class UnprocessableEntityError(HttpError):
         super().__init__(422, message)
 
 
-
 class CipNotFoundError(HttpError):
     """Excepción cuando un CIP no es encontrado en la API externa (404)."""
 
@@ -350,6 +748,70 @@ class CipNotFoundError(HttpError):
     def __init__(self, cip: str):
         self.code = self.code
         super().__init__(404, f"CIP {cip} no encontrado")
+
+
+# ── Multimedia (FREEZE-MD-1.0.0) ─────────────────────────────────────────────
+
+
+class MediaValidationError(HttpError):
+    """Base de los errores de validación de multimedia (FR-06 §2.3, §2.4).
+
+    El código público sale del catálogo; el detalle técnico (bytes leídos,
+    nombre declarado, motivo exacto del rechazo) queda en los logs.
+    """
+
+    code: str = "MEDIA_TIPO_NO_PERMITIDO"
+    status: int = 400
+
+    def __init__(self, code: str | None = None, status: int | None = None):
+        self.code = code or self.code
+        self.status = status or self.status
+        super().__init__(
+            self.status,
+            public_message_for(self.code, self.status),
+        )
+
+
+class MediaTipoNoPermitidoError(MediaValidationError):
+    """MIME fuera de la allowlist o con firma de contenido que no corresponde."""
+
+    code = "MEDIA_TIPO_NO_PERMITIDO"
+    status = 400
+
+
+class MediaTamanoExcedidoError(MediaValidationError):
+    """El archivo supera el tamaño máximo permitido."""
+
+    code = "MEDIA_TAMANO_EXCEDIDO"
+    status = 413
+
+
+class MediaTokenNoResueltoError(MediaValidationError):
+    """El payload referencia un token de archivo que no llegó en la petición."""
+
+    code = "MEDIA_TOKEN_NO_RESUELTO"
+    status = 400
+
+
+class MediaArchivoHuerfanoError(MediaValidationError):
+    """La petición incluye un archivo que ningún campo del payload referencia."""
+
+    code = "MEDIA_ARCHIVO_HUERFANO"
+    status = 400
+
+
+class MediaTokenDuplicadoError(MediaValidationError):
+    """Dos archivos declaran el mismo token, o el token se repite en el payload."""
+
+    code = "MEDIA_TOKEN_DUPLICADO"
+    status = 400
+
+
+class MediaDimensionesInvalidasError(MediaValidationError):
+    """Las dimensiones del archivo están fuera de los límites configurados."""
+
+    code = "MEDIA_DIMENSIONES_INVALIDAS"
+    status = 400
 
 
 # --- 2. Registro de Manejadores Globales ---
@@ -363,10 +825,11 @@ def register_exception_handlers(api):
     @api.exception_handler(ObjectDoesNotExist)
     def on_object_not_found(request: HttpRequest, exc: ObjectDoesNotExist):
         """Maneja cualquier .get() de Django que no encuentre resultados."""
-        details = {"non_field_errors": "No se pudo encontrar el objeto solicitado."}
+        public_message = public_message_for("RESOURCE_NOT_FOUND", 404)
+        details = {"non_field_errors": public_message}
         body, status = error_response(
-            code="NOT_FOUND",
-            message=humanize_validation_errors(details),
+            code="RESOURCE_NOT_FOUND",
+            message=public_message,
             details=details,
             status=404,
         )
@@ -375,12 +838,11 @@ def register_exception_handlers(api):
     @api.exception_handler(PermissionDenied)
     def on_permission_denied(request: HttpRequest, exc: PermissionDenied):
         """Maneja errores de permisos (403)."""
-        details = {
-            "non_field_errors": "No tienes autorización para realizar esta acción."
-        }
+        public_message = public_message_for("ACTION_NOT_ALLOWED", 403)
+        details = {"non_field_errors": public_message}
         body, status = error_response(
-            code="PERMISSION_DENIED",
-            message=humanize_validation_errors(details),
+            code="ACTION_NOT_ALLOWED",
+            message=public_message,
             details=details,
             status=403,
         )
@@ -397,7 +859,7 @@ def register_exception_handlers(api):
         El mensaje público sale del catálogo; el detalle técnico (token
         inválido, expirado, usuario inactivo) se queda en los logs.
         """
-        public_message = PUBLIC_ERROR_MESSAGES["AUTHENTICATION_REQUIRED"]
+        public_message = public_message_for("AUTHENTICATION_REQUIRED", 401)
         details = {"non_field_errors": public_message}
         body, status = error_response(
             code="AUTHENTICATION_REQUIRED",
@@ -420,7 +882,7 @@ def register_exception_handlers(api):
         nunca se escribe en los logs ni sale en la respuesta.
         """
         logger.info("Authentication failed (%s).", type(exc).__name__)
-        public_message = PUBLIC_ERROR_MESSAGES["AUTHENTICATION_REQUIRED"]
+        public_message = public_message_for("AUTHENTICATION_REQUIRED", 401)
         details = {"non_field_errors": public_message}
         body, status = error_response(
             code="AUTHENTICATION_REQUIRED",
@@ -445,7 +907,7 @@ def register_exception_handlers(api):
             request.method,
             request.path,
         )
-        public_message = PUBLIC_ERROR_MESSAGES["ACTION_NOT_ALLOWED"]
+        public_message = public_message_for("ACTION_NOT_ALLOWED", 403)
         details = {"non_field_errors": public_message}
         body, status = error_response(
             code="ACTION_NOT_ALLOWED",
@@ -461,14 +923,18 @@ def register_exception_handlers(api):
     ):
         """
         Maneja errores de validación de Pydantic (esquemas).
-        Estandariza los errores para el consumo directo por el frontend.
+
+        422 con `field_errors` como único canal de error por campo (FR-01 §4.2).
         """
-        details = format_errors(exc.errors(include_input=False))
+        raw_errors = exc.errors(include_input=False)
+        field_errors = field_errors_from_pydantic(raw_errors)
+        public_message = public_message_for("VALIDATION_ERROR", 422)
         body, status = error_response(
             code="VALIDATION_ERROR",
-            message=humanize_validation_errors(details),
-            details=details,
+            message=public_message,
+            details={"non_field_errors": public_message},
             status=422,
+            field_errors=field_errors,
         )
         return api.create_response(request, body, status=status)
 
@@ -477,66 +943,104 @@ def register_exception_handlers(api):
         """
         Maneja errores de validación en tiempo de ejecución inyectados por el router Ninja.
         """
-        details = format_errors(exc.errors)
+        field_errors = field_errors_from_pydantic(exc.errors)
+        public_message = public_message_for("VALIDATION_ERROR", 422)
         body, status = error_response(
             code="VALIDATION_ERROR",
-            message=humanize_validation_errors(details),
-            details=details,
+            message=public_message,
+            details={"non_field_errors": public_message},
             status=422,
+            field_errors=field_errors,
         )
         return api.create_response(request, body, status=status)
 
     @api.exception_handler(HttpError)
     def on_http_error(request: HttpRequest, exc: HttpError):
-        """Maneja errores explícitos del tipo HttpError o sus subclases."""
+        """Maneja errores explícitos del tipo HttpError o sus subclases.
+
+        El mensaje público sale SIEMPRE del catálogo. Cuando el código no está
+        catalogado, el mensaje es genérico según el status y el texto original
+        de la excepción queda únicamente en los logs.
+        """
         code = getattr(exc, "code", "HTTP_ERROR")
-        public_message = PUBLIC_ERROR_MESSAGES.get(code)
-        if public_message:
-            # El mensaje público sale del catálogo: la excepción nunca decide
-            # lo que el usuario ve.
+        status = exc.status_code
+        catalogued = code in PUBLIC_ERROR_MESSAGES
+
+        if catalogued:
+            public_message = public_message_for(code, status)
             details = {"non_field_errors": public_message}
-            message = public_message
+            field_errors = []
+            if isinstance(exc.message, dict):
+                details, field_errors = _split_details(exc.message)
+            elif isinstance(exc.message, list):
+                field_errors = field_errors_from_pydantic(exc.message)
         else:
-            if isinstance(exc.message, (list, dict)):
-                details = exc.message
-            else:
-                details = {"non_field_errors": exc.message}
-            message = (
-                humanize_validation_errors(details) or "Error en la petición del API."
+            logger.warning(
+                "HttpError no catalogado (code=%s status=%s) en %s %s: %s",
+                code,
+                status,
+                request.method,
+                request.path,
+                exc.message,
             )
+            public_message = public_message_for(code, status)
+            details = {"non_field_errors": public_message}
+            field_errors = _safe_field_errors_from_mapping(exc.message)
+
         body, status = error_response(
             code=code,
-            message=message,
+            message=public_message,
             details=details,
-            status=exc.status_code,
+            status=status,
+            field_errors=field_errors,
         )
         return api.create_response(request, body, status=status)
 
     @api.exception_handler(DjangoValidationError)
     def on_django_validation_error(request: HttpRequest, exc: DjangoValidationError):
-        """Maneja errores de validación internos de Django (ej: unique_together)."""
-        details = (
-            exc.message_dict
-            if hasattr(exc, "message_dict")
-            else {"non_field_errors": exc.messages}
-        )
+        """Maneja errores de validación internos de Django (ej: unique_together).
+
+        422 con `field_errors`. El texto original de Django puede interpolar
+        el valor que falló, así que la prosa pública se elige por el CÓDIGO del
+        error y el valor nunca se expone.
+        """
+        field_errors = field_errors_from_django(exc)
+        public_message = public_message_for("VALIDATION_ERROR", 422)
+        details = {"non_field_errors": public_message}
+        if not field_errors:
+            message_dict = getattr(exc, "message_dict", None)
+            if message_dict:
+                details, field_errors = _split_details(message_dict)
         body, status = error_response(
             code="VALIDATION_ERROR",
-            message=humanize_validation_errors(details) or "Error de validación interna.",
+            message=public_message,
             details=details,
-            status=400,
+            status=422,
+            field_errors=field_errors,
         )
         return api.create_response(request, body, status=status)
 
     @api.exception_handler(ValueError)
     def on_value_error(request: HttpRequest, exc: ValueError):
-        """Maneja ValueError (ej: credenciales inválidas → 401."""
-        details = {"non_field_errors": str(exc)}
+        """Maneja un `ValueError` no tipificado.
+
+        `ValueError` NO es un mecanismo de control de flujo
+        (`contract/django-app-architecture-contract.md` §10), así que su texto
+        crudo NUNCA se expone: se traduce a la categoría "Validation" (422)
+        con el mensaje del catálogo y el detalle técnico queda en el log.
+        """
+        logger.warning(
+            "ValueError no tipificado en %s %s: %s",
+            request.method,
+            request.path,
+            exc,
+        )
+        public_message = public_message_for("VALIDATION_ERROR", 422)
         body, status = error_response(
-            code="AUTH_ERROR",
-            message=str(exc),
-            details=details,
-            status=401,
+            code="VALIDATION_ERROR",
+            message=public_message,
+            details={"non_field_errors": public_message},
+            status=422,
         )
         return api.create_response(request, body, status=status)
 
@@ -551,12 +1055,11 @@ def register_exception_handlers(api):
         por un flujo — la registramos en logs sin volcar traceback a stderr.
         """
         logger.exception("Unhandled IntegrityError: %s", exc)
-        details = {
-            "non_field_errors": "Un campo único ya existe o hay una violación de integridad."
-        }
+        public_message = public_message_for("CONFLICT", 409)
+        details = {"non_field_errors": public_message}
         body, status = error_response(
             code="CONFLICT",
-            message=humanize_validation_errors(details),
+            message=public_message,
             details=details,
             status=409,
         )
@@ -564,11 +1067,43 @@ def register_exception_handlers(api):
 
     @api.exception_handler(Exception)
     def on_unhandled_exception(request: HttpRequest, exc: Exception):
-        """Atrapa-todo para errores inesperados del servidor (500)."""
+        """Atrapa-todo para errores inesperados del servidor (500).
+
+        El detalle técnico (traza, mensaje crudo) se queda en el log. La
+        respuesta es un mensaje genérico del catálogo (`INTERNAL_ERROR`).
+        """
         logger.exception("Unhandled exception: %s", exc)
+        public_message = public_message_for("INTERNAL_ERROR", 500)
         body, status = error_response(
             code="INTERNAL_ERROR",
-            message="An unexpected error occurred",
+            message=public_message,
             status=500,
         )
         return api.create_response(request, body, status=status)
+
+
+__all__ = [
+    "ADMIN_REQUIRED",
+    "ACTION_NOT_ALLOWED",
+    "AUTHENTICATION_REQUIRED",
+    "GENERIC_PUBLIC_MESSAGES",
+    "PUBLIC_ERROR_MESSAGES",
+    "AdminRequiredError",
+    "BusinessError",
+    "ConflictError",
+    "CipNotFoundError",
+    "ForbiddenError",
+    "MediaArchivoHuerfanoError",
+    "MediaDimensionesInvalidasError",
+    "MediaTamanoExcedidoError",
+    "MediaTokenDuplicadoError",
+    "MediaTokenNoResueltoError",
+    "MediaTipoNoPermitidoError",
+    "MediaValidationError",
+    "NotFoundError",
+    "UnprocessableEntityError",
+    "field_errors_from_django",
+    "field_errors_from_pydantic",
+    "public_message_for",
+    "register_exception_handlers",
+]

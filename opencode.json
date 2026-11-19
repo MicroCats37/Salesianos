@@ -4,9 +4,9 @@
     "shadcn": {
       "type": "local",
       "command": [
-        "npx",
-        "shadcn@latest",
-        "mcp"
+        "cmd.exe",
+        "/c",
+        "cd /d C:\\Users\\Usuario\\Desktop\\Aplicaciones\\CST\\Salesianos\\Aplicacion\\frontend && npx shadcn@latest mcp"
       ],
       "enabled": true
     }

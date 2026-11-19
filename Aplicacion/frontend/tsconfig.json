@@ -32,8 +32,7 @@
   ],
   "exclude": [
     "node_modules",
-    "src/features-example-app/**",
-    "src/_legacy-app-routes/**",
+    "biome_baseline_tmp/**",
     "src/components-app/**"
   ]
 }

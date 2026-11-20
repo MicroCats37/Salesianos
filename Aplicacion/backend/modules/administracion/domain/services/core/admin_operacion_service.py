@@ -558,6 +558,8 @@ class AdminOperacionService:
 
     def _fila_pago(self, compra) -> AdminPagoListItemAdminResultado:
         """La fila operativa de un pago."""
+        from modules.commerce.domain.constants import OrigenCompra
+
         orden = compra.orden_pago
         veredicto = self._veredicto_de_pago(orden)
         lote_pase = getattr(compra, "compra_de_pases", None)
@@ -581,7 +583,11 @@ class AdminOperacionService:
                 etiqueta=(
                     lote_pase.pase.nombre
                     if lote_pase is not None
-                    else "Cupos de inscripción"
+                    else (
+                        "Pedido de tienda"
+                        if compra.origen == OrigenCompra.MARKETPLACE
+                        else "Cupos de inscripción"
+                    )
                 ),
             ),
             acciones_disponibles=(

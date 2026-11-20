@@ -3,6 +3,17 @@ import { NextResponse } from "next/server";
 import { clearAuthCookies } from "@/lib/auth";
 import { RUTAS } from "@/lib/routes";
 
+function publicOrigin(request: Request): string {
+  const host = request.headers.get("x-forwarded-host");
+  const proto = request.headers.get("x-forwarded-proto");
+
+  if (host && proto) {
+    return `${proto.split(",")[0]}://${host.split(",")[0]}`;
+  }
+
+  return new URL(request.url).origin;
+}
+
 /**
  * The logout route handler.
  *
@@ -27,5 +38,5 @@ export async function POST() {
 export async function GET(request: Request) {
   await clearAuthCookies();
 
-  return NextResponse.redirect(new URL(RUTAS.auth.login, request.url));
+  return NextResponse.redirect(new URL(RUTAS.auth.login, publicOrigin(request)));
 }

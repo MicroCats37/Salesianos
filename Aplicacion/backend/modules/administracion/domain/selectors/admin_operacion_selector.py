@@ -319,7 +319,7 @@ class AdminPagoSelector:
         desde=None,
         hasta=None,
     ):
-        """Las compras de pases e inscripciones de la edición."""
+        """Las compras de pases, inscripciones y marketplace de la edición."""
         queryset = self._de_edicion(edicion_id)
 
         if q:
@@ -381,18 +381,27 @@ class AdminPagoSelector:
                 origen=OrigenCompra.INSCRIPCION,
             ) & referencias_inscripcion
 
+        alcance |= Q(
+            origen=OrigenCompra.MARKETPLACE,
+            pedidos_marketplace__edicion_id=edicion_id,
+        )
+
         return Compra.objects.filter(alcance).select_related(
             "orden_pago",
             "persona",
             "compra_de_pases__pase",
-        )
+        ).distinct()
 
     def obtener(self, compra_id):
         """La compra comercial publicada por el panel, o `None`."""
         return (
             Compra.objects.filter(
                 id=compra_id,
-                origen__in=[OrigenCompra.INSCRIPCION, OrigenCompra.PASE],
+                origen__in=[
+                    OrigenCompra.INSCRIPCION,
+                    OrigenCompra.PASE,
+                    OrigenCompra.MARKETPLACE,
+                ],
             )
             .select_related(
                 "orden_pago",
@@ -407,7 +416,11 @@ class AdminPagoSelector:
         return (
             Compra.objects.filter(
                 orden_pago_id=orden_pago_id,
-                origen__in=[OrigenCompra.INSCRIPCION, OrigenCompra.PASE],
+                origen__in=[
+                    OrigenCompra.INSCRIPCION,
+                    OrigenCompra.PASE,
+                    OrigenCompra.MARKETPLACE,
+                ],
             )
             .select_related(
                 "orden_pago",

@@ -4,10 +4,7 @@ import { ShieldCheck, UserPlus, UserRoundCheck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  ModalAgregarParticipante,
-  useAgregarParticipanteEquipo,
-} from "@/features/admin/asistido";
+import { ModalAgregarParticipante } from "@/features/admin/asistido";
 import {
   AdminEmptyState,
   AdminNotice,
@@ -119,7 +116,6 @@ export function EquipoAdminDetalleView({
  */
 function DetalleEquipo({ datos }: { datos: AdminEquipoDetalleOut }) {
   const [modalAgregar, setModalAgregar] = useState(false);
-  const agregar = useAgregarParticipanteEquipo();
 
   const accionesVisibles = ACCIONES.filter((accion) =>
     datos.acciones_disponibles.includes(accion.codigo),
@@ -236,24 +232,17 @@ function DetalleEquipo({ datos }: { datos: AdminEquipoDetalleOut }) {
         />
       </AdminPanel>
 
-      <ModalAgregarParticipante
-        open={modalAgregar}
-        onOpenChange={setModalAgregar}
-        equipoNombre={datos.nombre}
-        agregando={agregar.isPending}
-        onAgregar={async (datosFormulario) => {
-          await agregar.mutateAsync({
-            equipoId: datos.id,
-            payload: {
-              tipo_documento: datosFormulario.tipo_documento,
-              numero_documento: datosFormulario.numero_documento,
-              rol: datosFormulario.rol,
-              motivo: datosFormulario.motivo,
-            },
-          });
-          setModalAgregar(false);
-        }}
-      />
+      {modalAgregar ? (
+        <ModalAgregarParticipante
+          open
+          onOpenChange={(abierto) => {
+            if (!abierto) setModalAgregar(false);
+          }}
+          equipoId={datos.id}
+          equipoNombre={datos.nombre}
+          onAgregado={() => setModalAgregar(false)}
+        />
+      ) : null}
     </div>
   );
 }

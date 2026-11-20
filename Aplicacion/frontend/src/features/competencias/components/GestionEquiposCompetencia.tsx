@@ -52,9 +52,10 @@ export function GestionEquiposCompetencia({
   const elegibles = useEquiposElegibles(competenciaId);
   const incorporar = useIncorporarEquipo();
   const editar = useEditarEquipo();
-  const opciones = (elegibles.data ?? [])
-    .filter((equipo) => equipo.es_elegible)
-    .map((equipo) => ({ value: equipo.equipo_id, label: equipo.nombre }));
+  const opciones = (elegibles.data ?? []).map((equipo) => ({
+    value: equipo.equipo_id,
+    label: equipo.nombre,
+  }));
 
   return (
     <section className="flex flex-col gap-3">
@@ -62,7 +63,7 @@ export function GestionEquiposCompetencia({
         <p className="text-sm text-muted-foreground">
           {bloqueado
             ? "El cuadro ya fue generado; el orden se conserva como historial operativo."
-            : "Selecciona sólo equipos elegibles y define su orden antes de generar el cuadro."}
+            : "Selecciona un equipo y define su orden antes de generar el cuadro."}
         </p>
         <Button
           type="button"

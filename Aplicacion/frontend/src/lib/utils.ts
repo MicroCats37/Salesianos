@@ -10,7 +10,10 @@ export function resolveImageUrl(path: string | null | undefined): string {
   if (path.startsWith("http")) return path;
   // API requests use the `/api` prefix, while uploaded media is served by Django
   // outside that namespace.
-  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api\/?$/, "");
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "").replace(
+    /\/(?:api|backend)\/?$/,
+    "",
+  );
   return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
 }
 

@@ -81,15 +81,17 @@ export function PanelPlantillaEquipo({
         }
       />
 
-      <DialogoRetirarParticipante
-        abierto={retirada !== null}
-        onAbiertoChange={(abierto) => {
-          if (!abierto) setRetirada(null);
-        }}
-        nombreParticipante={participanteRetirado?.nombre ?? "esta persona"}
-        inscripcionId={inscripcionId}
-        participacionId={retirada ?? undefined}
-      />
+      {retirada !== null ? (
+        <DialogoRetirarParticipante
+          abierto
+          onAbiertoChange={(abierto) => {
+            if (!abierto) setRetirada(null);
+          }}
+          nombreParticipante={participanteRetirado?.nombre ?? "esta persona"}
+          inscripcionId={inscripcionId}
+          participacionId={retirada}
+        />
+      ) : null}
     </div>
   );
 }

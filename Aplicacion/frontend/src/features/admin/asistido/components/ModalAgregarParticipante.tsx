@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AppFormModal } from "@/components-app/forms/AppFormModal";
+import { useAgregarParticipanteEquipo } from "../hooks/useAsistidoAdmin";
 import {
-  type AgregarParticipanteFormData,
   agregarParticipanteFormSchema,
+  type AgregarParticipanteFormData,
 } from "../schemas/asistido.schema";
 
 export interface ModalAgregarParticipanteProps {
@@ -25,12 +26,12 @@ export interface ModalAgregarParticipanteProps {
   open: boolean;
   /** Called when the modal opens or closes. */
   onOpenChange: (open: boolean) => void;
+  /** The team the participant joins. */
+  equipoId: string;
   /** The name of the team, as the server published it. */
   equipoNombre: string;
-  /** Whether the command is running. */
-  agregando: boolean;
-  /** The command itself. */
-  onAgregar: (datos: AgregarParticipanteFormData) => Promise<unknown>;
+  /** Called when the command succeeded and the modal can close. */
+  onAgregado?: () => void;
 }
 
 const valoresIniciales: AgregarParticipanteFormData = {
@@ -59,10 +60,12 @@ const valoresIniciales: AgregarParticipanteFormData = {
 export function ModalAgregarParticipante({
   open,
   onOpenChange,
+  equipoId,
   equipoNombre,
-  agregando,
-  onAgregar,
+  onAgregado,
 }: ModalAgregarParticipanteProps) {
+  const agregar = useAgregarParticipanteEquipo();
+
   return (
     <AppFormModal<AgregarParticipanteFormData>
       open={open}
@@ -73,11 +76,23 @@ export function ModalAgregarParticipante({
       icon={<UserPlus className="size-5" aria-hidden="true" />}
       primaryLabel="Agregar al equipo"
       primaryLoadingLabel="Agregando..."
-      primaryLoading={agregando}
+      primaryLoading={agregar.isPending}
       onPrimary={() => undefined}
       schema={agregarParticipanteFormSchema}
       initialData={valoresIniciales}
-      onSubmit={onAgregar}
+      onSubmit={async (datos) => {
+        await agregar.mutateAsync({
+          equipoId,
+          payload: {
+            tipo_documento: datos.tipo_documento,
+            numero_documento: datos.numero_documento,
+            rol: datos.rol,
+            motivo: datos.motivo,
+          },
+        });
+
+        onAgregado?.();
+      }}
       showErrorsAsToasts
       size="lg"
       bodyClassName="max-h-[70vh] overflow-y-auto"

@@ -86,6 +86,8 @@ const EXCEPCIONES: { archivo: string; motivos: string[] }[] = [
       "/administracion/pagos",
       "/administracion/participantes",
       "/administracion/personas",
+      "/administracion/pases/compras-cliente",
+      "/administracion/marketplace/pedidos-cliente",
     ],
   },
 ];

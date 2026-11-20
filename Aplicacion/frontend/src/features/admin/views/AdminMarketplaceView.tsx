@@ -4,10 +4,7 @@ import { ExternalLink, Package, Plus, ShoppingCart, Store } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  ModalCompraParaCliente,
-  useComprarPedidoCliente,
-} from "@/features/admin/asistido";
+import { ModalCompraParaCliente } from "@/features/admin/asistido";
 import {
   AdminDataTable,
   AdminEmptyState,
@@ -47,7 +44,6 @@ export function AdminMarketplaceView() {
   const crearProducto = useCrearProducto();
   const inventario = useInventarioMarketplace();
   const registrarMovimiento = useRegistrarMovimientoInventario();
-  const comprarParaCliente = useComprarPedidoCliente();
   const stockPorProducto = new Map(
     (inventario.data ?? []).map((item) => [item.producto_id, item.stock]),
   );
@@ -238,31 +234,7 @@ export function AdminMarketplaceView() {
             maximumFractionDigits: 2,
           }).format(productoParaCliente.precio)}
           moneda="PEN"
-          comprando={comprarParaCliente.isPending}
-          onComprar={async (datos) => {
-            await comprarParaCliente.mutateAsync({
-              items: [
-                {
-                  tipo: "PRODUCTO",
-                  producto_id: productoParaCliente.id,
-                  cantidad: datos.cantidad,
-                },
-              ],
-              cliente: {
-                tipo_documento: datos.tipo_documento,
-                numero_documento: datos.numero_documento,
-                nombres: datos.nombres,
-                apellidos: datos.apellidos,
-                contacto_email: datos.contacto_email,
-              },
-              evidencia: {
-                canal: datos.canal,
-                referencia: datos.referencia,
-                motivo: datos.motivo,
-              },
-            });
-            setProductoParaCliente(null);
-          }}
+          onComprado={() => setProductoParaCliente(null)}
         />
       ) : null}
     </div>

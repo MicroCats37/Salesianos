@@ -23,8 +23,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { AppFormModal } from "@/components-app/forms/AppFormModal";
 import {
-  type CompraParaClienteFormData,
+  useComprarPaseCliente,
+  useComprarPedidoCliente,
+} from "../hooks/useAsistidoAdmin";
+import {
   compraParaClienteFormSchema,
+  type CompraParaClienteFormData,
 } from "../schemas/asistido.schema";
 
 /** What is being bought FOR the client. */
@@ -51,10 +55,8 @@ export interface ModalCompraParaClienteProps {
   precioUnitario?: string;
   /** The currency of the published price. */
   moneda?: string;
-  /** Whether the command is running. */
-  comprando: boolean;
-  /** The command itself. */
-  onComprar: (datos: CompraParaClienteFormData) => Promise<unknown>;
+  /** Called when the command succeeded and the modal can close. */
+  onComprado?: () => void;
 }
 
 const valoresIniciales: CompraParaClienteFormData = {
@@ -99,10 +101,14 @@ export function ModalCompraParaCliente({
   itemId,
   precioUnitario,
   moneda,
-  comprando,
-  onComprar,
+  onComprado,
 }: ModalCompraParaClienteProps) {
   const esPase = modo === "PASE";
+  const comprarPase = useComprarPaseCliente();
+  const comprarPedido = useComprarPedidoCliente();
+  const comprando = esPase
+    ? comprarPase.isPending
+    : comprarPedido.isPending;
 
   return (
     <AppFormModal<CompraParaClienteFormData>
@@ -124,7 +130,39 @@ export function ModalCompraParaCliente({
       onPrimary={() => undefined}
       schema={compraParaClienteFormSchema}
       initialData={valoresIniciales}
-      onSubmit={onComprar}
+      onSubmit={async (datos) => {
+        const cliente = {
+          tipo_documento: datos.tipo_documento,
+          numero_documento: datos.numero_documento,
+          nombres: datos.nombres,
+          apellidos: datos.apellidos,
+          contacto_email: datos.contacto_email,
+        };
+        const evidencia = {
+          canal: datos.canal,
+          referencia: datos.referencia,
+          motivo: datos.motivo,
+        };
+
+        if (esPase) {
+          await comprarPase.mutateAsync({
+            pase_id: itemId,
+            cantidad: datos.cantidad,
+            cliente,
+            evidencia,
+          });
+        } else {
+          await comprarPedido.mutateAsync({
+            items: [
+              { tipo: "PRODUCTO", producto_id: itemId, cantidad: datos.cantidad },
+            ],
+            cliente,
+            evidencia,
+          });
+        }
+
+        onComprado?.();
+      }}
       showErrorsAsToasts
       size="xl"
       bodyClassName="max-h-[70vh] overflow-y-auto"

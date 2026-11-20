@@ -2,10 +2,7 @@
 
 import { Ticket } from "lucide-react";
 import { useState } from "react";
-import {
-  ModalCompraParaCliente,
-  useComprarPaseCliente,
-} from "@/features/admin/asistido";
+import { ModalCompraParaCliente } from "@/features/admin/asistido";
 import {
   AdminDataTable,
   AdminEmptyState,
@@ -38,7 +35,6 @@ export function AdminPasesView() {
     moneda: string;
   } | null>(null);
   const catalogo = useCatalogoPases();
-  const comprarParaCliente = useComprarPaseCliente();
 
   const pases = catalogo.data?.pases ?? [];
 
@@ -144,26 +140,7 @@ export function AdminPasesView() {
             maximumFractionDigits: 2,
           }).format(paseParaCliente.monto)}
           moneda={paseParaCliente.moneda}
-          comprando={comprarParaCliente.isPending}
-          onComprar={async (datos) => {
-            await comprarParaCliente.mutateAsync({
-              pase_id: paseParaCliente.id,
-              cantidad: datos.cantidad,
-              cliente: {
-                tipo_documento: datos.tipo_documento,
-                numero_documento: datos.numero_documento,
-                nombres: datos.nombres,
-                apellidos: datos.apellidos,
-                contacto_email: datos.contacto_email,
-              },
-              evidencia: {
-                canal: datos.canal,
-                referencia: datos.referencia,
-                motivo: datos.motivo,
-              },
-            });
-            setPaseParaCliente(null);
-          }}
+          onComprado={() => setPaseParaCliente(null)}
         />
       ) : null}
     </div>

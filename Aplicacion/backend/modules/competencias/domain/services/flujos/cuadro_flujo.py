@@ -8,8 +8,8 @@ El flujo es ASYNC y es el ÚNICO lugar donde se abre `transaction.atomic()`.
 
 Alcance de este flujo:
 
-- alta de la **competencia** (con su edición y su disciplina resueltas por el
-  servidor);
+- alta de la **competencia** (con su edición, su disciplina y su categoría
+  resueltas por el servidor);
 - **incorporación** de un equipo elegible (la elegibilidad la decide el
   dueño de la inscripción y aquí se CONSUME por el puerto, `RN-K01`);
 - **edición** de la participación (semilla manual y retirada);
@@ -137,6 +137,7 @@ class CuadroFlujo:
             data.equipo_id,
             str(competencia.edicion_id),
             str(competencia.disciplina_id),
+            str(competencia.categoria_id),
         )
         participacion = await sync_to_async(self._incorporar_sync)(
             competencia,
@@ -199,12 +200,13 @@ class CuadroFlujo:
 
     # ── internos ───────────────────────────────────────────────────────────
 
-    def _veredicto(self, equipo_id, edicion_id, disciplina_id):
+    def _veredicto(self, equipo_id, edicion_id, disciplina_id, categoria_id):
         """El veredicto de ELEGIBILIDAD del puerto (no lanza: decide)."""
         return self.elegibilidad.verificar_elegibilidad(
             equipo_id,
             edicion_id,
             disciplina_id,
+            categoria_id,
         )
 
     @transaction.atomic()

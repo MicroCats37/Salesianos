@@ -22,6 +22,7 @@ from pydantic import Field
 from core.types import BaseSchema
 from modules.salesianos_fest.domain.constants import (
     MAX_EQUIPOS_POR_INSCRIPCION,
+    MIN_CANTIDAD_POR_INSCRIPCION,
     MIN_EQUIPOS_POR_INSCRIPCION,
 )
 
@@ -34,11 +35,29 @@ class EquipoIdentidadOut(BaseSchema):
     updated_at: datetime = Field(..., description="Última actualización.")
 
 
+class CategoriaReferenciaOut(BaseSchema):
+    """La banda competitiva de un equipo, como REFERENCIA.
+
+    La publica el servidor: el cliente NO la declara y NO la deriva
+    (`D-CAT-05`).
+    """
+
+    id: UUID = Field(..., description="Identificador de la categoría.")
+    nombre: str = Field(..., description="Nombre de la categoría.")
+
+
 class EquipoEspecificoOut(BaseSchema):
     """Bloque específico de un equipo."""
 
     disciplina_id: UUID = Field(..., description="Disciplina del equipo.")
     disciplina_nombre: str = Field(..., description="Nombre de la disciplina.")
+    categoria: CategoriaReferenciaOut = Field(
+        ...,
+        description=(
+            "Banda competitiva del equipo. La deriva el servidor desde la "
+            "promoción de la inscripción."
+        ),
+    )
     nombre: str = Field(..., description="Nombre del equipo.")
     estado: str = Field(..., description="Estado del equipo.")
 
@@ -63,11 +82,32 @@ class InscripcionGeneralOut(BaseSchema):
     responsable_id: UUID = Field(..., description="Persona responsable.")
 
 
+class PromocionReferenciaOut(BaseSchema):
+    """La promoción (cohorte) de una inscripción.
+
+    Se llama `…ReferenciaOut` y no `PromocionOut` a propósito: el catálogo
+    publica su propia `PromocionOut` y dos schemas con el mismo nombre en
+    módulos distintos colisionan en el registro de componentes OpenAPI.
+    """
+
+    id: UUID = Field(..., description="Identificador de la promoción.")
+    anio: int = Field(..., ge=1, description="Año de la cohorte.")
+    nombre: str = Field(..., description="Nombre de la promoción.")
+
+
 class InscripcionEspecificaOut(BaseSchema):
-    """Bloque específico de una inscripción: paquete, estado y saldo."""
+    """Bloque específico de una inscripción: paquete, promoción, estado y saldo."""
 
     paquete_id: UUID = Field(..., description="Paquete contratado.")
     paquete_nombre: str = Field(..., description="Nombre del paquete.")
+    promocion: PromocionReferenciaOut = Field(..., description="Promoción que compra.")
+    fusion_promocion: PromocionReferenciaOut | None = Field(
+        default=None,
+        description=(
+            "Promoción fusionada. Es metadato descriptivo: no altera cupos, "
+            "pago, categoría, elegibilidad ni cuadro competitivo."
+        ),
+    )
     estado: str = Field(..., description="Estado de la inscripción.")
     referencia: str = Field(..., description="Referencia de la inscripción.")
     cupos_solicitados: int = Field(..., ge=0, description="Cupos que compra el alta.")
@@ -104,6 +144,9 @@ class CompraOut(BaseSchema):
 
     Es una PROYECCIÓN de la compra de `commerce`: este módulo no es su
     dueño y no publica su modelo entero.
+
+    El total lo derivó `commerce` de las líneas del snapshot, que congela
+    la cantidad y el precio unitario que resolvió el servidor (`RN-C02`).
     """
 
     compra_id: UUID = Field(..., description="Identificador de la compra.")
@@ -150,10 +193,41 @@ class InscripcionInicialIn(BaseSchema):
     El responsable NO se declara: lo resuelve el servidor desde la cuenta
     autenticada (`RN-U04`). El precio tampoco: lo resuelve el servidor
     contra el catálogo vigente (`RN-C02`).
+
+    `promocion_id` es OBLIGATORIA: es la cohorte que compra y la que
+    determina la categoría del equipo. `fusion_promocion_id` es OPCIONAL y
+    DESCRIPTIVA.
+
+    `cantidad` es el número de PARTICIPANTES que se inscriben. El total lo
+    deriva el servidor como `cantidad × precio_unitario`.
     """
 
     edicion_id: UUID = Field(..., description="Edición del alcance.")
     paquete_id: UUID = Field(..., description="Paquete de inscripción.")
+    promocion_id: UUID = Field(
+        ...,
+        description="Promoción (cohorte) que compra la inscripción.",
+    )
+    fusion_promocion_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Promoción fusionada. Es metadato descriptivo: no altera cupos, "
+            "pago, categoría, elegibilidad ni cuadro competitivo."
+        ),
+    )
+    cantidad: int = Field(
+        ...,
+        ge=MIN_CANTIDAD_POR_INSCRIPCION,
+        description="Número de participantes que se inscriben.",
+    )
+    cotizacion_version: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Token de concurrencia de la cotización. Viaja sólo si el "
+            "comprador cotizó antes."
+        ),
+    )
     equipos: list[EquipoIn] = Field(
         ...,
         min_length=MIN_EQUIPOS_POR_INSCRIPCION,
@@ -163,6 +237,7 @@ class InscripcionInicialIn(BaseSchema):
 
 
 __all__ = [
+    "CategoriaReferenciaOut",
     "CompraOut",
     "EquipoEspecificoOut",
     "EquipoIdentidadOut",
@@ -175,4 +250,5 @@ __all__ = [
     "InscripcionIdentidadOut",
     "InscripcionInicialIn",
     "InscripcionInicialOut",
+    "PromocionReferenciaOut",
 ]

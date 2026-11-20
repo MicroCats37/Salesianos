@@ -1,0 +1,1 @@
+"""Servicios SYNC del módulo `videos` (sin `transaction.atomic` propia)."""

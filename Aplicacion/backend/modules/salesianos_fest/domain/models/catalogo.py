@@ -1,15 +1,24 @@
-"""Catálogo de inscripción por EDICIÓN: disciplinas, paquetes, beneficios y precios.
+"""Catálogo de inscripción por EDICIÓN: promociones, categorías, disciplinas,
+paquetes, beneficios y precios.
 
 Packet: `DOM-01` · Change: `salesianos-fest-rebuild`
+Cambio: `restore-registration-promotion-catalog-flow` (2026-11-20)
 
 Invariantes del catálogo:
 
 - **Todo el catálogo es de UNA EDICIÓN** (`RN-E01`): `Disciplina`, `Paquete`,
-  `PaquetePrecio` cuelgan de `eventos.Edicion`. No existe un paquete global.
+  `PaquetePrecio` y `Categoria` cuelgan de `eventos.Edicion`. No existe un
+  paquete global.
+- **La promoción es GLOBAL** (`D-CAT-04`): una cohorte de nacimiento es una
+  propiedad de la persona, no de un evento. `Promocion` NO tiene edición.
 - **El precio es un hecho del catálogo, no un literal del cliente**
   (`RN-C02`): `PaquetePrecio` congela un monto con su vigencia. Un paquete
   SIN precio vigente no está a la venta: no hay precio de reserva inventado
   (`FL-01` paso 3).
+- **El precio es UNITARIO** (`D-CAT-01`): el monto del catálogo es el precio
+  de UNA persona. El total lo deriva el servidor como `cantidad × precio`
+  (`RN-C02`); el cliente declara cuántos participantes compra, nunca cuánto
+  paga.
 - **Un beneficio es OFRECIDO, no disfrutado** (`RN-P01`):
   `PaqueteBeneficio` declara lo que el paquete ofrece; su concesión es otro
   hecho (`DOM-02`).
@@ -21,13 +30,18 @@ Invariantes del catálogo:
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import F, Q
 
 from core.models import BaseModel
 from modules.salesianos_fest.domain.constants import (
+    EstadoCategoria,
     EstadoDisciplina,
     EstadoPaquete,
+    EstadoPromocion,
     ModalidadDisciplina,
+    ModoDisciplinas,
     TipoBeneficioPaquete,
+    TipoPaquete,
 )
 
 
@@ -90,8 +104,110 @@ class Disciplina(BaseModel):
         return f"{self.nombre} ({self.edicion_id})"
 
 
+class Promocion(BaseModel):
+    """Cohorte de promoción (año de nacimiento) — GLOBAL.
+
+    No cuelga de ninguna edición: una cohorte es una propiedad de la PERSONA
+    (`D-CAT-04`). El `anio` es su clave natural y es único.
+
+    El nombre es DESCRIPTIVO (la cohorte que el sitio anuncia); la banda
+    competitiva la decide la `Categoria` de la edición, no la promoción.
+    """
+
+    anio = models.PositiveIntegerField(verbose_name="Año")
+    nombre = models.CharField(max_length=100, verbose_name="Nombre")
+    estado = models.CharField(
+        max_length=16,
+        choices=EstadoPromocion.choices,
+        default=EstadoPromocion.ACTIVA,
+        verbose_name="Estado",
+    )
+
+    class Meta:
+        db_table = "fest_promocion"
+        verbose_name = "Promoción"
+        verbose_name_plural = "Promociones"
+        ordering = ["-anio"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["anio"],
+                name="fest_promocion_anio_unico",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.nombre} ({self.anio})"
+
+
+class Categoria(BaseModel):
+    """Banda competitiva (rango de promociones) de UNA edición.
+
+    Es el mecanismo que convierte una cohorte en una banda con NOMBRE: el
+    rango `[promocion_desde, promocion_hasta]` se guarda como AÑOS enteros,
+    igual que en el legacy, para que la derivación cohorte → categoría no
+    dependa de un JOIN con `Promocion`.
+    """
+
+    edicion = models.ForeignKey(
+        "eventos.Edicion",
+        on_delete=models.PROTECT,
+        related_name="categorias",
+        verbose_name="Edición",
+        help_text="La edición es el alcance: el catálogo no es global.",
+    )
+    nombre = models.CharField(max_length=100, verbose_name="Nombre")
+    promocion_desde = models.PositiveIntegerField(
+        verbose_name="Promoción desde",
+        help_text="Año de cohorte más reciente que entra en esta categoría.",
+    )
+    promocion_hasta = models.PositiveIntegerField(
+        verbose_name="Promoción hasta",
+        help_text="Año de cohorte más antiguo que entra en esta categoría.",
+    )
+    estado = models.CharField(
+        max_length=16,
+        choices=EstadoCategoria.choices,
+        default=EstadoCategoria.ACTIVA,
+        verbose_name="Estado",
+    )
+
+    class Meta:
+        db_table = "fest_categoria"
+        verbose_name = "Categoría"
+        verbose_name_plural = "Categorías"
+        ordering = ["-promocion_hasta", "nombre"]
+        constraints = [
+            # El rango es un intervalo bien formado.
+            models.CheckConstraint(
+                condition=Q(promocion_desde__lte=F("promocion_hasta")),
+                name="fest_categoria_rango_valido",
+            ),
+            # Una sola categoría ACTIVA por nombre y edición: el catálogo
+            # histórico (inactiva) se conserva sin competir con el vigente.
+            models.UniqueConstraint(
+                fields=["edicion", "nombre"],
+                condition=Q(estado=EstadoCategoria.ACTIVA),
+                name="fest_categoria_nombre_unico_por_edicion",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.nombre} ({self.edicion_id})"
+
+
 class Paquete(BaseModel):
-    """Paquete de inscripción ofrecido por UNA edición."""
+    """Paquete de inscripción ofrecido por UNA edición.
+
+    El paquete NO dicta la cantidad de cupos que se compran: el comprador
+    declara CUÁNTAS personas inscriben (`Paquete.minimo_compra_inicial` es
+    el mínimo COMERCIAL) y el precio del catálogo es UNITARIO. El total lo
+    deriva el servidor como `cantidad × precio_unitario` (`RN-C02`).
+
+    `cupos_incluidos` sobrevive como hecho DECLARADO de la oferta (los
+    cupos que incluye) y está DEPRECADO: no gobierna la compra. Es la
+    transición que exige el espejo del frontend ya aplicado, que todavía lo
+    publica.
+    """
 
     edicion = models.ForeignKey(
         "eventos.Edicion",
@@ -109,12 +225,47 @@ class Paquete(BaseModel):
         default=EstadoPaquete.VIGENTE,
         verbose_name="Estado",
     )
+    tipo = models.CharField(
+        max_length=16,
+        choices=TipoPaquete.choices,
+        default=TipoPaquete.PACK,
+        verbose_name="Tipo",
+        help_text=(
+            "`PACK` es una oferta con beneficios; `DISCIPLINA` es la oferta "
+            "de un solo torneo."
+        ),
+    )
+    modo_disciplinas = models.CharField(
+        max_length=16,
+        choices=ModoDisciplinas.choices,
+        default=ModoDisciplinas.ELEGIBLE,
+        verbose_name="Modo de disciplinas",
+        help_text=(
+            "`FIJO` obliga a declarar EXACTAMENTE las disciplinas del "
+            "paquete; `ELEGIBLE` deja elegir entre ellas."
+        ),
+    )
+    cantidad_disciplinas = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Cantidad de disciplinas",
+        help_text="Cuántas disciplinas puede declarar la inscripción con este paquete.",
+    )
     cupos_incluidos = models.PositiveIntegerField(
         default=1,
         verbose_name="Cupos incluidos",
         help_text=(
-            "Cupos deportivos que otorga el paquete. Es la CANTIDAD que el "
-            "servidor compra: el cliente no la impone (`RN-C02`)."
+            "Cupos que DECLARA la oferta del paquete. DEPRECADO: es el hecho "
+            "de catálogo que la oferta incluye, NO la cantidad que el "
+            "comprador compra. La cantidad la declara el comprador y su "
+            "suelo comercial es `minimo_compra_inicial` (`D-CAT-01`)."
+        ),
+    )
+    minimo_compra_inicial = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Mínimo de compra inicial",
+        help_text=(
+            "Mínimo COMERCIAL de participantes en el alta. El cliente declara "
+            "la cantidad; el servidor la contrasta con este mínimo."
         ),
     )
     disciplinas = models.ManyToManyField(
@@ -133,6 +284,23 @@ class Paquete(BaseModel):
             models.UniqueConstraint(
                 fields=["edicion", "slug"],
                 name="fest_paquete_slug_unico_por_edicion",
+            ),
+            # Una oferta de una sola disciplina es de una sola disciplina.
+            models.CheckConstraint(
+                condition=~Q(
+                    tipo=TipoPaquete.DISCIPLINA,
+                    cantidad_disciplinas__gt=1,
+                ),
+                name="fest_paquete_disciplina_unica_cantidad",
+            ),
+            # Una oferta de una sola disciplina no es elegible: su disciplina
+            # es la del paquete.
+            models.CheckConstraint(
+                condition=~Q(
+                    tipo=TipoPaquete.DISCIPLINA,
+                    modo_disciplinas=ModoDisciplinas.ELEGIBLE,
+                ),
+                name="fest_paquete_disciplina_modo_fijo",
             ),
         ]
 
@@ -265,10 +433,12 @@ class PaquetePrecio(BaseModel):
 
 
 __all__ = [
+    "Categoria",
     "Disciplina",
     "Paquete",
     "PaqueteBeneficio",
     "PaqueteDisciplina",
     "PaquetePrecio",
+    "Promocion",
     "validar_monto_no_negativo",
 ]

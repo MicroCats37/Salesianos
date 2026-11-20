@@ -6,6 +6,7 @@ Un selector carga datos de la base de datos y devuelve **result objects**. No
 conoce la capa HTTP y no construye schemas de respuesta.
 """
 
+from modules.pagos.domain.constants import EstadoOrdenPago
 from modules.pagos.domain.models import OrdenPago, TransaccionPago
 from modules.pagos.domain.results.pago_result import IntentoPagoResult
 
@@ -33,6 +34,20 @@ class OrdenPagoSelector:
             TransaccionPago.objects.filter(orden_pago_id=orden_pago_id).order_by(
                 "-intento"
             )
+        )
+
+    def listar_confirmadas(self, limite: int = 100) -> list:
+        """Las órdenes de pago confirmadas, de la más reciente a la más antigua.
+
+        Son las únicas candidatas a una conciliación: un pago verificado es el
+        único hecho que puede tener un derecho pendiente (RN-C08).
+
+        Devuelve una LISTA, no un queryset: la evaluación de la consulta ocurre
+        dentro del contexto sync del selector y nunca en un contexto async.
+        """
+        return list(
+            OrdenPago.objects.filter(estado=EstadoOrdenPago.CONFIRMADA)
+            .order_by("-created_at")[: max(int(limite or 0), 0)]
         )
 
 

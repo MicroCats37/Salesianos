@@ -8,8 +8,13 @@ Invariantes:
   `eventos.Edicion`, que es su alcance. No existe una competencia global.
 - **La disciplina es de esa MISMA edición**: la disciplina es del catálogo de
   inscripción (`modules.salesianos_fest`), y ese catálogo es por edición.
-- **La identidad es (edición, disciplina, nombre)**, comparado sin distinguir
-  mayúsculas: "Final" y "final" son la MISMA competencia.
+- **La categoría es de esa MISMA edición**: la categoría (franja etaria) es
+  también del catálogo de inscripción (`modules.salesianos_fest.Categoria`).
+- **La identidad es (edición, disciplina, categoría, nombre)**, comparado sin
+  distinguir mayúsculas: "Final" y "final" son la MISMA competencia. La
+  CATEGORÍA es parte de la identidad porque DOS categorías distintas compiten
+  en la MISMA disciplina: un cuadro Junior y un cuadro Sénior pueden llamarse
+  igual y ser dos torneos DISTINTOS.
 - La `fecha` es el DÍA de la competencia: una competencia ocurre en un día y el
   horario de sus encuentros vive dentro de ese día.
 
@@ -44,6 +49,16 @@ class Competencia(CompetenciaBaseModel):
             "equipos (`RN-K01`)."
         ),
     )
+    categoria = models.ForeignKey(
+        "salesianos_fest.Categoria",
+        on_delete=models.PROTECT,
+        related_name="competencias",
+        verbose_name="Categoría",
+        help_text=(
+            "La categoría (franja etaria) del torneo. Junto con la disciplina, "
+            "es la que fija la elegibilidad de los equipos (`RN-K01`)."
+        ),
+    )
     nombre = models.CharField(max_length=200, verbose_name="Nombre")
     estado = models.CharField(
         max_length=20,
@@ -62,19 +77,26 @@ class Competencia(CompetenciaBaseModel):
         verbose_name_plural = "Competencias"
         ordering = ["-fecha", "nombre"]
         constraints = [
-            # La identidad de una competencia: edición + disciplina + nombre,
-            # comparado sin distinguir mayúsculas.
+            # La identidad de una competencia: edición + disciplina + categoría
+            # + nombre, comparado sin distinguir mayúsculas. La CATEGORÍA es
+            # parte de la identidad: dos categorías de la misma disciplina son
+            # dos torneos DISTINTOS.
             models.UniqueConstraint(
                 "edicion",
                 "disciplina",
+                "categoria",
                 Lower("nombre"),
-                name="competencia_identidad_unica_por_edicion_disciplina",
+                name="competencia_identidad_unica_por_edicion_disciplina_categoria",
             ),
         ]
         indexes = [
             models.Index(
                 fields=["edicion", "disciplina", "estado", "fecha"],
                 name="ix_cmp_edi_dis_est_fecha",
+            ),
+            models.Index(
+                fields=["edicion", "categoria", "estado", "fecha"],
+                name="ix_cmp_edi_cat_est_fecha",
             ),
         ]
 

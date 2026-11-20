@@ -7,9 +7,16 @@ GIVEN  una credencial emitida por el módulo `validaciones`
 WHEN   el operador la comprueba o la canjea
 THEN   la comprobación NO consume, el canje consume UNA sola vez y ambos
        intentos quedan auditados.
-"""
 
-import asyncio
+**Por qué `transaction=True`.** Los flujos son ASYNC y su acceso al ORM
+happens en `sync_to_async`, es decir en OTRO hilo y con OTRA conexión. Con la
+base en memoria compartida y el `atomic()` que envuelve un test no
+transaccional, esa conexión segunda se encuentra con el bloqueo de escritura
+de la primera y SQLite responde `database table is locked`. El módulo `usuarios`
+resuelve lo mismo con `django_db(transaction=True)` y tests `async def`: es el
+patrón establecido del proyecto para flujos async
+(`contract/django-app-architecture-contract.md` §2.1).
+"""
 
 import pytest
 
@@ -36,8 +43,15 @@ from modules.validaciones.domain.services.flujos.confirmar_ticket_flujo import (
 from modules.validaciones.domain.services.flujos.preview_ticket_flujo import (
     PreviewTicketFlujo,
 )
+from modules.validaciones.tests.fixtures.validacion_fixtures import (
+    consumido_de,
+    contar_actas,
+    listar_actas,
+    primera_acta,
+    revocar,
+)
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(transaction=True)
 
 
 # ── Servicios ────────────────────────────────────────────────────────────────
@@ -55,57 +69,54 @@ def confirmar_flujo(injector):
     return injector.get(ConfirmarTicketFlujo)
 
 
-def _preview(flujo, codigo):
-    return asyncio.run(flujo._preview(PreviewTicketData(codigo=codigo)))
+async def _preview(flujo, codigo):
+    return await flujo._preview(PreviewTicketData(codigo=codigo))
 
 
-def _confirmar(flujo, actor, codigo, clave, cantidad=None):
-    return asyncio.run(
-        flujo._confirmar(
-            str(actor.id),
-            None,
-            ConfirmarTicketData(
-                codigo=codigo,
-                idempotency_key=clave,
-                cantidad=cantidad,
-            ),
-        )
+async def _confirmar(flujo, actor, codigo, clave, cantidad=None):
+    return await flujo._confirmar(
+        str(actor.id),
+        None,
+        ConfirmarTicketData(
+            codigo=codigo,
+            idempotency_key=clave,
+            cantidad=cantidad,
+        ),
     )
 
 
 # ── La vista previa NO consume ───────────────────────────────────────────────
 
 
-def test_la_vista_previa_no_escribe_nada(preview_flujo, ticket_entrada):
+async def test_la_vista_previa_no_escribe_nada(preview_flujo, ticket_entrada):
     """GIVEN una credencial vigente · WHEN se comprueba · THEN no se escribe.
 
     Escanear NO es usar (`RN-P06`): ni el derecho ni la auditoría cambian.
     """
-    resultado = _preview(preview_flujo, ticket_entrada.codigo)
+    resultado = await _preview(preview_flujo, ticket_entrada.codigo)
 
     assert resultado.puede_canjear is True
     assert resultado.cantidad_disponible == 1
     assert resultado.cantidad_consumida == 0
     assert resultado.motivo_codigo is None
 
-    ticket_entrada.pase_beneficiario.refresh_from_db()
-    assert ticket_entrada.pase_beneficiario.cantidad_consumida == 0
-    assert ValidacionTicket.objects.count() == 0
+    assert await consumido_de(ticket_entrada) == 0
+    assert await contar_actas() == 0
 
 
-def test_la_vista_previa_de_una_credencial_inexistente_falla(
+async def test_la_vista_previa_de_una_credencial_inexistente_falla(
     preview_flujo, ticket_entrada
 ):
     """GIVEN un código que no existe · WHEN se comprueba · THEN 404."""
     with pytest.raises(TicketNoEncontradoError):
-        _preview(preview_flujo, "FEST-NO-EXISTE")
+        await _preview(preview_flujo, "FEST-NO-EXISTE")
 
 
-def test_la_vista_previa_de_una_credencial_revocada_no_puede_canjearse(
+async def test_la_vista_previa_de_una_credencial_revocada_no_puede_canjearse(
     preview_flujo, ticket_entrada_revocado
 ):
     """GIVEN una credencial revocada · WHEN se comprueba · THEN no se canjea."""
-    resultado = _preview(preview_flujo, ticket_entrada_revocado.codigo)
+    resultado = await _preview(preview_flujo, ticket_entrada_revocado.codigo)
 
     assert resultado.puede_canjear is False
     assert resultado.motivo_codigo == "CREDENCIAL_REVOCADA"
@@ -115,11 +126,11 @@ def test_la_vista_previa_de_una_credencial_revocada_no_puede_canjearse(
 # ── El canje consume UNA sola vez ───────────────────────────────────────────
 
 
-def test_el_canje_consume_el_derecho_y_deja_acta(
+async def test_el_canje_consume_el_derecho_y_deja_acta(
     confirmar_flujo, ticket_entrada, usuario_admin
 ):
     """GIVEN una credencial vigente · WHEN se confirma · THEN consume y audita."""
-    resultado = _confirmar(
+    resultado = await _confirmar(
         confirmar_flujo, usuario_admin, ticket_entrada.codigo, "clave-xct01-1"
     )
 
@@ -128,67 +139,66 @@ def test_el_canje_consume_el_derecho_y_deja_acta(
     assert resultado.cantidad_restante == 0
     assert resultado.repetido is False
 
-    ticket_entrada.pase_beneficiario.refresh_from_db()
-    assert ticket_entrada.pase_beneficiario.cantidad_consumida == 1
+    assert await consumido_de(ticket_entrada) == 1
 
-    actas = ValidacionTicket.objects.all()
-    assert actas.count() == 1
-    acta = actas.first()
+    actas = await listar_actas()
+    assert len(actas) == 1
+    acta = actas[0]
     assert acta.resultado == ResultadoValidacionChoices.PERMITIDO
     assert acta.cantidad == 1
     assert acta.actor_usuario_id == usuario_admin.id
     assert acta.operacion == ticket_entrada.operacion
 
 
-def test_la_repeticion_de_la_misma_clave_devuelve_el_mismo_resultado(
+async def test_la_repeticion_de_la_misma_clave_devuelve_el_mismo_resultado(
     confirmar_flujo, ticket_entrada, usuario_admin
 ):
     """GIVEN un canje hecho · WHEN se repite con la MISMA clave · THEN se
     devuelve el mismo resultado y NO se consume otra vez (`FR-04` §2.2)."""
-    primero = _confirmar(
+    primero = await _confirmar(
         confirmar_flujo, usuario_admin, ticket_entrada.codigo, "clave-xct01-2"
     )
-    segundo = _confirmar(
+    segundo = await _confirmar(
         confirmar_flujo, usuario_admin, ticket_entrada.codigo, "clave-xct01-2"
     )
 
     assert primero.validacion_id == segundo.validacion_id
     assert segundo.repetido is True
-    assert ValidacionTicket.objects.count() == 1
+    assert await contar_actas() == 1
 
-    ticket_entrada.pase_beneficiario.refresh_from_db()
-    assert ticket_entrada.pase_beneficiario.cantidad_consumida == 1
+    assert await consumido_de(ticket_entrada) == 1
 
 
-def test_el_segundo_uso_con_otra_clave_se_deniega_y_se_audita(
+async def test_el_segundo_uso_con_otra_clave_se_deniega_y_se_audita(
     confirmar_flujo, ticket_entrada, usuario_admin
 ):
     """GIVEN un ticket ya canjeado · WHEN se vuelve a canjear · THEN se
     deniega y el intento queda en el historial (`QA-V01` · `RN-P07`)."""
-    _confirmar(confirmar_flujo, usuario_admin, ticket_entrada.codigo, "clave-xct01-3")
+    await _confirmar(confirmar_flujo, usuario_admin, ticket_entrada.codigo, "clave-xct01-3")
 
     with pytest.raises(TicketYaConsumidoError):
-        _confirmar(confirmar_flujo, usuario_admin, ticket_entrada.codigo, "clave-xct01-4")
+        await _confirmar(
+            confirmar_flujo, usuario_admin, ticket_entrada.codigo, "clave-xct01-4"
+        )
 
-    ticket_entrada.pase_beneficiario.refresh_from_db()
-    assert ticket_entrada.pase_beneficiario.cantidad_consumida == 1
+    assert await consumido_de(ticket_entrada) == 1
 
-    denegada = ValidacionTicket.objects.filter(
+    denegada = await primera_acta(
         resultado=ResultadoValidacionChoices.DENEGADO
-    ).first()
+    )
     assert denegada is not None
     assert denegada.cantidad == 0
     assert denegada.motivo_codigo == "TICKET_YA_CONSUMIDO"
 
 
-def test_la_clave_reutilizada_con_otra_carga_se_deniega(
+async def test_la_clave_reutilizada_con_otra_carga_se_deniega(
     confirmar_flujo, ticket_entrada, usuario_admin
 ):
     """GIVEN un canje hecho · WHEN se repite la clave con otra cantidad ·
     THEN es un error del cliente (`FR-04` §2.2)."""
     from modules.validaciones.domain.exceptions import IdempotencyKeyReutilizadaError
 
-    _confirmar(
+    await _confirmar(
         confirmar_flujo,
         usuario_admin,
         ticket_entrada.codigo,
@@ -196,7 +206,7 @@ def test_la_clave_reutilizada_con_otra_carga_se_deniega(
         cantidad=1,
     )
     with pytest.raises(IdempotencyKeyReutilizadaError):
-        _confirmar(
+        await _confirmar(
             confirmar_flujo,
             usuario_admin,
             ticket_entrada.codigo,
@@ -205,33 +215,32 @@ def test_la_clave_reutilizada_con_otra_carga_se_deniega(
         )
 
 
-def test_el_canje_de_un_derecho_revocado_se_deniega(
+async def test_el_canje_de_un_derecho_revocado_se_deniega(
     confirmar_flujo, ticket_entrada, usuario_admin, beneficiario_pase
 ):
     """GIVEN un derecho revocado · WHEN se canjea · THEN se deniega."""
     from modules.salesianos_fest.domain.constants import EstadoDerechoPase
 
-    beneficiario_pase.estado = EstadoDerechoPase.REVOCADO
-    beneficiario_pase.save(update_fields=["estado", "updated_at"])
+    await revocar(beneficiario_pase, EstadoDerechoPase.REVOCADO)
 
     with pytest.raises(DerechoRevocadoError):
-        _confirmar(
+        await _confirmar(
             confirmar_flujo, usuario_admin, ticket_entrada.codigo, "clave-xct01-6"
         )
 
-    denegada = ValidacionTicket.objects.filter(
+    denegada = await primera_acta(
         resultado=ResultadoValidacionChoices.DENEGADO
-    ).first()
+    )
     assert denegada is not None
     assert denegada.motivo_codigo == "DERECHO_REVOCADO"
 
 
-def test_la_cantidad_excedente_se_deniega(
+async def test_la_cantidad_excedente_se_deniega(
     confirmar_flujo, ticket_entrada, usuario_admin
 ):
     """GIVEN un derecho de una unidad · WHEN se piden dos · THEN se deniega."""
     with pytest.raises(CantidadExcedidaError):
-        _confirmar(
+        await _confirmar(
             confirmar_flujo,
             usuario_admin,
             ticket_entrada.codigo,
@@ -239,5 +248,4 @@ def test_la_cantidad_excedente_se_deniega(
             cantidad=2,
         )
 
-    ticket_entrada.pase_beneficiario.refresh_from_db()
-    assert ticket_entrada.pase_beneficiario.cantidad_consumida == 0
+    assert await consumido_de(ticket_entrada) == 0

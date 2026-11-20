@@ -17,6 +17,53 @@ import pytest
 from pathlib import Path
 
 
+# ── Marcadores de nivel de prueba (VER-02) ────────────────────────────
+#
+# El plan de pruebas (`Aplicacion/plan/salesianos-fest-rebuild/
+# implementacion/03-pruebas-y-aceptacion.md` §1) define los niveles
+# "Integración API" y "E2E negocio", y el packet VER-02 ejecuta su lane con
+# `pytest modules -q -m "e2e or integration"`.
+#
+# Los ficheros ya viven en `tests/e2e/` y `tests/integration/`, pero NINGÚN
+# test declaraba el marcador: la lane del packet recogía 0 pruebas
+# (`704 deselected`, exit 5) y por lo tanto no producía ninguna evidencia.
+#
+# El marcador se deriva de la RUTA del test (la convención de carpetas ya
+# existente en el árbol), no de un decorador por fichero: así una suite nueva
+# queda dentro de su lane sin editar 95 ficheros.
+#
+# Los marcadores se REGISTRAN aquí y no en `pytest.ini` para no tocar la raíz
+# de configuración compartida (que `BL-04` §5 declara prohibited root).
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "e2e: recorrido de negocio de extremo a extremo sobre HTTP"
+    )
+    config.addinivalue_line(
+        "markers", "integration: prueba de integración de API, dominio o persistencia"
+    )
+
+
+def _marcador_por_ruta(ruta: Path) -> str | None:
+    """El marcador que corresponde a la carpeta del test, si alguna."""
+    for parte in ruta.parts:
+        if parte == "e2e":
+            return "e2e"
+        if parte == "integration":
+            return "integration"
+    return None
+
+
+def pytest_collection_modifyitems(config, items):
+    """Marca cada test según la carpeta que lo contiene."""
+    for item in items:
+        marcador = _marcador_por_ruta(Path(str(item.fspath)))
+        if marcador:
+            item.add_marker(getattr(pytest.mark, marcador))
+
+
 # ── Test database cleanup ───────────────────────────────────────────
 @pytest.fixture(scope="session", autouse=True)
 def _cleanup_test_db():

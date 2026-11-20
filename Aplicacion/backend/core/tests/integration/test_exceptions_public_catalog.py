@@ -493,3 +493,127 @@ def test_el_status_del_codigo_de_dom02_es_el_de_la_clase_de_dominio(
     assert exccepcion.code == codigo
     assert exccepcion.status_code == status
     assert codigo in PUBLIC_ERROR_MESSAGES
+
+
+# ── Barrido del catálogo (cierre del cableado global) ───────────────────────
+#
+# Las listas explícitas de arriba comprueban los códigos que A0 conoce de uno
+# en uno. El BARRIDO de abajo comprueba la INVARIANTE: TODO código que declara
+# una clase de excepción de dominio tiene prosa en el catálogo público.
+#
+# Sin este barrido, un módulo nuevo (o un código nuevo dentro de un módulo
+# existente) puede declarar un código sin catalogar: el cliente recibiría el
+# mensaje GENÉRICO del status y no podría distinguir la causa del síntoma
+# (`FR-01` §4.4). El barrido es lo que convierte "el catálogo está
+# sincronizado" en un hecho VERIFICADO y no en una afirmación.
+
+
+#: Módulos de dominio con clases de excepción propias. Cada uno declara sus
+#: códigos estables en el atributo de clase `code`.
+MODULOS_DE_EXCEPCIONES = (
+    "modules.competencias.domain.exceptions",
+    "modules.marketplace.domain.exceptions",
+    "modules.patrocinadores.domain.exceptions",
+    "modules.salesianos_fest.domain.exceptions",
+    "modules.usuarios.domain.exceptions",
+    "modules.validaciones.domain.exceptions",
+    "modules.videos.domain.exceptions",
+)
+
+
+def _codigos_de_dominio():
+    """`(codigo, origen)` de cada clase de excepción de los módulos listados."""
+    import inspect
+    from importlib import import_module
+
+    encontrados = []
+    for nombre in MODULOS_DE_EXCEPCIONES:
+        modulo = import_module(nombre)
+        for atributo in vars(modulo).values():
+            if not inspect.isclass(atributo):
+                continue
+            code = getattr(atributo, "code", None)
+            if not isinstance(code, str) or not code.isupper():
+                continue
+            encontrados.append((code, f"{nombre}.{atributo.__name__}"))
+    return encontrados
+
+
+def test_todo_codigo_de_dominio_esta_en_el_catalogo_publico():
+    """Ningún código de dominio se queda SIN prosa: el barrido no admite huecos."""
+    faltantes = sorted(
+        f"{origen} → {code}"
+        for code, origen in _codigos_de_dominio()
+        if code not in PUBLIC_ERROR_MESSAGES
+    )
+
+    assert not faltantes, f"Códigos sin catalogar: {faltantes}"
+
+
+def test_la_prosa_de_todo_codigo_de_dominio_es_prosa_fija():
+    """La prosa del catálogo no interpola nada: es texto fijo y seguro."""
+    interpolaciones = sorted(
+        f"{code}: {PUBLIC_ERROR_MESSAGES[code]}"
+        for code, _ in _codigos_de_dominio()
+        if code in PUBLIC_ERROR_MESSAGES
+        and any(marca in PUBLIC_ERROR_MESSAGES[code] for marca in ("{", "}", "%", "$"))
+    )
+
+    assert not interpolaciones, f"Prosa interpolada: {interpolaciones}"
+
+
+# ── Cotización (A0 · residual R-2 de VER-01, 2026-11-20) ────────────────────
+#
+# `PrecioCambiadoError` (409) lo declara
+# `modules.salesianos_fest.domain.exceptions` y PIDE su prosa a A0 ("Código
+# REQUESTED a A0"). Sin catálogo, la respuesta cae al mensaje GENÉRICO del
+# status 409 ("Conflicto con el estado actual del recurso.") y el cliente no
+# puede distinguir "el precio se movió" de cualquier otro conflicto.
+#
+# La prosa la elige A0 y NO puede interpolar precios, importes, ids ni slugs.
+
+
+CODIGOS_COTIZACION = ("PRECIO_CAMBIADO",)
+
+
+@pytest.mark.parametrize("codigo", CODIGOS_COTIZACION)
+def test_los_codigos_de_cotizacion_estan_en_el_catalogo(codigo):
+    """Cada código de cotización tiene prosa en el catálogo público."""
+    assert codigo in PUBLIC_ERROR_MESSAGES
+    assert PUBLIC_ERROR_MESSAGES[codigo]
+
+
+@pytest.mark.parametrize("codigo", CODIGOS_COTIZACION)
+def test_la_prosa_de_los_codigos_de_cotizacion_es_prosa_fija(codigo):
+    """La prosa pública no interpola nada: es texto fijo y seguro."""
+    mensaje = PUBLIC_ERROR_MESSAGES[codigo]
+
+    assert "{" not in mensaje
+    assert "}" not in mensaje
+    assert "%" not in mensaje
+    assert "$" not in mensaje
+
+
+@pytest.mark.parametrize(
+    "nombre_excepcion,codigo,status",
+    [
+        ("PrecioCambiadoError", "PRECIO_CAMBIADO", 409),
+    ],
+)
+def test_el_status_del_codigo_de_cotizacion_es_el_de_la_clase_de_dominio(
+    nombre_excepcion,
+    codigo,
+    status,
+):
+    """Catálogo y clase de dominio NO pueden divergir.
+
+    El status lo fija la excepción que el dominio lanza; la prosa la elige A0.
+    """
+    from importlib import import_module
+
+    dominio = import_module("modules.salesianos_fest.domain.exceptions")
+    excepcion = getattr(dominio, nombre_excepcion)()
+
+    assert excepcion.code == codigo
+    assert excepcion.status_code == status
+    assert codigo in PUBLIC_ERROR_MESSAGES

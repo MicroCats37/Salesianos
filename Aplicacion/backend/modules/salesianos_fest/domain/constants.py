@@ -21,6 +21,20 @@ Vocabularios cerrados (regla de `contract/django-app-architecture-contract.md`
    por qué la operación devolvió lo que devolvió (`RN-C07`: el comprador ve
    "pago pendiente", no "liquidación").
 
+Cambio `restore-registration-promotion-catalog-flow` (2026-11-20) RESTITUYE
+los conceptos de cohorte y banda competitiva que el rebuild había omitido, y
+con ellos el precio POR PERSONA del legacy:
+
+18. `EstadoPromocion` — `ACTIVA` / `INACTIVA`. La promoción es GLOBAL: una
+    cohorte de nacimiento es una propiedad de la persona, no de un evento.
+19. `EstadoCategoria` — `ACTIVA` / `INACTIVA`. La categoríacompetitive es de
+    UNA EDICIÓN: es la banda etaria con la que compite un equipo.
+20. `TipoPaquete` — `PACK` / `DISCIPLINA`. `PACK` es una oferta con beneficios
+    (fiesta, box); `DISCIPLINA` es una oferta de un solo torneo.
+21. `ModoDisciplinas` — `FIJO` / `ELEGIBLE`. `FIJO` obliga a declarar
+    EXACTAMENTE las disciplinas del paquete; `ELEGIBLE` deja elegir las
+    disciplinas del paquete, hasta `cantidad_disciplinas`.
+
 Packet `DOM-02` añade:
 
 8. `EstadoParticipacion` — `ACTIVA` / `RETIRADA`. Una participación `ACTIVA`
@@ -62,6 +76,48 @@ class EstadoDisciplina(models.TextChoices):
 
     ACTIVA = "ACTIVA", "Activa"
     INACTIVA = "INACTIVA", "Inactiva"
+
+
+class EstadoPromocion(models.TextChoices):
+    """Estado de una promoción (cohorte de nacimiento).
+
+    La promoción es GLOBAL: no cuelga de ninguna edición. Su estado decide si
+    se puede ELEGIR en un alta, no si existe.
+    """
+
+    ACTIVA = "ACTIVA", "Activa"
+    INACTIVA = "INACTIVA", "Inactiva"
+
+
+class EstadoCategoria(models.TextChoices):
+    """Estado de una categoría (banda competitiva) dentro de su edición."""
+
+    ACTIVA = "ACTIVA", "Activa"
+    INACTIVA = "INACTIVA", "Inactiva"
+
+
+class TipoPaquete(models.TextChoices):
+    """Naturaleza comercial de la oferta de un paquete.
+
+    `PACK` es una oferta con BENEFICIOS (fiesta, box, cerveza): el comprador
+    compra un conjunto. `DISCIPLINA` es la oferta de un SOLO torneo: el
+    comprador entra a competir y no arrastra beneficios de pack.
+    """
+
+    PACK = "PACK", "Pack (con beneficios)"
+    DISCIPLINA = "DISCIPLINA", "Disciplina individual"
+
+
+class ModoDisciplinas(models.TextChoices):
+    """Modo de selección de disciplinas de un paquete.
+
+    `FIJO` obliga a declarar EXACTAMENTE las disciplinas vinculadas al
+    paquete. `ELEGIBLE` deja elegir entre las disciplines vinculadas, hasta
+    `Paquete.cantidad_disciplinas`.
+    """
+
+    FIJO = "FIJO", "Fijo"
+    ELEGIBLE = "ELEGIBLE", "Elegible por el participante"
 
 
 class EstadoPaquete(models.TextChoices):
@@ -265,7 +321,24 @@ MAX_LEN_REFERENCIA_INSCRIPCION = 120
 MIN_EQUIPOS_POR_INSCRIPCION = 1
 
 #: Máximo de equipos que una inscripción puede declarar en el alta.
+#:
+#: Es un tope de TRANSPORTE, no la regla de negocio: la regla que acota los
+#: equipos declarados es la del PAQUETE (`Paquete.cantidad_disciplinas` y
+#: `Paquete.modo_disciplinas`). Este valor sólo impide que una carga útil
+#: declare más equipos de los que un paquete puede llegar a ofrecer.
 MAX_EQUIPOS_POR_INSCRIPCION = 20
+
+#: Mínimo de participantes (cupos) que una inscripción puede comprar en su
+#: ALTA.
+#:
+#: Es un límite de DOMINIO declarado, no un dato del cliente: la cantidad se
+#: rechaza con `CANTIDAD_INVALIDA` si no llega al mínimo del paquete
+#: (`Paquete.minimo_compra_inicial`), que es el mínimo COMERCIAL real.
+#:
+#: NO existe un máximo global de participantes: el tope de un equipo es el de
+#: su disciplina (`Disciplina.maximo_por_equipo`), que es una regla
+#: deportiva, no comercial.
+MIN_CANTIDAD_POR_INSCRIPCION = 1
 
 # ── Códigos de máquina del activador de derechos (DOM-02) ───────────────────
 #
@@ -376,6 +449,7 @@ __all__ = [
     "MAX_LEN_REFERENCIA_PASE",
     "MAX_LEN_TOKEN_PASE",
     "MAX_PASES_POR_COMPRA",
+    "MIN_CANTIDAD_POR_INSCRIPCION",
     "MIN_CUPOS_POR_AMPLIACION",
     "MIN_EQUIPOS_POR_INSCRIPCION",
     "MIN_LEN_MOTIVO_CORTESIA",
@@ -387,6 +461,7 @@ __all__ = [
     "CausaOperativaInscripcion",
     "CausaOperativaPool",
     "EstadoCompraPase",
+    "EstadoCategoria",
     "EstadoCortesiaPase",
     "EstadoDerechoPase",
     "EstadoDisciplina",
@@ -394,10 +469,13 @@ __all__ = [
     "EstadoInscripcion",
     "EstadoPaquete",
     "EstadoParticipacion",
+    "EstadoPromocion",
     "EstadoPase",
     "ModalidadDisciplina",
+    "ModoDisciplinas",
     "OrigenDerechoPase",
     "RolParticipante",
     "TipoActivacionCapacidad",
     "TipoBeneficioPaquete",
+    "TipoPaquete",
 ]

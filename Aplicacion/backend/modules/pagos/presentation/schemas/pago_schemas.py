@@ -90,12 +90,48 @@ class EstadoOperativoOut(BaseSchema):
     )
 
 
+class EstadoActivacionOut(BaseSchema):
+    """Veredicto de la activación de derechos de la compra.
+
+    Es un canal **SEPARADO** del veredicto operativo: el veredicto operativo
+    responde «¿está pagado esto?» y este responde «¿está habilitado el
+    derecho?». Los dos los calcula y los publica `pagos`, su único dueño
+    (FR-01 §5, FR-04 §6).
+
+    El vocabulario del veredicto operativo NO se amplía: la garantía de
+    FND-04 (`PAGADA` tras una confirmación correcta) se mantiene intacta y la
+    incidencia de activación viaja aquí (RN-C08).
+    """
+
+    codigo: str = Field(..., description="Código estable del veredicto.")
+    etiqueta: str = Field(..., description="Etiqueta corta en español.")
+    descripcion: str = Field(
+        ...,
+        description="Una línea con la causa y el siguiente paso seguro.",
+    )
+    recuperable: bool = Field(
+        default=False,
+        description="Si la incidencia admite un reintento seguro.",
+    )
+    proxima_accion: str = Field(
+        default="",
+        description="La acción segura que sigue (REINTENTAR_ACTIVACION, …).",
+    )
+
+
 class PagoConfirmadoEspecificaOut(BaseSchema):
     """Bloque específico de la confirmación de un pago."""
 
     estado_operativo: EstadoOperativoOut = Field(
         ...,
         description="Veredicto operativo del pago.",
+    )
+    estado_activacion: EstadoActivacionOut | None = Field(
+        default=None,
+        description=(
+            "Veredicto de la activación de derechos. Es un canal SEPARADO del "
+            "veredicto operativo (FR-04 §6)."
+        ),
     )
     ya_confirmado: bool = Field(
         ...,
@@ -137,6 +173,13 @@ class OrdenPagoEspecificaOut(BaseSchema):
         ...,
         description="Veredicto operativo del pago.",
     )
+    estado_activacion: EstadoActivacionOut | None = Field(
+        default=None,
+        description=(
+            "Veredicto de la activación de derechos. Es un canal SEPARADO del "
+            "veredicto operativo (FR-04 §6)."
+        ),
+    )
     origen_pago: str = Field(
         ...,
         description="Procedencia de la evidencia (IZIPAY, MANUAL, SIN_PAGO).",
@@ -175,6 +218,13 @@ class OrdenPagoOut(BaseSchema):
     estado_operativo: EstadoOperativoOut = Field(
         ...,
         description="Veredicto operativo del pago.",
+    )
+    estado_activacion: EstadoActivacionOut | None = Field(
+        default=None,
+        description=(
+            "Veredicto de la activación de derechos. Es un canal SEPARADO del "
+            "veredicto operativo (FR-04 §6)."
+        ),
     )
     origen_pago: str = Field(
         ...,
@@ -257,6 +307,7 @@ class ConfirmarPagoIn(BaseSchema):
 
 __all__ = [
     "ConfirmarPagoIn",
+    "EstadoActivacionOut",
     "EstadoOperativoOut",
     "IntentoPagoOut",
     "OrdenPagoEspecificaOut",

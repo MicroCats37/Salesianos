@@ -24,10 +24,18 @@ from modules.competencias.domain.models import (
 
 @admin.register(Competencia)
 class CompetenciaAdmin(admin.ModelAdmin):
-    """Listado de competencias por edición y disciplina."""
+    """Listado de competencias por edición, disciplina y categoría."""
 
-    list_display = ("nombre", "edicion", "disciplina", "fecha", "estado", "version")
-    list_filter = ("estado", "edicion", "disciplina")
+    list_display = (
+        "nombre",
+        "edicion",
+        "disciplina",
+        "categoria",
+        "fecha",
+        "estado",
+        "version",
+    )
+    list_filter = ("estado", "edicion", "disciplina", "categoria")
     search_fields = ("nombre",)
     date_hierarchy = "fecha"
     readonly_fields = ("id", "version", "created_at", "updated_at")

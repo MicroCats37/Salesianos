@@ -12,6 +12,7 @@ from modules.salesianos_fest.domain.models import (
     ActivacionCapacidad,
     ActivacionPase,
     BeneficioConcedido,
+    Categoria,
     CompraPase,
     CortesiaPase,
     Disciplina,
@@ -24,7 +25,36 @@ from modules.salesianos_fest.domain.models import (
     PaseBeneficiario,
     PasePrecio,
     Participacion,
+    Promocion,
 )
+
+
+@admin.register(Promocion)
+class PromocionAdmin(admin.ModelAdmin):
+    """Las cohortes de promoción.
+
+    Son GLOBALES: no cuelgan de ninguna edición. El `anio` es su clave
+    natural y no se edita a mano una vez que hay inscripciones que lo usan.
+    """
+
+    list_display = ("nombre", "anio", "estado")
+    list_filter = ("estado",)
+    search_fields = ("nombre",)
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(Categoria)
+class CategoriaAdmin(admin.ModelAdmin):
+    """Las bandas competitivas de una edición.
+
+    El rango de promociones es la regla de derivación cohorte → categoría:
+    no se edita a mano sin revisar las inscripciones afectadas.
+    """
+
+    list_display = ("nombre", "edicion", "promocion_desde", "promocion_hasta", "estado")
+    list_filter = ("estado", "edicion")
+    search_fields = ("nombre",)
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(Disciplina)
@@ -37,8 +67,14 @@ class DisciplinaAdmin(admin.ModelAdmin):
 
 @admin.register(Paquete)
 class PaqueteAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "edicion", "estado", "cupos_incluidos")
-    list_filter = ("estado", "edicion")
+    list_display = (
+        "nombre",
+        "edicion",
+        "estado",
+        "tipo",
+        "minimo_compra_inicial",
+    )
+    list_filter = ("estado", "tipo", "modo_disciplinas", "edicion")
     search_fields = ("nombre", "slug")
     readonly_fields = ("created_at", "updated_at")
 
@@ -65,16 +101,19 @@ class InscripcionAdmin(admin.ModelAdmin):
         "edicion",
         "responsable",
         "paquete",
+        "promocion",
         "estado",
         "cupos_pagados",
         "cupos_asignados",
     )
-    list_filter = ("estado", "edicion", "paquete")
+    list_filter = ("estado", "edicion", "paquete", "promocion")
     search_fields = ("referencia",)
     readonly_fields = (
         "created_at",
         "updated_at",
         "referencia",
+        "promocion",
+        "fusion_promocion",
         "cupos_solicitados",
         "cupos_pagados",
         "cupos_asignados",
@@ -83,10 +122,10 @@ class InscripcionAdmin(admin.ModelAdmin):
 
 @admin.register(Equipo)
 class EquipoAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "inscripcion", "disciplina", "estado")
-    list_filter = ("estado", "disciplina")
+    list_display = ("nombre", "inscripcion", "disciplina", "categoria", "estado")
+    list_filter = ("estado", "disciplina", "categoria")
     search_fields = ("nombre",)
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at", "categoria")
 
 
 @admin.register(Participacion)
@@ -275,6 +314,7 @@ __all__ = [
     "ActivacionCapacidadAdmin",
     "ActivacionPaseAdmin",
     "BeneficioConcedidoAdmin",
+    "CategoriaAdmin",
     "CompraPaseAdmin",
     "CortesiaPaseAdmin",
     "DisciplinaAdmin",
@@ -287,4 +327,5 @@ __all__ = [
     "PaseBeneficiarioAdmin",
     "PasePrecioAdmin",
     "ParticipacionAdmin",
+    "PromocionAdmin",
 ]

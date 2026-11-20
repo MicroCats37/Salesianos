@@ -1,6 +1,7 @@
 """`InscripcionFlujo` — el alta de la inscripción inicial y su compra.
 
 Packet: `DOM-01` · Change: `salesianos-fest-rebuild`
+Cambio: `restore-registration-promotion-catalog-flow` (2026-11-20)
 
 Contract: `contract/django-app-architecture-contract.md` §4.4 — flujos ASYNC.
 
@@ -15,9 +16,25 @@ interfaz CONGELADA de `commerce` (`CompraFlujo`).
 las líneas del snapshot; este flujo entrega el precio VIGENTE del catálogo y
 NO acepta ningún importe del cliente.
 
+**D-CAT-01 — El precio es POR PERSONA.** El cliente declara la CANTIDAD de
+participantes (mínimo comercial: `Paquete.minimo_compra_inicial`); el
+servidor entrega el precio UNITARIO vigente y el total lo deriva `commerce`
+como `cantidad × precio_unitario`. NO hay un máximo global de participantes:
+el tope de un equipo es el de su disciplina, que es una regla deportiva.
+
+**D-CAT-01/D-CAT-05 — La categoría la DERIVA el servidor.** La promoción
+principal se proyecta contra el rango de las categorías de la edición y de
+ahí sale la categoría de TODOS los equipos de la inscripción. El cliente
+declara la promoción; nunca la categoría.
+
+**D-CAT-02 — La fusión es DESCRIPTIVA.** `fusion_promocion` nombra la segunda
+cohorte de una promoción fusionada. NO altera cupos, pago, categoría,
+elegibilidad de equipo ni cuadro competitivo.
+
 **RN-I02 — Una compra pendiente NO habilita cupos.** La inscripción nace con
 `cupos_pagados = 0`. La activación de derechos (que sí incrementa los cupos)
-es de `DOM-02`, a través del puerto `IActivadorDominioCompra` de FND-05.
+es de `DOM-02`, a través del puerto `IActivadorDominioCompra` de FND-05. La
+activación concede EXACTAMENTE los `cantidad` cupos que congeló el snapshot.
 
 **RN-I01 — La inscripción tiene un responsable.** El responsable sale de la
 cuenta autenticada; el cliente no declara quién es.
@@ -34,6 +51,7 @@ reintentarla.
 
 import asyncio
 import uuid
+from decimal import Decimal
 
 from asgiref.sync import sync_to_async
 from django.db import IntegrityError, transaction
@@ -48,14 +66,23 @@ from modules.commerce.domain.services.flujos.compra_flujo import CompraFlujo
 from modules.eventos.domain.constants import ModuloLogico
 from modules.eventos.domain.exceptions import ModuloNoHabilitadoError
 from modules.salesianos_fest.domain.constants import (
+    CONCEPTO_LINEA_PAQUETE,
     CausaOperativaInscripcion,
     EstadoPaquete,
+    EstadoPromocion,
+    ModoDisciplinas,
 )
 from modules.salesianos_fest.domain.exceptions import (
+    CantidadInsuficienteError,
+    CategoriaNoResueltaError,
     DisciplinaNoPermitidaError,
     EquipoDuplicadoError,
+    EquiposFueraDePaqueteError,
+    FusionPromocionInvalidaError,
     InscripcionNoEncontradaError,
     PaqueteNoVigenteError,
+    PrecioCambiadoError,
+    PromocionNoEncontradaError,
 )
 from modules.salesianos_fest.domain.ports import IAlcanceEdicionService
 from modules.salesianos_fest.domain.referencia import referencia_inicial
@@ -64,6 +91,7 @@ from modules.salesianos_fest.domain.results.inscripcion_result import (
     EquipoResult,
     InscripcionDetalleResult,
     InscripcionInicialResult,
+    PromocionResult,
 )
 from modules.salesianos_fest.domain.schemas.inscripcion_schemas import (
     InscripcionInicialData,
@@ -119,31 +147,40 @@ class InscripcionFlujo:
         edicion = await sync_to_async(self._resolver_edicion)(data.edicion_id)
         paquete = await sync_to_async(self._resolver_paquete)(edicion, data.paquete_id)
         precio = await sync_to_async(self._resolver_precio)(paquete)
+        cantidad = await sync_to_async(self._validar_cantidad)(paquete, data.cantidad)
+        await sync_to_async(self._validar_version_cotizacion)(
+            paquete,
+            data.cotizacion_version,
+        )
+        promocion = await sync_to_async(self._resolver_promocion)(data.promocion_id)
+        fusion = await sync_to_async(self._resolver_fusion)(
+            data.fusion_promocion_id,
+            promocion,
+        )
+        categoria = await sync_to_async(self._resolver_categoria)(edicion, promocion)
         await sync_to_async(self._validar_equipos)(paquete, data.equipos)
 
         inscripcion, reutilizada = await self._obtener_o_crear_inscripcion(
             edicion,
             paquete,
             data,
+            cantidad,
+            promocion,
+            fusion,
+            categoria,
         )
         compra, compra_reutilizada = await self._crear_compra(
             inscripcion,
             paquete,
             precio,
+            cantidad,
             data.responsable_id,
         )
         detalle = await sync_to_async(self._construir_detalle)(inscripcion)
 
         return InscripcionInicialResult(
             inscripcion=detalle,
-            compra=CompraInscripcionResult(
-                compra_id=str(compra.id),
-                orden_pago_id=str(compra.orden_pago_id),
-                estado=compra.estado,
-                total=compra.total,
-                moneda=compra.moneda,
-                reutilizada=compra_reutilizada,
-            ),
+            compra=self._presentar_compra(compra, compra_reutilizada, cantidad),
             causa_operativa=(
                 CausaOperativaInscripcion.INSCRIPCION_REUTILIZADA
                 if reutilizada
@@ -180,19 +217,102 @@ class InscripcionFlujo:
         return paquete
 
     def _resolver_precio(self, paquete):
-        """El precio vigente del paquete. Sin precio, no hay venta."""
+        """El precio vigente del paquete. Sin precio, no hay venta.
+
+        El precio es UNITARIO: es el precio de UNA persona (`D-CAT-01`).
+        """
         precio = self.catalogo_selector.obtener_precio_vigente(paquete.id)
         if precio is None:
             raise PaqueteNoVigenteError()
         return precio
+
+    def _validar_cantidad(self, paquete, cantidad: int) -> int:
+        """La cantidad de participantes contra el mínimo COMERCIAL del paquete.
+
+        El mínimo es del PAQUETE (`Paquete.minimo_compra_inicial`), no un
+        máximo global: el tope de un equipo es el de su disciplina, que es
+        una regla deportiva (`D-CAT-01`).
+        """
+        if cantidad < paquete.minimo_compra_inicial:
+            raise CantidadInsuficienteError()
+        return cantidad
+
+    def _validar_version_cotizacion(self, paquete, cotizacion_version) -> None:
+        """Comprueba el TOKEN DE CONCURRENCIA de la cotización, si viaja.
+
+        El token es la versión del precio que el comprador vio. Si el
+        catálogo ya no está en esa versión, el alta se rechaza: es mejor
+        obligar a cotizar de nuevo que cobrar una cantidad que nadie vió
+        (`RN-C02`).
+
+        Sin token NO hay comprobación: el precio vigente es el que rige.
+        """
+        if cotizacion_version is None:
+            return
+        vigente = self.catalogo_selector.obtener_version_precio(paquete.id)
+        if cotizacion_version != vigente:
+            raise PrecioCambiadoError()
+
+    def _resolver_promocion(self, promocion_id):
+        """La promoción (cohorte) que compra. GLOBAL y ACTIVA.
+
+        La promoción es la que DECLARA el cliente; el servidor la contrasta
+        contra el catálogo global.
+        """
+        promocion = self.catalogo_selector.obtener_promocion(promocion_id)
+        if promocion is None or promocion.estado != EstadoPromocion.ACTIVA:
+            raise PromocionNoEncontradaError()
+        return promocion
+
+    def _resolver_fusion(self, fusion_promocion_id, promocion):
+        """La promoción fusionada: OPCIONAL, DESCRIPTIVA y DISTINTA.
+
+        La fusión nombra la segunda cohorte de una promoción fusionada. NO
+        altera cupos, pago, categoría, elegibilidad ni cuadro competitivo
+        (`D-CAT-02`): por eso su única regla es que no sea la misma que la
+        promoción principal.
+        """
+        if fusion_promocion_id is None:
+            return None
+
+        fusion = self.catalogo_selector.obtener_promocion(fusion_promocion_id)
+        if fusion is None or fusion.estado != EstadoPromocion.ACTIVA:
+            raise PromocionNoEncontradaError()
+        if fusion.id == promocion.id:
+            raise FusionPromocionInvalidaError()
+        return fusion
+
+    def _resolver_categoria(self, edicion, promocion):
+        """La categoría DERIVADA de la promoción principal.
+
+        Es el ÚNICO punto de derivación (`D-CAT-05`): el cliente declara la
+        promoción, nunca la categoría. Si la cohorte no cae en ninguna
+        categoría activa de la edición, la inscripción NO tiene banda con la
+        que competir y se rechaza: no se inventa ninguna.
+        """
+        categoria = self.catalogo_selector.obtener_categoria_por_promocion(
+            edicion.id,
+            promocion.anio,
+        )
+        if categoria is None:
+            raise CategoriaNoResueltaError()
+        return categoria
 
     def _validar_equipos(self, paquete, equipos):
         """Comprueba que las disciplinas declaradas estén permitidas.
 
         El padrón NO lo elige el cliente: cada disciplina debe existir en la
         edición, estar `ACTIVA` y formar parte del paquete.
+
+        Además, la CANTIDAD y el CONJUNTO de equipos los manda el PAQUETE:
+
+        - `modo_disciplinas = FIJO` — hay que declarar EXACTAMENTE las
+          disciplinas vinculadas al paquete.
+        - `modo_disciplinas = ELEGIBLE` — hay que declarar hasta
+          `cantidad_disciplinas` de las disciplinas vinculadas al paquete.
         """
         vistas = set()
+        permitidas = set()
         for equipo in equipos:
             disciplina = self.catalogo_core.disciplina_permitida(
                 paquete,
@@ -203,8 +323,33 @@ class InscripcionFlujo:
             if str(disciplina.id) in vistas:
                 raise EquipoDuplicadoError()
             vistas.add(str(disciplina.id))
+            permitidas.add(str(disciplina.id))
 
-    async def _obtener_o_crear_inscripcion(self, edicion, paquete, data):
+        vinculadas = {
+            str(vinculo.disciplina_id)
+            for vinculo in paquete.disciplinas_vinculadas.all()
+        }
+        if not permitidas.issubset(vinculadas):
+            raise DisciplinaNoPermitidaError()
+
+        if paquete.modo_disciplinas == ModoDisciplinas.FIJO:
+            if permitidas != vinculadas:
+                raise EquiposFueraDePaqueteError()
+            return
+
+        if len(permitidas) > paquete.cantidad_disciplinas:
+            raise EquiposFueraDePaqueteError()
+
+    async def _obtener_o_crear_inscripcion(
+        self,
+        edicion,
+        paquete,
+        data,
+        cantidad,
+        promocion,
+        fusion,
+        categoria,
+    ):
         """Devuelve `(inscripcion, reutilizada)`.
 
         La garantía de NO duplicar la inscripción la da la base de datos: la
@@ -219,6 +364,10 @@ class InscripcionFlujo:
                 edicion,
                 paquete,
                 data,
+                cantidad,
+                promocion,
+                fusion,
+                categoria,
             )
         except IntegrityError:
             # La restricción única rechazó la segunda inscripción: la que
@@ -252,7 +401,16 @@ class InscripcionFlujo:
         return None
 
     @transaction.atomic()
-    def _crear_o_reutilizar_sync(self, edicion, paquete, data):
+    def _crear_o_reutilizar_sync(
+        self,
+        edicion,
+        paquete,
+        data,
+        cantidad,
+        promocion,
+        fusion,
+        categoria,
+    ):
         """Alta atómica de la inscripción y sus equipos.
 
         Returns:
@@ -270,17 +428,28 @@ class InscripcionFlujo:
             edicion_id=edicion.id,
             responsable_id=data.responsable_id,
             paquete_id=paquete.id,
+            promocion_id=promocion.id,
+            fusion_promocion_id=fusion.id if fusion is not None else None,
             referencia=f"INS-{uuid.uuid4().hex[:12].upper()}",
-            cupos_solicitados=paquete.cupos_incluidos,
+            cupos_solicitados=cantidad,
         )
-        self.inscripcion_core.crear_equipos(inscripcion, data.equipos)
+        self.inscripcion_core.crear_equipos(
+            inscripcion,
+            data.equipos,
+            categoria,
+        )
         return inscripcion, False
 
-    async def _crear_compra(self, inscripcion, paquete, precio, responsable_id):
+    async def _crear_compra(self, inscripcion, paquete, precio, cantidad, responsable_id):
         """Crea (o reutiliza) la compra pendiente de la inscripción.
 
         La compra la crea `commerce` a través de su interfaz CONGELADA: este
         flujo sólo entrega el snapshot ya resuelto por el servidor.
+
+        La línea congela la CANTIDAD de participantes y el PRECIO UNITARIO
+        vigente: el total lo deriva `commerce` como
+        `cantidad × precio_unitario` (`RN-C02`). La activación de derechos
+        concederá EXACTAMENTE esos `cantidad` cupos (`RN-I02`).
         """
         intencion = CompraCreateData(
             persona_id=responsable_id,
@@ -290,7 +459,7 @@ class InscripcionFlujo:
                     concepto_tipo="PAQUETE",
                     concepto_id=str(paquete.id),
                     concepto_nombre=paquete.nombre,
-                    cantidad=paquete.cupos_incluidos,
+                    cantidad=cantidad,
                     precio_unitario=precio.monto,
                     precio_aplicado=precio.monto,
                 )
@@ -323,6 +492,20 @@ class InscripcionFlujo:
             responsable_id=str(inscripcion.responsable_id),
             paquete_id=str(inscripcion.paquete_id),
             paquete_nombre=inscripcion.paquete.nombre,
+            promocion=PromocionResult(
+                id=str(inscripcion.promocion_id),
+                anio=inscripcion.promocion.anio,
+                nombre=inscripcion.promocion.nombre,
+            ),
+            fusion_promocion=(
+                PromocionResult(
+                    id=str(inscripcion.fusion_promocion_id),
+                    anio=inscripcion.fusion_promocion.anio,
+                    nombre=inscripcion.fusion_promocion.nombre,
+                )
+                if inscripcion.fusion_promocion_id is not None
+                else None
+            ),
             estado=inscripcion.estado,
             referencia=inscripcion.referencia,
             cupos_solicitados=inscripcion.cupos_solicitados,
@@ -340,11 +523,49 @@ class InscripcionFlujo:
                     updated_at=equipo.updated_at,
                     disciplina_id=str(equipo.disciplina_id),
                     disciplina_nombre=equipo.disciplina.nombre,
+                    categoria_id=str(equipo.categoria_id),
+                    categoria_nombre=equipo.categoria.nombre,
                     nombre=equipo.nombre,
                     estado=equipo.estado,
                 )
                 for equipo in equipos
             ],
+        )
+
+    @staticmethod
+    def _presentar_compra(
+        compra,
+        reutilizada: bool,
+        cantidad: int,
+    ) -> CompraInscripcionResult:
+        """Proyecta la compra con los hechos CONGELADOS en su snapshot.
+
+        Los valores salen del snapshot, no del catálogo vigente: una compra
+        reutilizada conserva su precio y su cantidad originales aunque el
+        catálogo haya cambiado después (`RN-M03`).
+        """
+        cantidad_congelada = cantidad
+        precio_unitario = Decimal("0.00")
+        for linea in compra.lineas_snapshot or []:
+            if not isinstance(linea, dict):
+                continue
+            if linea.get("concepto_tipo") != CONCEPTO_LINEA_PAQUETE:
+                continue
+            cantidad_congelada = int(linea.get("cantidad") or cantidad_congelada)
+            precio_unitario = Decimal(
+                str(linea.get("precio_aplicado") or linea.get("precio_unitario") or 0)
+            )
+            break
+
+        return CompraInscripcionResult(
+            compra_id=str(compra.id),
+            orden_pago_id=str(compra.orden_pago_id),
+            estado=compra.estado,
+            cantidad=cantidad_congelada,
+            precio_unitario=precio_unitario,
+            total=compra.total,
+            moneda=compra.moneda,
+            reutilizada=reutilizada,
         )
 
 

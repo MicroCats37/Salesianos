@@ -22,6 +22,9 @@ from modules.usuarios.domain.services.core.grupo_service import GrupoFuncionalSe
 from modules.usuarios.domain.services.core.persona_core_service import (
     PersonaCoreService,
 )
+from modules.usuarios.domain.services.core.registro_core_service import (
+    RegistroCoreService,
+)
 from modules.usuarios.domain.services.core.titularidad_service import (
     TitularidadService,
 )
@@ -32,6 +35,7 @@ from modules.usuarios.domain.services.flujos.auth_flujo import AuthFlujo
 from modules.usuarios.domain.services.flujos.persona_resolucion_flujo import (
     PersonaResolucionFlujo,
 )
+from modules.usuarios.domain.services.flujos.registro_flujo import RegistroFlujo
 from modules.usuarios.domain.services.orchestrators.auth_orchestrator import (
     AuthOrchestrator,
 )

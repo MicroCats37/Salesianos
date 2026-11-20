@@ -17,7 +17,12 @@ import pytest
 from asgiref.sync import async_to_sync
 
 from modules.eventos.domain.exceptions import ModuloNoHabilitadoError
-from modules.salesianos_fest.domain.models import PaquetePrecio
+from modules.salesianos_fest.domain.exceptions import CantidadInsuficienteError
+from modules.salesianos_fest.domain.models import (
+    Paquete,
+    PaqueteDisciplina,
+    PaquetePrecio,
+)
 from modules.salesianos_fest.domain.services.flujos.catalogo_flujo import CatalogoFlujo
 
 pytestmark = pytest.mark.django_db
@@ -42,6 +47,9 @@ def test_el_paquete_se_publica_con_su_precio_vigente_y_sus_beneficios(
     publicado = resultado.paquetes[0]
     assert publicado.nombre == "Paquete competitivo"
     assert publicado.estado == "VIGENTE"
+    # El precio es UNITARIO (`D-CAT-01`) y el paquete declara su mínimo
+    # comercial de participantes.
+    assert publicado.minimo_compra_inicial == 10
     assert publicado.cupos_incluidos == 10
     assert publicado.precio.monto == Decimal("250.00")
     assert publicado.precio.moneda == "PEN"
@@ -107,3 +115,38 @@ def test_una_edicion_sin_el_modulo_no_expone_catalogo(flujo, edicion_sin_modulo)
     """
     with pytest.raises(ModuloNoHabilitadoError):
         async_to_sync(flujo.listar_paquetes)(edicion_sin_modulo.id)
+
+
+def test_el_minimo_comercial_manda_y_el_cupo_declarado_no_gobierna(
+    flujo, edicion_publicada, disciplina
+):
+    """GIVEN un paquete cuyo hecho DECLARADO de cupos NO es su mínimo comercial
+    WHEN  se cotiza por debajo del declarado y por encima del mínimo
+    THEN  manda `minimo_compra_inicial`: el declarado está DEPRECADO y no
+    gobierna la capacidad (`D-CAT-01`).
+    """
+    paquete = Paquete.objects.create(
+        edicion=edicion_publicada,
+        nombre="Paquete de capacidad divergente",
+        slug="capacidad-divergente",
+        cupos_incluidos=10,
+        minimo_compra_inicial=4,
+    )
+    PaqueteDisciplina.objects.create(paquete=paquete, disciplina=disciplina)
+    PaquetePrecio.objects.create(
+        paquete=paquete,
+        monto=Decimal("250.00"),
+        moneda="PEN",
+        vigente_desde=date.today() - timedelta(days=1),
+    )
+
+    # THEN la cantidad que el hecho DECLARADO prohíbe se cotiza sin problema:
+    # el suelo es el mínimo COMERCIAL, no el cupo declarado.
+    cotizacion = async_to_sync(flujo.cotizar)(paquete.id, 5)
+    assert cotizacion.minimo_cantidad == 4
+    assert cotizacion.cantidad_cotizada == 5
+    assert cotizacion.total == Decimal("1250.00")
+
+    # AND la cantidad por debajo del mínimo AUTORITATIVO se rechaza.
+    with pytest.raises(CantidadInsuficienteError):
+        async_to_sync(flujo.cotizar)(paquete.id, 3)

@@ -114,6 +114,119 @@ class TotalOrdenData(BaseModel):
     moneda: str = Field(..., description="Código ISO-4217 del monto.")
 
 
+class EstadoActivacionCompraData(BaseModel):
+    """El estado de la activación de derechos de la compra que financia la orden.
+
+    Lo devuelve el puerto `IActivacionCompraService.estado_activacion`.
+
+    Expone **BANDERAS**, no el vocabulario crudo del dominio de activación:
+    `pagos` no necesita conocer los valores de `commerce` y el grafo de
+    módulos queda desacoplado también en los datos (igual que
+    `EstadoCompraOrdenPago`).
+
+    `incidencia_codigo` es un **código de máquina seguro** (`[A-Z0-9_]`), nunca
+    el texto de una excepción ni un payload (FR-04 §4, RN-C08).
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    existe: bool = Field(
+        ...,
+        description="Si hay una activación registrada para la compra.",
+    )
+    activada: bool = Field(
+        default=False,
+        description="Si el derecho quedó habilitado (terminal).",
+    )
+    pendiente: bool = Field(
+        default=False,
+        description="Si la activación está registrada y aún no se resolvió.",
+    )
+    fallida: bool = Field(
+        default=False,
+        description="Si el último intento de activación falló (recuperable).",
+    )
+    en_curso: bool = Field(
+        default=False,
+        description="Si hay un intento de activación reservado.",
+    )
+    recuperable: bool = Field(
+        default=False,
+        description="Si la incidencia admite un reintento seguro.",
+    )
+    intentos: int = Field(
+        default=0,
+        description="Número de intentos de activación Consumidos.",
+    )
+    incidencia_codigo: str = Field(
+        default="",
+        description="Código de máquina de la incidencia, si la hay.",
+    )
+    proxima_accion: str = Field(
+        default="",
+        description="La acción segura que sigue (REINTENTAR_ACTIVACION, …).",
+    )
+
+
+class ContextoNotificacionCompra(BaseModel):
+    """Los hechos congelados que se entregan al notificador del comprador.
+
+    No lleva reglas, plantillas, destinos ni credenciales: sólo los hechos
+    públicos de la compra. El **proveedor** es un puerto sin implementación
+    hasta que `PD-08` se ratifique, así que nada de esto se envía todavía.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    orden_pago_id: str = Field(..., description="Identificador de la orden pagada.")
+    persona_id: str | None = Field(
+        default=None,
+        description="Identificador de la persona compradora, si la hay.",
+    )
+    referencia: str = Field(
+        default="",
+        description="Referencia visible de la orden. Nunca un secreto.",
+    )
+    total: Decimal | None = Field(
+        default=None,
+        description="Monto congelado de la compra.",
+    )
+    moneda: str = Field(default="", description="Código ISO-4217 del monto.")
+
+
+class ResultadoNotificacion(BaseModel):
+    """El resultado de intentar notificar al comprador.
+
+    `omitida=True` significa que **no se intentó enviar**: el proveedor no
+    está configurado (`PD-08` abierto). `enviada=False` con `omitida=False`
+    significa que se intentó y falló. En los dos casos el pago confirmado se
+    conserva: la notificación NUNCA revierte una compra (RN-C08).
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    enviada: bool = Field(
+        default=False,
+        description="Si la notificación se envió.",
+    )
+    omitida: bool = Field(
+        default=False,
+        description="Si no se intentó enviar (proveedor no configurado).",
+    )
+    recuperable: bool = Field(
+        default=False,
+        description="Si el intento admite un reintento.",
+    )
+    codigo: str = Field(
+        default="",
+        description="Código de máquina del resultado.",
+    )
+    intentos: int = Field(
+        default=0,
+        description="Número de intentos de notificación consumidos.",
+    )
+
+
 class ResultadoActivacionCompra(BaseModel):
     """El resultado de pedir la activación de los derechos de una compra.
 
@@ -168,10 +281,13 @@ class ResultadoActivacionCompra(BaseModel):
 
 
 __all__ = [
+    "ContextoNotificacionCompra",
     "EvidenciaPagoData",
+    "EstadoActivacionCompraData",
     "EstadoCompraOrdenPago",
     "LineaIntentoData",
     "MarcaCompraPagadaResult",
     "ResultadoActivacionCompra",
+    "ResultadoNotificacion",
     "TotalOrdenData",
 ]

@@ -18,11 +18,13 @@ Reglas:
 """
 
 from modules.pagos.domain.results.pago_result import (
+    EstadoActivacionResult,
     EstadoOperativoResult,
     OrdenPagoResult,
     PagoConfirmadoResult,
 )
 from modules.pagos.presentation.schemas.pago_schemas import (
+    EstadoActivacionOut,
     EstadoOperativoOut,
     IntentoPagoOut,
     OrdenPagoOut,
@@ -43,6 +45,25 @@ class PagosPresenter:
         )
 
     @staticmethod
+    def present_estado_activacion(
+        result: EstadoActivacionResult | None,
+    ) -> EstadoActivacionOut | None:
+        """Proyecta el veredicto de activación a su wrapper HTTP.
+
+        Es un canal SEPARADO del veredicto operativo: el cliente recibe los
+        dos hechos sin cruzar por su cuenta los estados hermanos (FR-04 §6).
+        """
+        if result is None:
+            return None
+        return EstadoActivacionOut(
+            codigo=result.codigo,
+            etiqueta=result.etiqueta,
+            descripcion=result.descripcion,
+            recuperable=result.recuperable,
+            proxima_accion=result.proxima_accion,
+        )
+
+    @staticmethod
     def present_confirmado(result: PagoConfirmadoResult) -> PagoConfirmadoOut:
         """Proyecta el resultado de una confirmación al wrapper HTTP."""
         return PagoConfirmadoOut(
@@ -53,6 +74,9 @@ class PagosPresenter:
             estado_orden=result.estado_orden,
             estado_operativo=PagosPresenter.present_estado_operativo(
                 result.estado_operativo
+            ),
+            estado_activacion=PagosPresenter.present_estado_activacion(
+                result.estado_activacion
             ),
             ya_confirmado=result.ya_confirmado,
             monto=result.monto,
@@ -74,6 +98,9 @@ class PagosPresenter:
             pagada_en=result.pagada_en,
             estado_operativo=PagosPresenter.present_estado_operativo(
                 result.estado_operativo
+            ),
+            estado_activacion=PagosPresenter.present_estado_activacion(
+                result.estado_activacion
             ),
             origen_pago=result.origen_pago,
             monto=result.monto,

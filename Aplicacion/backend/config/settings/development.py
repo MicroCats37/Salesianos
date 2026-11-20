@@ -1,8 +1,16 @@
 """
 Development settings.
 """
+import os
 from datetime import timedelta
-from .base import *  # noqa
+
+# Desarrollo local: SQLite por defecto. Se fija ANTES de importar `base` para
+# que `base` no exija `DB_PASSWORD` en el entorno (A0-VER03-05). Para trabajar
+# contra PostgreSQL hay que exportar `USE_SQLITE=false` Y `DB_PASSWORD` de
+# forma explícita: no hay ningún valor por defecto para la credencial.
+os.environ.setdefault("USE_SQLITE", "true")
+
+from .base import *  # noqa: E402,F403,F405
 
 DEBUG = True
 
@@ -10,8 +18,8 @@ DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']
 
 # ── Base de datos — SQLite para desarrollo local ────────────
-# Para usar PostgreSQL en desarrollo, quitar USE_SQLITE o setearlo a false
-import os
+# Para usar PostgreSQL en desarrollo, setear USE_SQLITE=false (y exportar
+# DB_PASSWORD, DB_NAME, DB_USER, DB_HOST y DB_PORT).
 if os.environ.get("USE_SQLITE", "").lower() in ("1", "true", "yes"):
     DATABASES = {
         'default': {

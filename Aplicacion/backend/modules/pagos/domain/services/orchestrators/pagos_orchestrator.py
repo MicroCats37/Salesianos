@@ -121,6 +121,10 @@ class PagosOrchestrator:
             self.estado_operativo_service.calcular_para_orden
         )(orden)
 
+        estado_activacion = await sync_to_async(
+            self.estado_operativo_service.calcular_activacion_para_orden
+        )(orden)
+
         intentos = await self._intentos_publicos(orden_pago_id)
         origen_pago = await sync_to_async(self._origen)(orden)
 
@@ -133,6 +137,7 @@ class PagosOrchestrator:
             pagada_en=orden.pagada_en,
             creada_en=orden.created_at,
             estado_operativo=estado_operativo,
+            estado_activacion=estado_activacion,
             intentos=intentos,
             origen_pago=origen_pago,
         )

@@ -18,6 +18,10 @@ escribir.
 **Los motivos de rechazo** viajan como CÓDIGO (`MotivoNoElegibilidad`), no
 como prosa: el backend publica la razón y el cliente nunca la adivina
 (`QA-K01`).
+
+**La CATEGORÍA es parte de la identidad del torneo**: el alta la exige
+(`categoria_id`) y las salidas la publican (`categoria_id` +
+`categoria_nombre`), con el MISMO patrón que la disciplina.
 """
 
 from datetime import date, datetime
@@ -122,6 +126,8 @@ class CompetenciaListadoOut(Schema):
     edicion_id: str = Field(..., description="Edición de la competencia.")
     disciplina_id: str = Field(..., description="Disciplina del torneo.")
     disciplina_nombre: str = Field(..., description="Nombre de la disciplina.")
+    categoria_id: str = Field(..., description="Categoría del torneo.")
+    categoria_nombre: str = Field(..., description="Nombre de la categoría.")
     nombre: str = Field(..., description="Nombre del torneo.")
     estado: str = Field(..., description="Estado del torneo.")
     fecha: date = Field(..., description="Día de la competencia.")
@@ -141,6 +147,8 @@ class CompetenciaDetalleOut(Schema):
     edicion_nombre: str = Field(..., description="Nombre de la edición.")
     disciplina_id: str = Field(..., description="Disciplina del torneo.")
     disciplina_nombre: str = Field(..., description="Nombre de la disciplina.")
+    categoria_id: str = Field(..., description="Categoría del torneo.")
+    categoria_nombre: str = Field(..., description="Nombre de la categoría.")
     nombre: str = Field(..., description="Nombre del torneo.")
     estado: str = Field(..., description="Estado del torneo.")
     fecha: date = Field(..., description="Día de la competencia.")
@@ -176,6 +184,14 @@ class EquipoElegibleOut(Schema):
     edicion_id: str = Field(..., description="Edición a la que pertenece el equipo.")
     disciplina_id: str = Field(..., description="Disciplina del equipo.")
     disciplina_nombre: str = Field(..., description="Nombre de la disciplina.")
+    categoria_id: str | None = Field(
+        default=None,
+        description="Categoría del equipo. Vacía si el equipo no tiene categoría asignada.",
+    )
+    categoria_nombre: str = Field(
+        default="",
+        description="Nombre de la categoría del equipo.",
+    )
     estado: str = Field(..., description="Estado del equipo en su inscripción.")
     es_elegible: bool = Field(..., description="Si el equipo puede competir.")
     motivo: str = Field(
@@ -327,6 +343,13 @@ class CompetenciaCrearIn(Schema):
 
     edicion_id: str = Field(..., description="Edición de la competencia.")
     disciplina_id: str = Field(..., description="Disciplina del torneo.")
+    categoria_id: str = Field(
+        ...,
+        description=(
+            "Categoría del torneo. Es OBLIGATORIA: la identidad de una "
+            "competencia es (edición, disciplina, categoría, nombre)."
+        ),
+    )
     nombre: str = Field(
         ...,
         min_length=1,

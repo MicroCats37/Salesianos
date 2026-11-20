@@ -128,7 +128,7 @@ def test_una_persona_inexistente_se_rechaza(
 
 
 def test_la_disciplina_inactiva_no_es_elegible(
-    flujo, inscripcion, disciplina_inactiva, persona_participante
+    flujo, inscripcion, disciplina_inactiva, persona_participante, categoria
 ):
     """GIVEN una disciplina INACTIVA
     WHEN  se intenta agregar un participante a su equipo
@@ -137,6 +137,7 @@ def test_la_disciplina_inactiva_no_es_elegible(
     equipo = Equipo.objects.create(
         inscripcion=inscripcion,
         disciplina=disciplina_inactiva,
+        categoria=categoria,
         nombre="Equipo Inactivo",
     )
     intencion = ParticipanteAsignarData(
@@ -152,7 +153,7 @@ def test_la_disciplina_inactiva_no_es_elegible(
 
 
 def test_la_disciplina_que_el_paquete_no_permite_se_rechaza(
-    flujo, inscripcion, disciplina_otra_edicion, persona_participante
+    flujo, inscripcion, disciplina_otra_edicion, persona_participante, categoria
 ):
     """GIVEN una disciplina que NO está en el paquete de la inscripción
     WHEN  se intenta agregar un participante
@@ -161,6 +162,7 @@ def test_la_disciplina_que_el_paquete_no_permite_se_rechaza(
     equipo = Equipo.objects.create(
         inscripcion=inscripcion,
         disciplina=disciplina_otra_edicion,
+        categoria=categoria,
         nombre="Equipo Ajeno",
     )
     intencion = ParticipanteAsignarData(
@@ -176,7 +178,13 @@ def test_la_disciplina_que_el_paquete_no_permite_se_rechaza(
 
 
 def test_el_equipo_de_otra_inscripcion_no_existe(
-    flujo, inscripcion, persona_participante, persona_ajena, paquete, disciplina
+    flujo,
+    inscripcion,
+    persona_participante,
+    persona_ajena,
+    paquete,
+    disciplina,
+    categoria,
 ):
     """GIVEN un equipo de OTRA inscripción
     WHEN  se intenta agregar un participante a ese equipo
@@ -187,6 +195,7 @@ def test_el_equipo_de_otra_inscripcion_no_existe(
         edicion_id=inscripcion.edicion_id,
         responsable_id=persona_ajena.id,
         paquete_id=inscripcion.paquete_id,
+        promocion_id=inscripcion.promocion_id,
         referencia="INS-TEST-OTRA",
         cupos_solicitados=10,
         cupos_pagados=10,
@@ -194,6 +203,7 @@ def test_el_equipo_de_otra_inscripcion_no_existe(
     equipo_ajeno = Equipo.objects.create(
         inscripcion=otra_inscripcion,
         disciplina=disciplina,
+        categoria=categoria,
         nombre="Equipo Ajeno",
     )
     intencion = ParticipanteAsignarData(
@@ -209,7 +219,7 @@ def test_el_equipo_de_otra_inscripcion_no_existe(
 
 
 def test_la_modalidad_de_la_disciplina_exige_el_generero(
-    flujo, inscripcion, persona_otro_participante
+    flujo, inscripcion, persona_otro_participante, categoria
 ):
     """GIVEN una disciplina FEMENINA y una persona de género MASCULINO
     WHEN  se intenta agregar
@@ -232,6 +242,7 @@ def test_la_modalidad_de_la_disciplina_exige_el_generero(
     equipo = Equipo.objects.create(
         inscripcion=inscripcion,
         disciplina=disciplina,
+        categoria=categoria,
         nombre="Equipo Femenino",
     )
     intencion = ParticipanteAsignarData(
@@ -312,6 +323,7 @@ def test_la_persona_no_se_solapa_en_la_misma_disciplina_de_la_edicion(
         edicion=edicion_publicada,
         responsable_id=persona_ajena.id,
         paquete=paquete,
+        promocion_id=inscripcion.promocion_id,
         referencia="INS-TEST-SOLAPE",
         cupos_solicitados=10,
         cupos_pagados=10,
@@ -319,6 +331,7 @@ def test_la_persona_no_se_solapa_en_la_misma_disciplina_de_la_edicion(
     equipo_otro = Equipo.objects.create(
         inscripcion=otra_inscripcion,
         disciplina=equipo.disciplina,
+        categoria=equipo.categoria,
         nombre="Equipo Solapado",
     )
     Participacion.objects.create(
@@ -436,7 +449,13 @@ def test_retirar_una_participacion_inexistente_se_rechaza(
 
 
 def test_no_se_puede_retirar_la_participacion_de_otra_inscripcion(
-    flujo, intencion, persona_participante, edicion_publicada, paquete, persona_ajena
+    flujo,
+    intencion,
+    inscripcion,
+    persona_participante,
+    edicion_publicada,
+    paquete,
+    persona_ajena,
 ):
     """GIVEN una participación que pertenece a otra inscripción
     WHEN  se intenta retirar desde esta inscripción
@@ -449,6 +468,7 @@ def test_no_se_puede_retirar_la_participacion_de_otra_inscripcion(
         edicion=edicion_publicada,
         responsable_id=persona_ajena.id,
         paquete=paquete,
+        promocion_id=inscripcion.promocion_id,
         referencia="INS-TEST-OTRA-2",
         cupos_solicitados=10,
         cupos_pagados=10,

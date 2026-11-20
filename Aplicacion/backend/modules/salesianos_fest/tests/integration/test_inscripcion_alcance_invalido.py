@@ -37,12 +37,14 @@ def flujo(injector):
     return injector.get(InscripcionFlujo)
 
 
-def _intencion(edicion_id, paquete_id, disciplina_id, persona_id):
+def _intencion(edicion_id, paquete_id, disciplina_id, persona_id, promocion_id):
     """Construye la intención de alta."""
     return InscripcionInicialData(
         responsable_id=persona_id,
         edicion_id=edicion_id,
         paquete_id=paquete_id,
+        promocion_id=promocion_id,
+        cantidad=10,
         equipos=[
             EquipoCreateData(disciplina_id=disciplina_id, nombre="EquipoUno"),
         ],
@@ -50,13 +52,19 @@ def _intencion(edicion_id, paquete_id, disciplina_id, persona_id):
 
 
 def test_una_edicion_no_publicada_no_se_puede_comprar(
-    flujo, edicion_borrador, paquete, disciplina, persona
+    flujo, edicion_borrador, paquete, disciplina, persona, promocion
 ):
     """GIVEN una edición en BORRADOR
     WHEN  se confirma el alta
     THEN  se rechaza con `EDICION_NO_PUBLICADA`.
     """
-    intencion = _intencion(edicion_borrador.id, paquete.id, disciplina.id, persona.id)
+    intencion = _intencion(
+        edicion_borrador.id,
+        paquete.id,
+        disciplina.id,
+        persona.id,
+        promocion.id,
+    )
 
     with pytest.raises(EdicionNoPublicadaError):
         async_to_sync(flujo.crear_inscripcion_inicial)(intencion)
@@ -66,7 +74,7 @@ def test_una_edicion_no_publicada_no_se_puede_comprar(
 
 
 def test_una_edicion_inexistente_no_se_puede_comprar(
-    flujo, paquete, disciplina, persona
+    flujo, paquete, disciplina, persona, promocion
 ):
     """GIVEN una edición que no existe
     WHEN  se confirma el alta
@@ -74,7 +82,7 @@ def test_una_edicion_inexistente_no_se_puede_comprar(
     """
     from uuid import uuid4
 
-    intencion = _intencion(uuid4(), paquete.id, disciplina.id, persona.id)
+    intencion = _intencion(uuid4(), paquete.id, disciplina.id, persona.id, promocion.id)
 
     with pytest.raises(EdicionNoEncontradaError):
         async_to_sync(flujo.crear_inscripcion_inicial)(intencion)
@@ -83,7 +91,7 @@ def test_una_edicion_inexistente_no_se_puede_comprar(
 
 
 def test_una_edicion_sin_el_modulo_no_expone_compra(
-    flujo, edicion_sin_modulo, disciplina, persona
+    flujo, edicion_sin_modulo, disciplina, persona, promocion
 ):
     """GIVEN una edición sin el módulo `inscripciones` habilitado
     WHEN  se confirma el alta
@@ -98,7 +106,13 @@ def test_una_edicion_sin_el_modulo_no_expone_compra(
     )
     PaqueteDisciplina.objects.create(paquete=paquete, disciplina=disciplina)
 
-    intencion = _intencion(edicion_sin_modulo.id, paquete.id, disciplina.id, persona.id)
+    intencion = _intencion(
+        edicion_sin_modulo.id,
+        paquete.id,
+        disciplina.id,
+        persona.id,
+        promocion.id,
+    )
 
     with pytest.raises(ModuloNoHabilitadoError):
         async_to_sync(flujo.crear_inscripcion_inicial)(intencion)
@@ -107,7 +121,13 @@ def test_una_edicion_sin_el_modulo_no_expone_compra(
 
 
 def test_un_paquete_de_otra_edicion_no_se_puede_comprar(
-    flujo, edicion_publicada, edicion_otra, disciplina_otra_edicion, persona, precio
+    flujo,
+    edicion_publicada,
+    edicion_otra,
+    disciplina_otra_edicion,
+    persona,
+    precio,
+    promocion,
 ):
     """GIVEN un paquete de OTRA edición
     WHEN  se confirma el alta contra la edición actual
@@ -130,6 +150,7 @@ def test_un_paquete_de_otra_edicion_no_se_puede_comprar(
         paquete_ajeno.id,
         disciplina_otra_edicion.id,
         persona.id,
+        promocion.id,
     )
 
     with pytest.raises(PaqueteNoVigenteError):
@@ -140,7 +161,7 @@ def test_un_paquete_de_otra_edicion_no_se_puede_comprar(
 
 
 def test_un_paquete_sin_precio_vigente_no_se_puede_comprar(
-    flujo, edicion_publicada, paquete_sin_precio, disciplina, persona
+    flujo, edicion_publicada, paquete_sin_precio, disciplina, persona, promocion
 ):
     """GIVEN un paquete sin precio vigente
     WHEN  se confirma el alta
@@ -151,6 +172,7 @@ def test_un_paquete_sin_precio_vigente_no_se_puede_comprar(
         paquete_sin_precio.id,
         disciplina.id,
         persona.id,
+        promocion.id,
     )
 
     with pytest.raises(PaqueteNoVigenteError):
@@ -161,7 +183,15 @@ def test_un_paquete_sin_precio_vigente_no_se_puede_comprar(
 
 
 def test_una_disciplina_fuera_del_paquete_no_se_puede_comprar(
-    flujo, edicion_publicada, paquete, disciplina, disciplina_otra_edicion, persona, precio
+    flujo,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    disciplina_otra_edicion,
+    persona,
+    precio,
+    promocion,
+    categoria,
 ):
     """GIVEN una disciplina que el paquete NO permite
     WHEN  se confirma el alta
@@ -173,6 +203,7 @@ def test_una_disciplina_fuera_del_paquete_no_se_puede_comprar(
         paquete.id,
         disciplina_otra_edicion.id,
         persona.id,
+        promocion.id,
     )
 
     with pytest.raises(DisciplinaNoPermitidaError):
@@ -183,7 +214,14 @@ def test_una_disciplina_fuera_del_paquete_no_se_puede_comprar(
 
 
 def test_una_disciplina_inactiva_no_se_puede_comprar(
-    flujo, edicion_publicada, paquete, disciplina_inactiva, persona, precio
+    flujo,
+    edicion_publicada,
+    paquete,
+    disciplina_inactiva,
+    persona,
+    precio,
+    promocion,
+    categoria,
 ):
     """GIVEN una disciplina INACTIVA
     WHEN  se confirma el alta
@@ -201,6 +239,7 @@ def test_una_disciplina_inactiva_no_se_puede_comprar(
         paquete.id,
         disciplina_inactiva.id,
         persona.id,
+        promocion.id,
     )
 
     with pytest.raises(DisciplinaNoPermitidaError):
@@ -210,7 +249,14 @@ def test_una_disciplina_inactiva_no_se_puede_comprar(
 
 
 def test_dos_equipos_de_la_misma_disciplina_se_rechazan(
-    flujo, edicion_publicada, paquete, disciplina, persona, precio
+    flujo,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    persona,
+    precio,
+    promocion,
+    categoria,
 ):
     """GIVEN un alta con dos equipos de la MISMA disciplina
     WHEN  se confirma
@@ -220,6 +266,8 @@ def test_dos_equipos_de_la_misma_disciplina_se_rechazan(
         responsable_id=persona.id,
         edicion_id=edicion_publicada.id,
         paquete_id=paquete.id,
+        promocion_id=promocion.id,
+        cantidad=10,
         equipos=[
             EquipoCreateData(disciplina_id=disciplina.id, nombre="EquipoUno"),
             EquipoCreateData(disciplina_id=disciplina.id, nombre="EquipoDos"),

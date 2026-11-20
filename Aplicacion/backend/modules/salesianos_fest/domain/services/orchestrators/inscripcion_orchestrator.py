@@ -62,6 +62,10 @@ class InscripcionOrchestrator:
             responsable_id=UUID(persona_id),
             edicion_id=data.edicion_id,
             paquete_id=data.paquete_id,
+            promocion_id=data.promocion_id,
+            fusion_promocion_id=data.fusion_promocion_id,
+            cantidad=data.cantidad,
+            cotizacion_version=data.cotizacion_version,
             equipos=data.equipos,
         )
         return await self.flujo.crear_inscripcion_inicial(intencion)

@@ -86,6 +86,21 @@ class DisciplinaNoEncontradaError(NotFoundError):
         super().__init__(resource="Disciplina", code=self.code)
 
 
+class CategoriaNoEncontradaError(NotFoundError):
+    """La categoría solicitada no existe en la edición (404).
+
+    La CATEGORÍA es un hecho del DUEÑO (`modules.salesianos_fest`): este
+    módulo sólo la REFERENCIA. Una categoría que no existe —o que es de otra
+    edición— no se puede usar en una competencia, y el backend lo dice con su
+    propio código.
+    """
+
+    code = "CATEGORIA_NO_ENCONTRADA"
+
+    def __init__(self) -> None:
+        super().__init__(resource="Categoría", code=self.code)
+
+
 class CompetenciaDuplicadaError(ConflictError):
     """Ya existe una competencia con la misma identidad en la edición (409)."""
 
@@ -277,6 +292,7 @@ class EquipoNoElegibleError(UnprocessableEntityError):
 
 __all__ = [
     "ByeInvalidoError",
+    "CategoriaNoEncontradaError",
     "CompetenciaDuplicadaError",
     "CompetenciaEquipoDuplicadoError",
     "CompetenciaEquipoNoEncontradaError",

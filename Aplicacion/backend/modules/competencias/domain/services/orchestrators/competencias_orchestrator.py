@@ -91,6 +91,7 @@ class CompetenciasOrchestrator:
         self,
         *,
         disciplina_id=None,
+        categoria_id=None,
         estado=None,
     ) -> list[CompetenciaListadoResult]:
         """Las competencias de la edición vigente, con sus contadores."""
@@ -98,6 +99,7 @@ class CompetenciasOrchestrator:
         return await sync_to_async(self.competencia_selector.listar)(
             edicion.id,
             disciplina_id=disciplina_id,
+            categoria_id=categoria_id,
             estado=estado,
         )
 
@@ -135,6 +137,7 @@ class CompetenciasOrchestrator:
         return await sync_to_async(self.elegibilidad.listar_equipos_elegibles)(
             str(competencia.edicion_id),
             str(competencia.disciplina_id),
+            str(competencia.categoria_id),
         )
 
     # ── escrituras ─────────────────────────────────────────────────────────

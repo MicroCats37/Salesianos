@@ -32,13 +32,19 @@ from modules.competencias.domain.models import (
 )
 from modules.eventos.domain.constants import EstadoEdicion, ModuloLogico
 from modules.eventos.domain.models import Edicion, Evento
-from modules.salesianos_fest.domain.constants import EstadoDisciplina
+from modules.salesianos_fest.domain.constants import (
+    EstadoCategoria,
+    EstadoDisciplina,
+    EstadoPromocion,
+)
 from modules.salesianos_fest.domain.models import (
+    Categoria,
     Disciplina,
     Equipo,
     Inscripcion,
     Paquete,
     Participacion,
+    Promocion,
 )
 from modules.usuarios.domain.models import Persona, Usuario
 
@@ -80,6 +86,71 @@ def edicion_otra(db):
 
 
 # ── Catálogo e inscripción ──────────────────────────────────────────────────
+
+
+@pytest.fixture
+def promocion(db):
+    """Cohorte de promoción GLOBAL de la edición (`anio` 2027).
+
+    `Promocion` cuelga de la PERSONA, no de la edición: su clave natural es
+    el `anio`, que es ÚNICO en toda la base (`fest_promocion_anio_unico`).
+    Las dos ediciones de este módulo (2027) comparten la misma cohorte.
+
+    La inscripción la DECLARA (`D-CAT-01`): desde que la promoción es
+    obligatoria, una inscripción sin `promocion` viola el `NOT NULL` de la
+    columna. El fixture la crea de verdad — no se simula.
+    """
+    return Promocion.objects.create(
+        anio=2027,
+        nombre="Promoción 2027",
+        estado=EstadoPromocion.ACTIVA,
+    )
+
+
+@pytest.fixture
+def categoria(db, edicion_publicada):
+    """Banda competitiva ACTIVA de la edición publicada.
+
+    El equipo DECLARA su categoría (`Equipo.categoria`, NOT NULL): el servidor
+    la deriva de la promoción de la inscripción (`D-CAT-05`). La fixture la
+    crea de verdad — no se simula.
+    """
+    return Categoria.objects.create(
+        edicion=edicion_publicada,
+        nombre="General 2027",
+        promocion_desde=2008,
+        promocion_hasta=2027,
+        estado=EstadoCategoria.ACTIVA,
+    )
+
+
+@pytest.fixture
+def categoria_otra(db, edicion_otra):
+    """Banda competitiva de la OTRA edición (el catálogo es por edición)."""
+    return Categoria.objects.create(
+        edicion=edicion_otra,
+        nombre="General 2027",
+        promocion_desde=2008,
+        promocion_hasta=2027,
+        estado=EstadoCategoria.ACTIVA,
+    )
+
+
+@pytest.fixture
+def categoria_2(db, edicion_publicada):
+    """SEGUNDA banda competitiva de la MISMA edición.
+
+    La CATEGORÍA es parte de la identidad de una competencia: sin una segunda
+    banda de la misma edición no se puede comprobar que dos cuadros de la
+    misma disciplina y con el MISMO nombre coexisten.
+    """
+    return Categoria.objects.create(
+        edicion=edicion_publicada,
+        nombre="Veteranos 2027",
+        promocion_desde=1998,
+        promocion_hasta=2007,
+        estado=EstadoCategoria.ACTIVA,
+    )
 
 
 @pytest.fixture
@@ -129,13 +200,22 @@ def disciplina_otra_edicion(db, edicion_otra):
 
 
 def _paquete(nombre, slug, edicion):
-    """Paquete de inscripción de la edición."""
+    """Paquete de inscripción de la edición.
+
+    La capacidad COMERCIAL la declara `minimo_compra_inicial` (`D-CAT-01`):
+    es el mínimo de participantes que el comprador puede inscribir. El
+    `cupos_incluidos` es el hecho DECLARADO de la oferta y está DEPRECADO: no
+    gobierna la compra, pero lo publica el contrato vigente, así que la
+    fixture lo mantiene alineado con el mínimo y NO lo usa como si fuera la
+    capacidad.
+    """
     return Paquete.objects.create(
         edicion=edicion,
         nombre=nombre,
         slug=slug,
         descripcion="Paquete de prueba.",
         cupos_incluidos=10,
+        minimo_compra_inicial=10,
     )
 
 
@@ -196,12 +276,13 @@ def persona_4(db):
 
 
 @pytest.fixture
-def inscripcion(db, edicion_publicada, paquete, persona):
+def inscripcion(db, edicion_publicada, paquete, persona, promocion):
     """Inscripción viva con la capacidad pagada."""
     return Inscripcion.objects.create(
         edicion=edicion_publicada,
         responsable=persona,
         paquete=paquete,
+        promocion=promocion,
         referencia="INS-COMP-0001",
         cupos_solicitados=10,
         cupos_pagados=10,
@@ -210,12 +291,13 @@ def inscripcion(db, edicion_publicada, paquete, persona):
 
 
 @pytest.fixture
-def inscripcion_2(db, edicion_publicada, paquete_2, persona_2):
+def inscripcion_2(db, edicion_publicada, paquete_2, persona_2, promocion):
     """SEGUNDA inscripción viva: con otro responsable y otro paquete."""
     return Inscripcion.objects.create(
         edicion=edicion_publicada,
         responsable=persona_2,
         paquete=paquete_2,
+        promocion=promocion,
         referencia="INS-COMP-0002",
         cupos_solicitados=10,
         cupos_pagados=10,
@@ -224,12 +306,13 @@ def inscripcion_2(db, edicion_publicada, paquete_2, persona_2):
 
 
 @pytest.fixture
-def inscripcion_cancelada(db, edicion_publicada, paquete, persona_4):
+def inscripcion_cancelada(db, edicion_publicada, paquete, persona_4, promocion):
     """Inscripción CANCELADA: su equipo no puede competir."""
     return Inscripcion.objects.create(
         edicion=edicion_publicada,
         responsable=persona_4,
         paquete=paquete,
+        promocion=promocion,
         referencia="INS-COMP-0003",
         estado="CANCELADA",
         cupos_solicitados=10,
@@ -239,43 +322,49 @@ def inscripcion_cancelada(db, edicion_publicada, paquete, persona_4):
 
 
 @pytest.fixture
-def equipo(db, inscripcion, disciplina):
+def equipo(db, inscripcion, disciplina, categoria):
     """Equipo ACTIVO de la primera inscripción, con su disciplina."""
     return Equipo.objects.create(
         inscripcion=inscripcion,
         disciplina=disciplina,
+        categoria=categoria,
         nombre="Equipo Vóley",
     )
 
 
 @pytest.fixture
-def equipo_2(db, inscripcion_2, disciplina):
+def equipo_2(db, inscripcion_2, disciplina, categoria):
     """SEGUNDO equipo, de otra inscripción y de la misma disciplina."""
     return Equipo.objects.create(
         inscripcion=inscripcion_2,
         disciplina=disciplina,
+        categoria=categoria,
         nombre="Equipo Vóley B",
     )
 
 
 @pytest.fixture
-def equipo_cancelado(db, inscripcion_cancelada, disciplina):
+def equipo_cancelado(db, inscripcion_cancelada, disciplina, categoria):
     """Equipo de una inscripción CANCELADA."""
     return Equipo.objects.create(
         inscripcion=inscripcion_cancelada,
         disciplina=disciplina,
+        categoria=categoria,
         nombre="Equipo Cancelado",
     )
 
 
 @pytest.fixture
-def equipo_otra_edicion(db, edicion_otra, disciplina_otra_edicion, persona):
+def equipo_otra_edicion(
+    db, edicion_otra, disciplina_otra_edicion, persona, promocion, categoria_otra
+):
     """Equipo de OTRA edición: no puede entrar en este torneo."""
     paquete_ajeno = _paquete("Paquete ajeno", "paquete-ajeno", edicion_otra)
     otra_inscripcion = Inscripcion.objects.create(
         edicion=edicion_otra,
         responsable=persona,
         paquete=paquete_ajeno,
+        promocion=promocion,
         referencia="INS-AJENA-0001",
         cupos_solicitados=5,
         cupos_pagados=5,
@@ -284,26 +373,44 @@ def equipo_otra_edicion(db, edicion_otra, disciplina_otra_edicion, persona):
     return Equipo.objects.create(
         inscripcion=otra_inscripcion,
         disciplina=disciplina_otra_edicion,
+        categoria=categoria_otra,
         nombre="Equipo Ajeno",
     )
 
 
 @pytest.fixture
-def equipo_sin_plantilla(db, inscripcion, disciplina_exigente):
+def equipo_categoria_otra(db, inscripcion_2, disciplina, categoria_2):
+    """Equipo de la MISMA edición y disciplina, pero de OTRA categoría.
+
+    Es el equipo que NO puede entrar en un cuadro de la categoría `categoria`:
+    el motivo es `CATEGORIA_DISTINTA`, no una falta de inscripción.
+    """
+    return Equipo.objects.create(
+        inscripcion=inscripcion_2,
+        disciplina=disciplina,
+        categoria=categoria_2,
+        nombre="Equipo Veteranos",
+    )
+
+
+@pytest.fixture
+def equipo_sin_plantilla(db, inscripcion, disciplina_exigente, categoria):
     """Equipo ACTIVO de OTRA disciplina y SIN roster: no puede competir."""
     return Equipo.objects.create(
         inscripcion=inscripcion,
         disciplina=disciplina_exigente,
+        categoria=categoria,
         nombre="Equipo Sin Plantilla",
     )
 
 
 @pytest.fixture
-def equipo_plantilla_incompleta(db, inscripcion_2, disciplina_exigente):
+def equipo_plantilla_incompleta(db, inscripcion_2, disciplina_exigente, categoria):
     """Equipo de la disciplina exigente con sólo un participante activo."""
     return Equipo.objects.create(
         inscripcion=inscripcion_2,
         disciplina=disciplina_exigente,
+        categoria=categoria,
         nombre="Equipo Plantilla Incompleta",
     )
 
@@ -382,13 +489,30 @@ def usuario_ajeno(db, persona_2):
 
 
 @pytest.fixture
-def competencia(db, edicion_publicada, disciplina):
+def competencia(db, edicion_publicada, disciplina, categoria):
     """Competencia `PLANIFICADA` de la edición publicada."""
     return Competencia.objects.create(
         edicion=edicion_publicada,
         disciplina=disciplina,
+        categoria=categoria,
         nombre="Vóley Mixto 2027",
         fecha=date(2027, 3, 14),
+    )
+
+
+@pytest.fixture
+def competencia_categoria_2(db, edicion_publicada, disciplina, categoria_2):
+    """Competencia de la MISMA edición y disciplina, pero de OTRA categoría.
+
+    Comparte edition, disciplina y nombre con `competencia`: lo único que
+    cambia es la categoría, que es parte de la identidad.
+    """
+    return Competencia.objects.create(
+        edicion=edicion_publicada,
+        disciplina=disciplina,
+        categoria=categoria_2,
+        nombre="Vóley Mixto 2027",
+        fecha=date(2027, 3, 15),
     )
 
 
@@ -509,7 +633,11 @@ def injector():
 
 
 __all__ = [
+    "categoria",
+    "categoria_2",
+    "categoria_otra",
     "competencia",
+    "competencia_categoria_2",
     "disciplina",
     "disciplina_exigente",
     "disciplina_inactiva",
@@ -521,6 +649,7 @@ __all__ = [
     "equipo",
     "equipo_2",
     "equipo_2_en_cuadro",
+    "equipo_categoria_otra",
     "equipo_cancelado",
     "equipo_en_cuadro",
     "equipo_otra_edicion",
@@ -540,6 +669,7 @@ __all__ = [
     "persona_2",
     "persona_3",
     "persona_4",
+    "promocion",
     "ronda",
     "ronda_final",
     "usuario_admin",

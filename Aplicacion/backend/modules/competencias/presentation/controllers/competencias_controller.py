@@ -122,6 +122,7 @@ class CompetenciasController:
         self,
         request,
         disciplina_id: str | None = None,
+        categoria_id: str | None = None,
         estado: str | None = None,
     ):
         """Las competencias de la edición vigente, con sus contadores.
@@ -129,10 +130,12 @@ class CompetenciasController:
         Route: GET /api/competencias
 
         La EDICIÓN la resuelve el servidor por el orden congelado
-        (`FR-02` §2.2): el cliente no la elige.
+        (`FR-02` §2.2): el cliente no la elige. Los filtros de DISCIPLINA y de
+        CATEGORÍA se combinan con AND.
         """
         resultados = await self.orchestrator.listar_competencias(
             disciplina_id=disciplina_id,
+            categoria_id=categoria_id,
             estado=estado,
         )
         return success_response(
@@ -226,14 +229,15 @@ class CompetenciasController:
 
         Route: POST /api/competencias
 
-        La identidad es (edición, disciplina, nombre) y el backend la
-        comprueba: dos competencias con el mismo nombre en el mismo alcance
-        no pueden existir.
+        La identidad es (edición, disciplina, categoría, nombre) y el backend
+        la comprueba: dos competencias con el mismo nombre en el mismo alcance
+        y la MISMA categoría no pueden existir; con categorías DISTINTAS sí.
         """
         resultado = await self.orchestrator.crear_competencia(
             CompetenciaCreateData(
                 edicion_id=payload.edicion_id,
                 disciplina_id=payload.disciplina_id,
+                categoria_id=payload.categoria_id,
                 nombre=payload.nombre,
                 fecha=payload.fecha,
             ),

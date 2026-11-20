@@ -117,7 +117,24 @@ def test_un_descenso_de_version_es_un_cambio_mayor():
 #: ya NO son `1.0.0`: el MÓDULO dueño declara la suya y el registro global la
 #: refleja. La versión exacta se comprueba contra la declaración del módulo
 #: (test de drift) y, para `salesianos_fest`, contra el valor congelado de
-#: DOM-03.
+#: DOM-03 (`1.2.0`) y el MAJOR de 2026-11-20 (`2.0.0`).
+#:
+#: `competencias` (DOM-07), `patrocinadores` (DOM-08) y `validaciones`
+#: (XCT-01) se añadieron en el CIERRE DEL CABLEADO GLOBAL (2026-11-19): sus
+#: módulos están registrados, sus controllers viven y sus versiones
+#: declaradas están reflejadas en el registro global.
+#:
+#: `competencias` evolucionó con la RESTAURACIÓN DE LA CATEGORÍA
+#: (`restore-registration-promotion-catalog-flow`, 2026-11-20): su versión
+#: vigente es `2.0.0` (MAJOR, ROMPEDOR).
+#:
+#: `administracion` (XCT-02) se añadió en el CIERRE DEL CABLEADO GLOBAL
+#: (2026-11-20): su módulo está registrado, sus seis controllers viven y la
+#: versión que DECLARA el módulo (`1.0.0`) está reflejada en el registro.
+#:
+#: `videos` (`public-video-streaming-crud`, 2026-11-20): el módulo de la SALA
+#: DE PROYECCIÓN declara `SCHEMA_VERSION = "1.0.0"` y su entrada está
+#: reflejada en el registro global.
 MODULOS_COMPLETADOS = (
     "eventos",
     "usuarios",
@@ -125,6 +142,11 @@ MODULOS_COMPLETADOS = (
     "pagos",
     "salesianos_fest",
     "marketplace",
+    "competencias",
+    "patrocinadores",
+    "validaciones",
+    "administracion",
+    "videos",
 )
 
 
@@ -145,16 +167,42 @@ def test_no_hay_drift_entre_el_registro_y_el_modulo(modulo):
 
 
 def test_el_registro_refleja_la_version_declarada_de_salesianos_fest():
-    """A0-02 del paquete DOM-03: el registro global sigue al módulo.
+    """A0 · el registro global sigue al módulo (residual R-1 de VER-01).
 
-    `salesianos_fest` subió a `1.2.0` (MINOR, ADITIVO) con el dominio de
-    pases, beneficiarios y cortesía. El registro global es de A0: si el
-    módulo sube y A0 no actualiza, este test falla — es el mecanismo de
-    detección de drift (`FR-07` §1.3) funcionando, no un defecto.
+    `salesianos_fest` subió a `2.0.0` (MAJOR, ROMPEDOR) con el cambio
+    `restore-registration-promotion-catalog-flow` de 2026-11-20: el alta exige
+    `promocion_id` y `cantidad`, la salida publica `promocion` y la
+    `categoria` derivada de cada equipo, y se añaden tres rutas. DOM-03
+    (`1.2.0`, MINOR aditivo) queda subsumido en este valor.
+
+    El registro global es de A0: si el módulo sube y A0 no actualiza, este test
+    falla — es el mecanismo de detección de drift (`FR-07` §1.3) funcionando,
+    no un defecto.
     """
-    assert schema_version("salesianos_fest") == "1.2.0"
+    assert schema_version("salesianos_fest") == "2.0.0"
 
 
-def test_la_version_de_salesianos_fest_es_un_cambio_minor_aditivo():
-    """DOM-03 fue ADITIVO: `1.1.0` → `1.2.0` no rompe a un cliente."""
+def test_la_version_de_salesianos_fest_es_un_cambio_mayor_rompedor():
+    """El salto vigente (`1.2.0` → `2.0.0`) es MAJOR, no MINOR aditivo.
+
+    DOM-03 (`1.1.0` → `1.2.0`) fue ADITIVO; el cambio de 2026-11-20 no lo es:
+    añade una entrada obligatoria y dos campos de salida obligatorios.
+    """
     assert tipo_de_cambio("1.1.0", "1.2.0") == "MINOR"
+    assert tipo_de_cambio("1.2.0", "2.0.0") == "MAJOR"
+
+
+def test_el_registro_refleja_la_version_declarada_de_competencias():
+    """A0 · el registro global sigue al módulo `competencias` (2026-11-20).
+
+    La RESTAURACIÓN DE LA CATEGORÍA (`restore-registration-promotion-catalog-flow`)
+    devolvió la CATEGORÍA a la competencia y su salto es MAJOR, ROMPEDOR: el
+    alta `POST /api/competencias` exige `categoria_id` (entrada obligatoria
+    nueva) y las salidas publican `categoria_id` / `categoria_nombre`.
+
+    El registro global es de A0: si el módulo sube y A0 no actualiza, este test
+    falla — es el mecanismo de detección de drift (`FR-07` §1.3) funcionando,
+    no un defecto.
+    """
+    assert schema_version("competencias") == "2.0.0"
+    assert tipo_de_cambio("1.0.0", "2.0.0") == "MAJOR"

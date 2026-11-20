@@ -162,7 +162,7 @@ def test_una_cantidad_que_supera_el_tope_se_rechaza(flujo, inscripcion):
 
 
 def test_un_paquete_sin_precio_vigente_no_se_amplia(
-    flujo, edicion_publicada, persona, paquete_sin_precio, disciplina
+    flujo, edicion_publicada, persona, paquete_sin_precio, disciplina, promocion
 ):
     """GIVEN un paquete SIN precio vigente
     WHEN  se intenta ampliar
@@ -173,6 +173,7 @@ def test_un_paquete_sin_precio_vigente_no_se_amplia(
         edicion=edicion_publicada,
         responsable=persona,
         paquete=paquete_sin_precio,
+        promocion=promocion,
         referencia="INS-TEST-SIN-PRECIO",
         cupos_solicitados=5,
     )
@@ -186,7 +187,7 @@ def test_un_paquete_sin_precio_vigente_no_se_amplia(
 
 
 def test_un_paquete_retirado_no_se_amplia(
-    flujo, edicion_publicada, persona, paquete_retirado, disciplina
+    flujo, edicion_publicada, persona, paquete_retirado, disciplina, promocion
 ):
     """GIVEN un paquete RETIRADO
     WHEN  se intenta ampliar
@@ -196,6 +197,7 @@ def test_un_paquete_retirado_no_se_amplia(
         edicion=edicion_publicada,
         responsable=persona,
         paquete=paquete_retirado,
+        promocion=promocion,
         referencia="INS-TEST-RETIRADO",
         cupos_solicitados=5,
     )

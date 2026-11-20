@@ -17,13 +17,19 @@ def competencia_crear_payload(
     *,
     edicion_id: str,
     disciplina_id: str,
+    categoria_id: str,
     nombre: str = "Vóley Mixto 2027",
     fecha: date = date(2027, 3, 14),
 ) -> dict:
-    """El payload del alta de una competencia."""
+    """El payload del alta de una competencia.
+
+    La `categoria_id` es OBLIGATORIA: la identidad de una competencia es
+    (edición, disciplina, categoría, nombre).
+    """
     return {
         "edicion_id": edicion_id,
         "disciplina_id": disciplina_id,
+        "categoria_id": categoria_id,
         "nombre": nombre,
         "fecha": fecha,
     }

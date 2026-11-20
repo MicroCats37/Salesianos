@@ -35,12 +35,16 @@ def flujo(injector):
 
 
 @pytest.fixture
-def intencion(edicion_publicada, paquete, disciplina, persona, precio):
+def intencion(
+    edicion_publicada, paquete, disciplina, persona, precio, promocion, categoria
+):
     """La intención de alta de la inscripción."""
     return InscripcionInicialData(
         responsable_id=persona.id,
         edicion_id=edicion_publicada.id,
         paquete_id=paquete.id,
+        promocion_id=promocion.id,
+        cantidad=10,
         equipos=[
             EquipoCreateData(disciplina_id=disciplina.id, nombre="EquipoUno"),
         ],
@@ -48,7 +52,7 @@ def intencion(edicion_publicada, paquete, disciplina, persona, precio):
 
 
 def test_la_base_de_datos_rechaza_la_inscripcion_duplicada(
-    edicion_publicada, paquete, disciplina, persona
+    edicion_publicada, paquete, disciplina, persona, promocion
 ):
     """GIVEN una inscripción viva · WHEN se inserta la misma combinación ·
     THEN la base de datos lo rechaza: la restricción única es la autoridad.
@@ -57,6 +61,7 @@ def test_la_base_de_datos_rechaza_la_inscripcion_duplicada(
         edicion=edicion_publicada,
         responsable=persona,
         paquete=paquete,
+        promocion=promocion,
         referencia="INS-GANADORA",
         cupos_solicitados=10,
     )
@@ -66,13 +71,14 @@ def test_la_base_de_datos_rechaza_la_inscripcion_duplicada(
             edicion=edicion_publicada,
             responsable=persona,
             paquete=paquete,
+            promocion=promocion,
             referencia="INS-PERDEDORA",
             cupos_solicitados=10,
         )
 
 
 def test_la_carrera_perdida_reutiliza_la_inscripcion_ganadora(
-    flujo, intencion, edicion_publicada, paquete, disciplina, persona
+    flujo, intencion, edicion_publicada, paquete, disciplina, persona, promocion
 ):
     """GIVEN que otra petición YA creó la inscripción
     WHEN  esta petición confirma la misma inscripción
@@ -82,6 +88,7 @@ def test_la_carrera_perdida_reutiliza_la_inscripcion_ganadora(
         edicion=edicion_publicada,
         responsable=persona,
         paquete=paquete,
+        promocion=promocion,
         referencia="INS-GANADORA",
         cupos_solicitados=10,
     )

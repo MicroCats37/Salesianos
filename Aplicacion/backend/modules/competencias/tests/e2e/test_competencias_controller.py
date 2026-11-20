@@ -60,6 +60,48 @@ def test_la_lista_devuelve_las_competencias_de_la_edicion(
     assert cuerpo["data"][0]["nombre"] == competencia.nombre
 
 
+def test_la_lista_publica_la_categoria_de_cada_competencia(
+    cliente,
+    usuario_admin,
+    competencia,
+    categoria,
+):
+    """GIVEN una competencia con su categoría."""
+    respuesta = cliente.get(
+        "/api/competencias",
+        **_autorizacion(usuario_admin),
+    )
+
+    assert respuesta.status_code == 200
+    fila = json.loads(respuesta.content)["data"][0]
+    assert fila["categoria_id"] == str(categoria.id)
+    assert fila["categoria_nombre"] == categoria.nombre
+
+
+def test_la_lista_se_filtra_por_categoria(
+    cliente,
+    usuario_admin,
+    competencia,
+    competencia_categoria_2,
+    categoria,
+    categoria_2,
+):
+    """GIVEN dos competencias de la misma edición con categorías DISTINTAS."""
+    respuesta = cliente.get(
+        "/api/competencias",
+        data={"categoria_id": str(categoria_2.id)},
+        **_autorizacion(usuario_admin),
+    )
+
+    # THEN el filtro deja SÓLO las competencias de esa categoría.
+    assert respuesta.status_code == 200
+    cuerpo = json.loads(respuesta.content)
+    assert [fila["id"] for fila in cuerpo["data"]] == [
+        str(competencia_categoria_2.id)
+    ]
+    assert cuerpo["data"][0]["categoria_id"] == str(categoria_2.id)
+
+
 def test_el_detalle_trae_equipos_y_cuadro(
     cliente,
     usuario_admin,
@@ -67,6 +109,7 @@ def test_el_detalle_trae_equipos_y_cuadro(
     equipo_en_cuadro,
     ronda,
     encuentro,
+    categoria,
 ):
     """GIVEN una competencia con un equipo y un encuentro."""
     respuesta = cliente.get(
@@ -78,6 +121,8 @@ def test_el_detalle_trae_equipos_y_cuadro(
     cuerpo = json.loads(respuesta.content)
     detalle = cuerpo["data"]
     assert detalle["id"] == str(competencia.id)
+    assert detalle["categoria_id"] == str(categoria.id)
+    assert detalle["categoria_nombre"] == categoria.nombre
     assert len(detalle["equipos"]) == 1
     assert detalle["equipos"][0]["id"] == str(equipo_en_cuadro.id)
     assert len(detalle["rondas"]) == 1
@@ -138,6 +183,7 @@ def test_los_equipos_candidatos_traen_el_motivo_del_veredicto(
     competencia,
     equipo,
     participacion,
+    categoria,
 ):
     """GIVEN un equipo elegible en la competencia."""
     respuesta = cliente.get(
@@ -152,6 +198,8 @@ def test_los_equipos_candidatos_traen_el_motivo_del_veredicto(
     assert veredicto["equipo_id"] == str(equipo.id)
     assert veredicto["es_elegible"] is True
     assert veredicto["motivo"] == "ELEGIBLE"
+    assert veredicto["categoria_id"] == str(categoria.id)
+    assert veredicto["categoria_nombre"] == categoria.nombre
 
 
 # ── Autorización ────────────────────────────────────────────────────────────
@@ -193,14 +241,16 @@ def test_la_creacion_de_una_competencia_devuelve_el_detalle(
     usuario_admin,
     edicion_publicada,
     disciplina,
+    categoria,
 ):
-    """GIVEN una edición y una disciplina."""
+    """GIVEN una edición, una disciplina y una categoría."""
     respuesta = cliente.post(
         "/api/competencias",
         data=json.dumps(
             {
                 "edicion_id": str(edicion_publicada.id),
                 "disciplina_id": str(disciplina.id),
+                "categoria_id": str(categoria.id),
                 "nombre": "Vóley Mixto 2027",
                 "fecha": "2027-03-14",
             }
@@ -215,6 +265,7 @@ def test_la_creacion_de_una_competencia_devuelve_el_detalle(
     assert cuerpo["message"]
     assert cuerpo["data"]["nombre"] == "Vóley Mixto 2027"
     assert cuerpo["data"]["disciplina_id"] == str(disciplina.id)
+    assert cuerpo["data"]["categoria_id"] == str(categoria.id)
 
 
 def test_la_creacion_de_una_competencia_duplicada_se_rechaza(
@@ -222,6 +273,7 @@ def test_la_creacion_de_una_competencia_duplicada_se_rechaza(
     usuario_admin,
     edicion_publicada,
     disciplina,
+    categoria,
     competencia,
 ):
     """GIVEN una competencia con la misma identidad."""
@@ -231,6 +283,7 @@ def test_la_creacion_de_una_competencia_duplicada_se_rechaza(
             {
                 "edicion_id": str(edicion_publicada.id),
                 "disciplina_id": str(disciplina.id),
+                "categoria_id": str(categoria.id),
                 "nombre": "vóley mixto 2027",
                 "fecha": "2027-03-14",
             }

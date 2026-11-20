@@ -31,21 +31,28 @@ class CompetenciaSelector:
         edicion_id,
         *,
         disciplina_id=None,
+        categoria_id=None,
         estado=None,
     ) -> list[CompetenciaListadoResult]:
         """Las competencias de la edición, con sus tres contadores.
 
         Los contadores los calcula la BASE DE DATOS con un número constante de
         consultas: el cliente nunca los re-deriva (`RN-A02`).
+
+        El filtro por CATEGORÍA es el que permite recorrer los cuadros por
+        franja etaria: es la PARIDAD con el filtro público histórico
+        `GET /competencias?categoria_id=`.
         """
         consultas = Competencia.objects.filter(edicion_id=edicion_id)
         if disciplina_id:
             consultas = consultas.filter(disciplina_id=disciplina_id)
+        if categoria_id:
+            consultas = consultas.filter(categoria_id=categoria_id)
         if estado:
             consultas = consultas.filter(estado=estado)
 
         filas = (
-            consultas.select_related("disciplina")
+            consultas.select_related("disciplina", "categoria")
             .annotate(
                 total_equipos=Count(
                     "equipos",
@@ -70,6 +77,8 @@ class CompetenciaSelector:
                 edicion_id=str(competencia.edicion_id),
                 disciplina_id=str(competencia.disciplina_id),
                 disciplina_nombre=competencia.disciplina.nombre,
+                categoria_id=str(competencia.categoria_id),
+                categoria_nombre=competencia.categoria.nombre,
                 nombre=competencia.nombre,
                 estado=competencia.estado,
                 fecha=competencia.fecha,
@@ -87,9 +96,11 @@ class CompetenciaSelector:
         resolver la entidad antes de operar sobre ella.
         """
         try:
-            return Competencia.objects.select_related("edicion", "disciplina").get(
-                id=competencia_id
-            )
+            return Competencia.objects.select_related(
+                "edicion",
+                "disciplina",
+                "categoria",
+            ).get(id=competencia_id)
         except (Competencia.DoesNotExist, ValueError, TypeError):
             raise CompetenciaNoEncontradaError()
 
@@ -119,6 +130,8 @@ class CompetenciaSelector:
             edicion_nombre=competencia.edicion.nombre,
             disciplina_id=str(competencia.disciplina_id),
             disciplina_nombre=competencia.disciplina.nombre,
+            categoria_id=str(competencia.categoria_id),
+            categoria_nombre=competencia.categoria.nombre,
             nombre=competencia.nombre,
             estado=competencia.estado,
             fecha=competencia.fecha,

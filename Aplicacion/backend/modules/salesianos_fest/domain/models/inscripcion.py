@@ -1,6 +1,7 @@
 """Inscripción del responsable y sus equipos.
 
 Packet: `DOM-01` · Change: `salesianos-fest-rebuild`
+Cambio: `restore-registration-promotion-catalog-flow` (2026-11-20)
 
 Invariantes:
 
@@ -8,6 +9,14 @@ Invariantes:
   `usuarios.Persona`, no un documento suelto ni un id de cuenta.
 - **La inscripción pertenece a UNA edición** (`RN-E01`): conserva su propio
   catálogo, sus compras y su historial.
+- **La inscripción declara su PROMOCIÓN** (`D-CAT-01`): `promocion` es la
+  cohorte que compra. Es OBLIGATORIA y es la que determina la categoría.
+- **La fusión es DESCRIPTIVA** (`D-CAT-02`): `fusion_promocion` nombra la
+  segunda cohorte de una promoción fusionada. NO cambia cupos, ni pago, ni
+  categoría, ni elegibilidad de equipo, ni cuadro competitivo.
+- **La categoría del equipo la DERIVA el servidor** (`D-CAT-05`): `Equipo`
+  no acepta una categoría del cliente; sale de `Inscripcion.promocion` contra
+  el rango de la `Categoria` de la edición.
 - **Los cupos PAGADOS empiezan en cero** (`RN-I02`, `QA-I01`): una compra
   pendiente no habilita ningún cupo. `cupos_pagados` sólo lo incrementa la
   ACTIVACIÓN de derechos, que es de `DOM-02` a través del puerto congelado
@@ -59,6 +68,29 @@ class Inscripcion(BaseModel):
         on_delete=models.PROTECT,
         related_name="inscripciones",
         verbose_name="Paquete",
+    )
+    promocion = models.ForeignKey(
+        "salesianos_fest.Promocion",
+        on_delete=models.PROTECT,
+        related_name="inscripciones",
+        verbose_name="Promoción",
+        help_text=(
+            "Cohorte que compra la inscripción. Es OBLIGATORIA y es la que "
+            "determina la categoría del equipo (`D-CAT-01`)."
+        ),
+    )
+    fusion_promocion = models.ForeignKey(
+        "salesianos_fest.Promocion",
+        on_delete=models.PROTECT,
+        related_name="inscripciones_fusionadas",
+        null=True,
+        blank=True,
+        verbose_name="Promoción fusionada",
+        help_text=(
+            "Segunda cohorte de una promoción FUSIONADA. Es DESCRIPTIVA: no "
+            "altera cupos, pago, categoría, elegibilidad ni cuadro "
+            "competitivo (`D-CAT-02`)."
+        ),
     )
     estado = models.CharField(
         max_length=16,
@@ -131,6 +163,17 @@ class Equipo(BaseModel):
         on_delete=models.PROTECT,
         related_name="equipos",
         verbose_name="Disciplina",
+    )
+    categoria = models.ForeignKey(
+        "salesianos_fest.Categoria",
+        on_delete=models.PROTECT,
+        related_name="equipos",
+        verbose_name="Categoría",
+        help_text=(
+            "Banda competitiva del equipo. La DERIVA el servidor desde la "
+            "promoción de la inscripción: el cliente no la declara "
+            "(`D-CAT-05`)."
+        ),
     )
     nombre = models.CharField(max_length=160, verbose_name="Nombre")
     estado = models.CharField(

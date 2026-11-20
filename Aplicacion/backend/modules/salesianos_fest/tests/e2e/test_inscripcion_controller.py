@@ -37,11 +37,18 @@ def _autorizacion(usuario) -> dict:
     return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
 
 
-def _payload_alta(edicion_id, paquete_id, disciplina_id) -> dict:
-    """El payload del alta de la inscripción inicial."""
+def _payload_alta(edicion_id, paquete_id, disciplina_id, promocion_id) -> dict:
+    """El payload del alta de la inscripción inicial.
+
+    La promoción es OBLIGATORIA (`D-CAT-01`) y la cantidad es el número de
+    PARTICIPANTES que se inscriben: el precio lo resuelve el servidor
+    (`RN-C02`).
+    """
     return {
         "edicion_id": str(edicion_id),
         "paquete_id": str(paquete_id),
+        "promocion_id": str(promocion_id),
+        "cantidad": 10,
         "equipos": [
             {"disciplina_id": str(disciplina_id), "nombre": "EquipoUno"},
         ],
@@ -52,7 +59,14 @@ def _payload_alta(edicion_id, paquete_id, disciplina_id) -> dict:
 
 
 def test_el_alta_devuelve_la_inscripcion_y_su_compra_pendiente(
-    cliente, usuario_responsable, edicion_publicada, paquete, disciplina, precio
+    cliente,
+    usuario_responsable,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    precio,
+    promocion,
+    categoria,
 ):
     """GIVEN una cuenta con persona y un paquete vigente
     WHEN  confirma el alta
@@ -61,7 +75,14 @@ def test_el_alta_devuelve_la_inscripcion_y_su_compra_pendiente(
     """
     respuesta = cliente.post(
         "/api/inscripciones",
-        data=json.dumps(_payload_alta(edicion_publicada.id, paquete.id, disciplina.id)),
+        data=json.dumps(
+            _payload_alta(
+                edicion_publicada.id,
+                paquete.id,
+                disciplina.id,
+                promocion.id,
+            )
+        ),
         content_type="application/json",
         **_autorizacion(usuario_responsable),
     )
@@ -75,10 +96,15 @@ def test_el_alta_devuelve_la_inscripcion_y_su_compra_pendiente(
     inscripcion = cuerpo["data"]["inscripcion"]
     assert inscripcion["edicion_id"] == str(edicion_publicada.id)
     assert inscripcion["paquete_id"] == str(paquete.id)
+    assert inscripcion["promocion"]["id"] == str(promocion.id)
+    assert inscripcion["fusion_promocion"] is None
     assert inscripcion["cupos_pagados"] == 0
     assert inscripcion["cupos_disponibles"] == 0
     assert len(inscripcion["equipos"]) == 1
     assert inscripcion["equipos"][0]["disciplina_nombre"] == disciplina.nombre
+    # La categoría la deriVA el servidor (`D-CAT-05`) y viaja como REFERENCIA.
+    assert inscripcion["equipos"][0]["categoria"]["id"] == str(categoria.id)
+    assert inscripcion["equipos"][0]["categoria"]["nombre"] == categoria.nombre
 
     compra = cuerpo["data"]["compra"]
     assert compra["estado"] == "PENDIENTE"
@@ -91,13 +117,25 @@ def test_el_alta_devuelve_la_inscripcion_y_su_compra_pendiente(
 
 
 def test_el_alta_repetida_devuelve_la_misma_inscripcion(
-    cliente, usuario_responsable, edicion_publicada, paquete, disciplina, precio
+    cliente,
+    usuario_responsable,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    precio,
+    promocion,
+    categoria,
 ):
     """GIVEN una inscripción ya creada
     WHEN  se repite el alta
     THEN  responde 201 con la MISMA inscripción y la causa de reutilización.
     """
-    payload = _payload_alta(edicion_publicada.id, paquete.id, disciplina.id)
+    payload = _payload_alta(
+        edicion_publicada.id,
+        paquete.id,
+        disciplina.id,
+        promocion.id,
+    )
     cabeceras = _autorizacion(usuario_responsable)
 
     primera = cliente.post(
@@ -123,8 +161,34 @@ def test_el_alta_repetida_devuelve_la_misma_inscripcion(
     assert cuerpo_segunda["causa_operativa"] == "INSCRIPCION_REUTILIZADA"
 
 
+def test_el_alta_sin_promocion_es_422(
+    cliente, usuario_responsable, edicion_publicada, paquete, disciplina
+):
+    """GIVEN un alta SIN promoción
+    WHEN  confirma el alta
+    THEN  responde 422: la promoción es obligatoria (`D-CAT-01`).
+    """
+    payload = {
+        "edicion_id": str(edicion_publicada.id),
+        "paquete_id": str(paquete.id),
+        "cantidad": 10,
+        "equipos": [
+            {"disciplina_id": str(disciplina.id), "nombre": "EquipoUno"},
+        ],
+    }
+
+    respuesta = cliente.post(
+        "/api/inscripciones",
+        data=json.dumps(payload),
+        content_type="application/json",
+        **_autorizacion(usuario_responsable),
+    )
+
+    assert respuesta.status_code == 422
+
+
 def test_el_alta_sin_sesion_es_401(
-    cliente, edicion_publicada, paquete, disciplina
+    cliente, edicion_publicada, paquete, disciplina, promocion
 ):
     """GIVEN una petición sin sesión
     WHEN  confirma el alta
@@ -132,7 +196,14 @@ def test_el_alta_sin_sesion_es_401(
     """
     respuesta = cliente.post(
         "/api/inscripciones",
-        data=json.dumps(_payload_alta(edicion_publicada.id, paquete.id, disciplina.id)),
+        data=json.dumps(
+            _payload_alta(
+                edicion_publicada.id,
+                paquete.id,
+                disciplina.id,
+                promocion.id,
+            )
+        ),
         content_type="application/json",
     )
 
@@ -142,7 +213,14 @@ def test_el_alta_sin_sesion_es_401(
 
 
 def test_el_alta_de_una_disciplina_no_permitida_es_422(
-    cliente, usuario_responsable, edicion_publicada, paquete, disciplina_otra_edicion, precio
+    cliente,
+    usuario_responsable,
+    edicion_publicada,
+    paquete,
+    disciplina_otra_edicion,
+    precio,
+    promocion,
+    categoria,
 ):
     """GIVEN una disciplina que el paquete NO permite
     WHEN  confirma el alta
@@ -155,6 +233,7 @@ def test_el_alta_de_una_disciplina_no_permitida_es_422(
                 edicion_publicada.id,
                 paquete.id,
                 disciplina_otra_edicion.id,
+                promocion.id,
             )
         ),
         content_type="application/json",
@@ -170,7 +249,14 @@ def test_el_alta_de_una_disciplina_no_permitida_es_422(
 
 
 def test_el_responsable_consulta_el_detalle_y_los_equipos(
-    cliente, usuario_responsable, edicion_publicada, paquete, disciplina, precio
+    cliente,
+    usuario_responsable,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    precio,
+    promocion,
+    categoria,
 ):
     """GIVEN una inscripción creada por el responsable
     WHEN  consulta su detalle y sus equipos
@@ -178,7 +264,14 @@ def test_el_responsable_consulta_el_detalle_y_los_equipos(
     """
     alta = cliente.post(
         "/api/inscripciones",
-        data=json.dumps(_payload_alta(edicion_publicada.id, paquete.id, disciplina.id)),
+        data=json.dumps(
+            _payload_alta(
+                edicion_publicada.id,
+                paquete.id,
+                disciplina.id,
+                promocion.id,
+            )
+        ),
         content_type="application/json",
         **_autorizacion(usuario_responsable),
     )
@@ -201,7 +294,15 @@ def test_el_responsable_consulta_el_detalle_y_los_equipos(
 
 
 def test_otro_actor_no_puede_consultar_la_inscripcion(
-    cliente, usuario_responsable, usuario_ajeno, edicion_publicada, paquete, disciplina, precio
+    cliente,
+    usuario_responsable,
+    usuario_ajeno,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    precio,
+    promocion,
+    categoria,
 ):
     """GIVEN la inscripción de OTRA persona
     WHEN  un tercero la consulta
@@ -209,7 +310,14 @@ def test_otro_actor_no_puede_consultar_la_inscripcion(
     """
     alta = cliente.post(
         "/api/inscripciones",
-        data=json.dumps(_payload_alta(edicion_publicada.id, paquete.id, disciplina.id)),
+        data=json.dumps(
+            _payload_alta(
+                edicion_publicada.id,
+                paquete.id,
+                disciplina.id,
+                promocion.id,
+            )
+        ),
         content_type="application/json",
         **_autorizacion(usuario_responsable),
     )
@@ -279,13 +387,103 @@ def test_el_catalogo_de_disciplinas_es_publico(
     ]
 
 
+def test_el_catalogo_de_promociones_y_categorias_es_publico(
+    cliente, edicion_publicada, promocion, categoria
+):
+    """GIVEN una promoción activa y su categoría
+    WHEN  se consultan los catálogos públicos
+    THEN  ambos responden 200 con la EDICIÓN del alcance en el envoltorio.
+    """
+    promociones = cliente.get(
+        f"/api/catalogo/promociones?edicion_id={edicion_publicada.id}"
+    )
+    categorias = cliente.get(
+        f"/api/catalogo/categorias?edicion_id={edicion_publicada.id}"
+    )
+
+    assert promociones.status_code == 200
+    assert categorias.status_code == 200
+
+    cuerpo_promociones = json.loads(promociones.content)["data"]
+    assert cuerpo_promociones["edicion_id"] == str(edicion_publicada.id)
+    assert [publicada["anio"] for publicada in cuerpo_promociones["promociones"]] == [
+        promocion.anio
+    ]
+
+    cuerpo_categorias = json.loads(categorias.content)["data"]
+    assert cuerpo_categorias["edicion_id"] == str(edicion_publicada.id)
+    assert [publicada["nombre"] for publicada in cuerpo_categorias["categorias"]] == [
+        categoria.nombre
+    ]
+    assert cuerpo_categorias["categorias"][0]["promocion_desde"] == 2012
+    assert cuerpo_categorias["categorias"][0]["promocion_hasta"] == 2025
+
+
+def test_la_cotizacion_es_publica_y_devuelve_el_token_de_concurrencia(
+    cliente, edicion_publicada, paquete, disciplina, precio
+):
+    """GIVEN un paquete vigente con precio
+    WHEN  se cotiza para 12 participantes
+    THEN  responde 200 con el precio UNITARIO, el total derivado y el token
+       de concurrencia del precio; el cliente NO envía ningún importe.
+    """
+    respuesta = cliente.post(
+        "/api/cotizaciones",
+        data=json.dumps({"paquete_id": str(paquete.id), "cantidad": 12}),
+        content_type="application/json",
+    )
+
+    assert respuesta.status_code == 200
+    cuerpo = json.loads(respuesta.content)["data"]
+    assert cuerpo["minimo_cantidad"] == 10
+    assert cuerpo["cantidad_cotizada"] == 12
+    assert Decimal(str(cuerpo["precio_unitario"])) == Decimal("250.00")
+    assert Decimal(str(cuerpo["total"])) == Decimal("3000.00")
+    assert cuerpo["moneda"] == "PEN"
+    assert cuerpo["version"] == 1
+    assert cuerpo["estado"] == "ACTIVA"
+    assert cuerpo["validez_hasta"]
+
+
+def test_la_cotizacion_por_debajo_del_minimo_es_422(
+    cliente, edicion_publicada, paquete, disciplina, precio
+):
+    """GIVEN un paquete cuyo mínimo comercial es 10
+    WHEN  se cotiza para 5 participantes
+    THEN  responde 422 con el código estable `CANTIDAD_INSUFICIENTE`.
+    """
+    respuesta = cliente.post(
+        "/api/cotizaciones",
+        data=json.dumps({"paquete_id": str(paquete.id), "cantidad": 5}),
+        content_type="application/json",
+    )
+
+    assert respuesta.status_code == 422
+    cuerpo = json.loads(respuesta.content)
+    assert cuerpo["error"]["code"] == "CANTIDAD_INSUFICIENTE"
+
+
 def test_la_respuesta_no_expone_identificadores_internos(
-    cliente, usuario_responsable, edicion_publicada, paquete, disciplina, precio
+    cliente,
+    usuario_responsable,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    precio,
+    promocion,
+    categoria,
 ):
     """El envelope público no filtra trazas ni texto crudo (FR-01 §4)."""
     respuesta = cliente.post(
         "/api/inscripciones",
-        data=json.dumps(_payload_alta(edicion_publicada.id, paquete.id, disciplina.id)),
+        data=json.dumps(
+            _payload_alta(
+                edicion_publicada.id,
+                paquete.id,
+                disciplina.id,
+                promocion.id,
+            )
+        ),
         content_type="application/json",
         **_autorizacion(usuario_responsable),
     )

@@ -1,0 +1,1 @@
+"""VACÍO por contrato: no se crea un repository para envolver el ORM."""

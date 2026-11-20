@@ -15,8 +15,6 @@ import asyncio
 
 import pytest
 
-from modules.marketplace.domain.constants import EstadoEntregaPedido
-from modules.marketplace.domain.models import EntregaPedido
 from modules.validaciones.domain.constants import ResultadoValidacionChoices
 from modules.validaciones.domain.models import ValidacionTicket
 from modules.validaciones.domain.results.validacion_results import (
@@ -25,6 +23,10 @@ from modules.validaciones.domain.results.validacion_results import (
 from modules.validaciones.domain.schemas.validacion_schemas import ConfirmarTicketData
 from modules.validaciones.domain.services.flujos.confirmar_ticket_flujo import (
     ConfirmarTicketFlujo,
+)
+from modules.validaciones.tests.fixtures.validacion_fixtures import (
+    consumido_de,
+    listar_actas,
 )
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -39,35 +41,32 @@ def confirmar_flujo(injector):
 # ── El escaneo simultáneo ────────────────────────────────────────────────────
 
 
-def test_dos_escaneos_simultaneos_consumen_una_sola_vez(
+async def test_dos_escaneos_simultaneos_consumen_una_sola_vez(
     confirmar_flujo, ticket_entrada, usuario_admin
 ):
     """GIVEN dos confirmaciones simultáneas de la MISMA credencial
     WHEN  ambas compiten
     THEN  queda UN solo consumo y UN solo acta permitida (`QA-V02`)."""
 
-    async def _simultaneas():
-        return await asyncio.gather(
-            confirmar_flujo._confirmar(
-                str(usuario_admin.id),
-                None,
-                ConfirmarTicketData(
-                    codigo=ticket_entrada.codigo,
-                    idempotency_key="clave-carrera-1",
-                ),
+    respuestas = await asyncio.gather(
+        confirmar_flujo._confirmar(
+            str(usuario_admin.id),
+            None,
+            ConfirmarTicketData(
+                codigo=ticket_entrada.codigo,
+                idempotency_key="clave-carrera-1",
             ),
-            confirmar_flujo._confirmar(
-                str(usuario_admin.id),
-                None,
-                ConfirmarTicketData(
-                    codigo=ticket_entrada.codigo,
-                    idempotency_key="clave-carrera-2",
-                ),
+        ),
+        confirmar_flujo._confirmar(
+            str(usuario_admin.id),
+            None,
+            ConfirmarTicketData(
+                codigo=ticket_entrada.codigo,
+                idempotency_key="clave-carrera-2",
             ),
-            return_exceptions=True,
-        )
-
-    respuestas = asyncio.run(_simultaneas())
+        ),
+        return_exceptions=True,
+    )
 
     exitos = [
         respuesta
@@ -76,11 +75,8 @@ def test_dos_escaneos_simultaneos_consumen_una_sola_vez(
     ]
     assert len(exitos) == 1, respuestas
 
-    ticket_entrada.pase_beneficiario.refresh_from_db()
-    assert ticket_entrada.pase_beneficiario.cantidad_consumida == 1
+    assert await consumido_de(ticket_entrada) == 1
 
-    permitidas = ValidacionTicket.objects.filter(
-        resultado=ResultadoValidacionChoices.PERMITIDO
-    )
-    assert permitidas.count() == 1
-    assert permitidas.first().cantidad == 1
+    permitidas = await listar_actas(resultado=ResultadoValidacionChoices.PERMITIDO)
+    assert len(permitidas) == 1
+    assert permitidas[0].cantidad == 1

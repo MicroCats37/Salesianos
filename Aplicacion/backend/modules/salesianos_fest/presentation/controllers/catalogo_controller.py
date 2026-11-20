@@ -28,8 +28,10 @@ from modules.salesianos_fest.presentation.presenters.catalogo_presenter import (
     CatalogoPresenter,
 )
 from modules.salesianos_fest.presentation.schemas.catalogo_schemas import (
+    CatalogoCategoriasOut,
     CatalogoDisciplinasOut,
     CatalogoPaquetesOut,
+    CatalogoPromocionesOut,
 )
 
 
@@ -97,6 +99,65 @@ class CatalogoController:
         return success_response(
             CatalogoPresenter.present_disciplinas(result),
             message="Catálogo de disciplinas consultado correctamente.",
+        )
+
+    @route.get(
+        "/promociones",
+        response={200: ApiResponse[CatalogoPromocionesOut]},
+        auth=None,
+        permissions=[AllowAny],
+        summary="Promociones activas del catálogo global.",
+    )
+    async def listar_promociones(
+        self,
+        request,
+        edicion_id: UUID = Query(
+            None,
+            description=(
+                "Edición del alcance. Si se omite, se resuelve por el orden "
+                "congelado de edición."
+            ),
+        ),
+    ):
+        """Route: GET /api/catalogo/promociones
+
+        Las promociones son GLOBALES (`D-CAT-04`): una cohorte de nacimiento
+        es una propiedad de la persona, no de un evento. La EDICIÓN que
+        scopea el catálogo va en el ENVOLTORIO de la respuesta.
+        """
+        result = await self.orchestrator.listar_promociones(edicion_id)
+        return success_response(
+            CatalogoPresenter.present_promociones(result),
+            message="Catálogo de promociones consultado correctamente.",
+        )
+
+    @route.get(
+        "/categorias",
+        response={200: ApiResponse[CatalogoCategoriasOut]},
+        auth=None,
+        permissions=[AllowAny],
+        summary="Categorías activas de la edición del alcance.",
+    )
+    async def listar_categorias(
+        self,
+        request,
+        edicion_id: UUID = Query(
+            None,
+            description=(
+                "Edición del alcance. Si se omite, se resuelve por el orden "
+                "congelado de edición."
+            ),
+        ),
+    ):
+        """Route: GET /api/catalogo/categorias
+
+        Las categorías son las bandas competitivas de la EDICIÓN: cada una
+        declara el rango de promociones que contiene.
+        """
+        result = await self.orchestrator.listar_categorias(edicion_id)
+        return success_response(
+            CatalogoPresenter.present_categorias(result),
+            message="Catálogo de categorías consultado correctamente.",
         )
 
 

@@ -41,12 +41,23 @@ def orquestador(injector):
 
 
 @pytest.fixture
-def inscripcion(flujo, edicion_publicada, paquete, disciplina, persona, precio):
+def inscripcion(
+    flujo,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    persona,
+    precio,
+    promocion,
+    categoria,
+):
     """Una inscripción creada por `persona`."""
     intencion = InscripcionInicialData(
         responsable_id=persona.id,
         edicion_id=edicion_publicada.id,
         paquete_id=paquete.id,
+        promocion_id=promocion.id,
+        cantidad=10,
         equipos=[
             EquipoCreateData(disciplina_id=disciplina.id, nombre="EquipoUno"),
         ],
@@ -116,7 +127,7 @@ def test_el_grupo_administrador_no_sustituye_la_titularidad(
 
 
 def test_una_cuenta_sin_persona_no_puede_inscribirse(
-    orquestador, edicion_publicada, paquete, disciplina, db
+    orquestador, edicion_publicada, paquete, disciplina, db, promocion
 ):
     """GIVEN una cuenta autenticada SIN persona vinculada
     WHEN  intenta el alta
@@ -132,6 +143,8 @@ def test_una_cuenta_sin_persona_no_puede_inscribirse(
     intencion = InscripcionInicialData(
         edicion_id=edicion_publicada.id,
         paquete_id=paquete.id,
+        promocion_id=promocion.id,
+        cantidad=10,
         equipos=[
             EquipoCreateData(disciplina_id=disciplina.id, nombre="EquipoUno"),
         ],

@@ -123,6 +123,63 @@ DESCRIPCIONES_ESTADO_OPERATIVO: dict[str, str] = {
 }
 
 
+# ── Veredicto de la activación de derechos (FR-04 §6 · XCT-03) ─────────────
+
+
+class EstadoActivacionPago(models.TextChoices):
+    """El veredicto de la ACTIVACIÓN de derechos de una compra pagada.
+
+    Es un canal **SEPARADO** del veredicto operativo (`EstadoOperativoPago`):
+
+    - el veredicto operativo responde «¿está pagado esto?»;
+    - el veredicto de activación responde «¿está habilitado el derecho?».
+
+    Los dos los calcula y los publica `pagos`, que es el **único** dueño de
+    los veredictos (FR-01 §5). El vocabulario de `EstadoOperativoPago` **no
+    se toca**: ni se renumera ni se amplía (D-07). La activación es un hecho
+    POSTERIOR y separado del cobro (RN-C08, FR-04 §4).
+
+    - `SIN_ACTIVACION` — el pago está confirmado y no hay activación
+      registrada para la compra.
+    - `ACTIVADA` — el derecho quedó habilitado. Es TERMINAL.
+    - `PENDIENTE` — la activación está registrada y pendiente de resolverse.
+    - `EN_CURSO` — hay un intento de activación reservado.
+    - `FALLIDA` — el intento falló. Es **recuperable**: el pago confirmado se
+      conserva y el reintento es seguro.
+    """
+
+    SIN_ACTIVACION = "SIN_ACTIVACION", "Sin activación"
+    ACTIVADA = "ACTIVADA", "Activada"
+    PENDIENTE = "PENDIENTE", "Pendiente"
+    EN_CURSO = "EN_CURSO", "En curso"
+    FALLIDA = "FALLIDA", "Fallida"
+
+
+#: Descripciones públicas del veredicto de activación (FR-01 §5.1).
+#:
+#: Una línea con la causa y el siguiente paso seguro. Son prosa FIJA: nunca
+#: interpolan ids, UUIDs, montos, referencias del proveedor ni texto técnico.
+DESCRIPCIONES_ESTADO_ACTIVACION: dict[str, str] = {
+    EstadoActivacionPago.SIN_ACTIVACION: (
+        "El pago está confirmado y todavía no hay una activación de derechos "
+        "registrada."
+    ),
+    EstadoActivacionPago.ACTIVADA: (
+        "El pago está confirmado y el derecho quedó habilitado."
+    ),
+    EstadoActivacionPago.PENDIENTE: (
+        "El pago está confirmado y la activación del derecho está pendiente."
+    ),
+    EstadoActivacionPago.EN_CURSO: (
+        "El pago está confirmado y la activación del derecho está en curso."
+    ),
+    EstadoActivacionPago.FALLIDA: (
+        "El pago está confirmado y estamos resolviendo la activación de tu "
+        "compra."
+    ),
+}
+
+
 # ── Origen de la evidencia de pago ─────────────────────────────────────────
 
 
@@ -227,12 +284,14 @@ METADATA_FORBIDDEN_KEYS = frozenset(
 __all__ = [
     "CODIGO_PROVEEDOR_ERROR_COMUNICACION",
     "CODIGO_PROVEEDOR_EXITO",
+    "DESCRIPCIONES_ESTADO_ACTIVACION",
     "DESCRIPCIONES_ESTADO_OPERATIVO",
     "MAX_LEN_CLAVE_IDEMPOTENCIA",
     "METADATA_ALLOWED_KEYS",
     "METADATA_FORBIDDEN_KEYS",
     "ORDEN_VIGENCIA_HORAS",
     "CanalConfirmacionPago",
+    "EstadoActivacionPago",
     "EstadoOperativoPago",
     "EstadoOrdenPago",
     "EstadoTransaccionPago",

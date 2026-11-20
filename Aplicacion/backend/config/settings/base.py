@@ -64,14 +64,63 @@ LOCAL_APPS = [
     #                               `commerce` por petición explícita de DOM-01
     #                               (A0-01), que es el orden del grafo.
     #   `marketplace`      (DOM-04) → depende de `eventos.0001`.
-    # Ninguna app INACABADA (`pases`, `beneficios`, `validaciones`,
-    # `patrocinadores`, `competencias`, `administracion`) se registra.
+    #
+    # Reconciliación A0 de DOM-07 y DOM-08 (2026-11-19 · cierre del
+    # cableado global, `evidence/foundations/A0-wiring-validation.md`):
+    #   `competencias`     (DOM-07) → depende de `eventos.0001`,
+    #                               `salesianos_fest.0003` y `usuarios.0002`;
+    #                               se registra DESPUÉS de `salesianos_fest` y
+    #                               `marketplace` porque su migración depende
+    #                               de esos nodos del grafo.
+    #   `patrocinadores`   (DOM-08) → depende de `eventos.0001`.
+    #
+    # Reconciliación A0 de XCT-01 (2026-11-19 · cierre del cableado global):
+    #   `validaciones`     (XCT-01) → depende de `eventos.0001`,
+    #                               `usuarios.0002`, `salesianos_fest.0003` y
+    #                               `marketplace.0003`; se registra DESPUÉS de
+    #                               `marketplace` porque su migración depende
+    #                               de ese nodo del grafo.
+    #                               Su suite de integración está VERDE
+    #                               (20 de 20): el bloqueo de SQLite que la
+    #                               dejaba roja se resolvió en el harness de
+    #                               fixtures, no en el módulo de dominio. Un
+    #                               controller con pruebas verdes y su módulo
+    #                               versionado SÍ se registra (FR-07 §3.1
+    #                               regla 2).
+    #
+    # SIGUEN SIN REGISTRAR (apps NO completadas o NO verificadas): ninguna.
+    #
+    # Reconciliación A0 de XCT-03 (2026-11-20):
+    #   `notificaciones` (XCT-03) → NO depende de ningún módulo de dominio:
+    #   es una HOJA del grafo. Registra la trazabilidad del intento de
+    #   notificar al comprador y su migración `0001_initial` no declara
+    #   ninguna FK. Se registra AL FINAL para no alterar el orden de
+    #   migraciones de los demás nodos.
+    #
+    # Reconciliación A0 de XCT-02 (2026-11-20 · cierre del cableado global,
+    # `evidence/verification/VER-01-baseline-regression-payments.md` §7):
+    #   `administracion` (XCT-02) → es un módulo de AGREGACIÓN: su único
+    #   modelo propio es el ACTA transversal (`AccionAuditada`), cuya
+    #   migración `0001_initial` sólo depende de `eventos.0001_initial` y de
+    #   `AUTH_USER_MODEL`. No declara FK a ningún otro módulo de dominio, así
+    #   que se registra AL FINAL: no altera el orden del grafo y su ACTA
+    #   queda disponible para las seis superficies administrativas.
     "modules.eventos",
     "modules.usuarios",
     "modules.pagos",
     "modules.commerce",
     "modules.salesianos_fest",
     "modules.marketplace",
+    "modules.competencias",
+    "modules.patrocinadores",
+    "modules.validaciones",
+    "modules.notificaciones",
+    "modules.administracion",
+    # `videos` (cambio `public-video-streaming-crud`): la SALA DE PROYECCIÓN
+    # pública. Es una hoja del grafo de migraciones: su modelo NO declara FK
+    # a ningún otro módulo de dominio (la entidad es editorial y no pertenece
+    # a ninguna edición), así que se registra AL FINAL y no altera el orden.
+    "modules.videos",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -157,8 +206,15 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 #
 # MEDIA_ROOT es un VOLUMEN PERSISTENTE: guarda estado durable de negocio,
 # no es un caché. MEDIA_URL se sirve sin CDN (DEC-14).
+#
+# La ruta es CONFIGURABLE para que el despliegue monte el volumen donde
+# quiera: en el contenedor del API el volumen persistente se monta en
+# `/app/media` (ver `Aplicacion/docker-compose.yml`), y el servidor de
+# archivos del despliegue (nginx) lo lee en modo sólo-lectura
+# (`Aplicacion/proxy/nginx.conf`). El valor por defecto sigue siendo
+# `BASE_DIR/media` para el desarrollo local.
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = str(Path(env("MEDIA_ROOT", default=BASE_DIR / "media")))
 
 # Allowlist MIME. `image/svg+xml` está EXCLUIDO a propósito: puede llevar
 # script embebido.
@@ -189,6 +245,11 @@ MEDIA_MAX_DIMENSION = env.int("MEDIA_MAX_DIMENSION", default=0)
 # rutas, credenciales ni ventanas. El interruptor permite activar la copia
 # cuando la política esté definida; por defecto no hay copia y el
 # comportamiento es explícito, no silencioso.
+#
+# BLOQUEO EXPLÍCITO (XCT-03): el despliegue NO respalda el volumen de media
+# mientras `GOV-01-OPEN-09` no se ratifique. El interruptor existe, vale
+# `False` y no hay ninguna tarea programada que lo active. "Sin copia" es un
+# hecho conocido y declarado, no un olvido.
 MEDIA_BACKUP_ENABLED = env.bool("MEDIA_BACKUP_ENABLED", default=False)
 MEDIA_BACKUP_ROOT = env("MEDIA_BACKUP_ROOT", default="")
 
@@ -240,6 +301,38 @@ NINJA_EXTRA = {
         # dependientes (`usuarios` → `pagos` → `commerce`).
         "modules.salesianos_fest.di.SalesianosFestModule",
         "modules.marketplace.di.MarketplaceModule",
+        # DOM-07 (DOM-07 · A0-01) · DOM-08 (DOM-08 · A0-01): el wiring de DI
+        # de las apps COMPLETADAS y VERIFICADAS. `competencias` va después de
+        # `salesianos_fest` porque su adaptador `EquipoElegibleAdapter`
+        # consulta los HECHOS de ese módulo.
+        "modules.competencias.di.CompetenciasModule",
+        "modules.patrocinadores.di.PatrocinadoresModule",
+        # XCT-01 (A0 · cierre del cableado): el wiring de DI del módulo
+        # `validaciones` COMPLETADO y VERIFICADO. Se registra al final porque
+        # su orquestador REÚNE los adaptadores `VerificarDerecho` que viven
+        # en sus módulos dueños (`salesianos_fest`, `marketplace`): sus
+        # adaptadores tienen que existir antes de que el orquestador los
+        # enlace.
+        "modules.validaciones.di.ValidacionesModule",
+        # XCT-03 (A0 · reconciliación): el wiring de DI del módulo
+        # `notificaciones`. Es una hoja del grafo: no depende de ningún
+        # módulo de dominio. Se registra al final porque su puerto
+        # (`INotificadorCompraService`) lo implementa para `pagos`, y el
+        # enlace es perezoso (fábrica), de modo que el orden no altera la
+        # dirección de dependencias.
+        "modules.notificaciones.di.NotificacionesModule",
+        # XCT-02 (A0 · cierre del cableado): el wiring de DI del módulo
+        # `administracion` COMPLETADO y VERIFICADO. El ORDEN importa: este
+        # módulo AGREGA y consume los servicios de `pagos`, `commerce`,
+        # `salesianos_fest`, `usuarios` y `eventos`, así que su wiring va
+        # DETRÁS del de esos módulos (el binding de
+        # `EstadoOperativoPagoService` lo publica `pagos`).
+        "modules.administracion.di.AdministracionModule",
+        # `videos` (cambio `public-video-streaming-crud`): el wiring de DI del
+        # módulo `videos`. Es una hoja del grafo: no consume ningún otro
+        # dominio, así que su wiring se registra al final sin alterar la
+        # dirección de dependencias.
+        "modules.videos.di.VideosModule",
     ]
 }
 
@@ -269,12 +362,18 @@ if os.environ.get("USE_SQLITE", "").lower() in ("1", "true", "yes"):
 else:
     # PostgreSQL — production.py debería overridear, pero dejamos helper limpio.
     # Lee DB_* con defaults razonables. Puerto interno estándar: 5432.
+    #
+    # `DB_PASSWORD` NO tiene valor por defecto (A0-VER03-05): una contraseña
+    # por defecto escrita en el repositorio es una credencial conocida por
+    # cualquiera, y el despliegue arrancaría con ella. Si el motor es
+    # PostgreSQL, la credencial tiene que llegar EXPLÍCITAMENTE del entorno.
+    # Para trabajar sin credencial hay que usar SQLite (`USE_SQLITE`).
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": env("DB_NAME", default="salesianos_db"),
             "USER": env("DB_USER", default="salesianos_user"),
-            "PASSWORD": env("DB_PASSWORD", default="changeme"),
+            "PASSWORD": env("DB_PASSWORD"),
             "HOST": env("DB_HOST", default="localhost"),
             "PORT": env("DB_PORT", default="5432"),
         }

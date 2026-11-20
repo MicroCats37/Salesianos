@@ -13,6 +13,7 @@ Rutas (el prefijo `/api` lo pone el montaje de `config/urls.py`):
 
 | Método | Ruta | Auth | Wrapper |
 |---|---|---|---|
+| POST | `/api/auth/register` | pública | `ApiResponse[LoginTokenOut]` |
 | POST | `/api/auth/login/username` | pública | `ApiResponse[LoginTokenOut]` |
 | POST | `/api/auth/login/dni` | pública | `ApiResponse[LoginTokenOut]` |
 | POST | `/api/auth/login/email` | pública | `ApiResponse[LoginTokenOut]` |
@@ -32,6 +33,8 @@ from ninja_extra.permissions import AllowAny, IsAuthenticated
 
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
+from modules.usuarios.domain.schemas.persona_schemas import PersonaCreateData
+from modules.usuarios.domain.schemas.registro_schemas import RegistroData
 from modules.usuarios.domain.services.orchestrators.auth_orchestrator import (
     AuthOrchestrator,
 )
@@ -41,13 +44,14 @@ from modules.usuarios.presentation.schemas.auth_schemas import (
     LoginEmailIn,
     LoginTokenOut,
     LoginUsernameIn,
+    RegisterIn,
     SesionUsuarioOut,
 )
 
 
 @api_controller("/auth", tags=["Autenticación"])
 class AuthController:
-    """Inicio de sesión por username, DNI o email, y sesión actual."""
+    """Alta de la cuenta, inicio de sesión y sesión actual."""
 
     @inject
     def __init__(
@@ -57,6 +61,46 @@ class AuthController:
     ):
         self.auth_orchestrator = auth_orchestrator
         self.auth_presenter = auth_presenter
+
+    @route.post(
+        "/register",
+        response={201: ApiResponse[LoginTokenOut]},
+        auth=None,
+        permissions=[AllowAny],
+        summary="Registra una cuenta pública y abre su sesión.",
+    )
+    async def register(self, request, payload: RegisterIn):
+        """Registra una cuenta con su identidad.
+
+        Route: POST /api/auth/register
+        Auth: pública.
+
+        El alta es el ÚNICO camino de nacimiento de una cuenta: nadie la crea
+        como efecto lateral de consultar un documento (`FR-03` §1.2).
+
+        La respuesta es el MISMO wrapper del inicio de sesión: el alta abre
+        la sesión del actor recién creado, con su grupo funcional `Normal`.
+        """
+        data = RegistroData(
+            persona=PersonaCreateData(
+                tipo_documento=payload.tipoDocumento,
+                numero_documento=payload.numeroDocumento,
+                nombres=payload.nombres,
+                apellidos=payload.apellidos,
+                genero=payload.genero,
+                telefono=payload.telefono or "",
+                whatsapp=payload.whatsapp or "",
+                contacto_emergencia_nombre=payload.contactoEmergenciaNombre or "",
+                contacto_emergencia_telefono=payload.contactoEmergenciaTelefono or "",
+            ),
+            email=payload.email,
+            password=payload.password,
+        )
+        result = await self.auth_orchestrator.registrar(data)
+        return success_response(
+            self.auth_presenter.present_login(result),
+            message="El registro se completó correctamente.",
+        )
 
     @route.post(
         "/login/username",

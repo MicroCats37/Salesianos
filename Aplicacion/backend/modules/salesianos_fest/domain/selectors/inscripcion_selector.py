@@ -17,7 +17,13 @@ class InscripcionSelector:
         """La inscripción con ese identificador, o `None`."""
         return (
             Inscripcion.objects.filter(id=inscripcion_id)
-            .select_related("edicion", "responsable", "paquete")
+            .select_related(
+                "edicion",
+                "responsable",
+                "paquete",
+                "promocion",
+                "fusion_promocion",
+            )
             .first()
         )
 
@@ -39,7 +45,13 @@ class InscripcionSelector:
                 paquete_id=paquete_id,
             )
             .exclude(estado="CANCELADA")
-            .select_related("edicion", "responsable", "paquete")
+            .select_related(
+                "edicion",
+                "responsable",
+                "paquete",
+                "promocion",
+                "fusion_promocion",
+            )
             .first()
         )
 
@@ -47,7 +59,7 @@ class InscripcionSelector:
         """Los equipos de una inscripción, en orden estable."""
         return (
             Equipo.objects.filter(inscripcion_id=inscripcion_id)
-            .select_related("disciplina")
+            .select_related("disciplina", "categoria")
             .order_by("nombre")
         )
 
@@ -59,7 +71,7 @@ class InscripcionSelector:
         """
         return (
             Equipo.objects.filter(id=equipo_id, inscripcion_id=inscripcion_id)
-            .select_related("disciplina")
+            .select_related("disciplina", "categoria")
             .first()
         )
 

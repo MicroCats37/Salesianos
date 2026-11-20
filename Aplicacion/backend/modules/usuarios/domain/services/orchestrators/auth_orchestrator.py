@@ -16,15 +16,18 @@ convierte en la respuesta HTTP (`contract/api-wrapper-presenter-contract.md`
 from injector import inject
 
 from modules.usuarios.domain.results import LoginTokenResult, SesionUsuarioResult
+from modules.usuarios.domain.schemas.registro_schemas import RegistroData
 from modules.usuarios.domain.services.flujos.auth_flujo import AuthFlujo
+from modules.usuarios.domain.services.flujos.registro_flujo import RegistroFlujo
 
 
 class AuthOrchestrator:
     """Fachada async de las operaciones de autenticación y sesión."""
 
     @inject
-    def __init__(self, flujo: AuthFlujo):
+    def __init__(self, flujo: AuthFlujo, registro_flujo: RegistroFlujo):
         self.flujo = flujo
+        self.registro_flujo = registro_flujo
 
     # ── Inicio de sesión ───────────────────────────────────────────────────
 
@@ -39,6 +42,16 @@ class AuthOrchestrator:
     async def login_email(self, email: str, password: str) -> LoginTokenResult:
         """Inicio de sesión por email."""
         return await self.flujo._proceso_login_email(email, password)
+
+    # ── Alta de la cuenta ──────────────────────────────────────────────────
+
+    async def registrar(self, data: RegistroData) -> LoginTokenResult:
+        """Alta de una cuenta con su identidad.
+
+        El resultado es el MISMO wrapper del inicio de sesión: el alta abre
+        la sesión del actor recién creado (`tokens + sesión`).
+        """
+        return await self.registro_flujo._proceso_registro(data)
 
     # ── Sesión actual ──────────────────────────────────────────────────────
 

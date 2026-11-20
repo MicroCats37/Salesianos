@@ -10,6 +10,10 @@ import pytest
 
 from modules.competencias.tests.fixtures.competencias_fixtures import (  # noqa: F401
     competencia,
+    competencia_categoria_2,
+    categoria,
+    categoria_2,
+    categoria_otra,
     disciplina,
     disciplina_exigente,
     disciplina_inactiva,
@@ -21,6 +25,7 @@ from modules.competencias.tests.fixtures.competencias_fixtures import (  # noqa:
     equipo,
     equipo_2,
     equipo_2_en_cuadro,
+    equipo_categoria_otra,
     equipo_plantilla_incompleta,
     equipo_cancelado,
     equipo_en_cuadro,
@@ -42,6 +47,7 @@ from modules.competencias.tests.fixtures.competencias_fixtures import (  # noqa:
     persona_2,
     persona_3,
     persona_4,
+    promocion,
     ronda,
     ronda_final,
     usuario_admin,

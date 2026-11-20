@@ -40,23 +40,39 @@ from datetime import datetime
 from injector import inject
 
 from modules.pagos.domain.constants import (
+    DESCRIPCIONES_ESTADO_ACTIVACION,
     DESCRIPCIONES_ESTADO_OPERATIVO,
+    EstadoActivacionPago,
     EstadoOperativoPago,
     EstadoOrdenPago,
     EstadoTransaccionPago,
     OrigenPago,
 )
 from modules.pagos.domain.models import TransaccionPago
-from modules.pagos.domain.ports import IEstadoCompraOrdenPagoService
-from modules.pagos.domain.results.pago_result import EstadoOperativoResult
+from modules.pagos.domain.ports import (
+    IActivacionCompraService,
+    IEstadoCompraOrdenPagoService,
+)
+from modules.pagos.domain.results.pago_result import (
+    EstadoActivacionResult,
+    EstadoOperativoResult,
+)
 
 
 class EstadoOperativoPagoService:
     """Calcula el veredicto operativo de una orden de pago."""
 
     @inject
-    def __init__(self, estado_compra_service: IEstadoCompraOrdenPagoService):
+    def __init__(
+        self,
+        estado_compra_service: IEstadoCompraOrdenPagoService,
+        activacion_service: IActivacionCompraService,
+    ):
         self.estado_compra_service = estado_compra_service
+        # El puerto de activación publica el SEGUNDO canal del veredicto (el
+        # estado de la activación de derechos). Nunca recalcula el veredicto
+        # operativo, que es el primero y el congelado.
+        self.activacion_service = activacion_service
 
     # ── Cálculo puro ─────────────────────────────────────────────────────────
 
@@ -152,6 +168,82 @@ class EstadoOperativoPagoService:
             pagada_en=orden.pagada_en if orden is not None else None,
         )
         return self.construir_result(codigo)
+
+    # ── Veredicto de la activación (FR-04 §6 · XCT-03) ───────────────────────
+
+    @staticmethod
+    def calcular_activacion(
+        *,
+        existe: bool,
+        activada: bool,
+        pendiente: bool,
+        fallida: bool,
+        en_curso: bool,
+        recuperable: bool,
+    ) -> str:
+        """El código del veredicto de activación a partir de las banderas.
+
+        Es una función PURA, como `calcular`: recibe los hechos y devuelve el
+        código. No consulta la base de datos y no escribe nada.
+
+        La precedencia es la del ciclo de vida de la activación:
+
+        1. `SIN_ACTIVACION` — no hay activación registrada.
+        2. `ACTIVADA` — el derecho quedó habilitado (terminal).
+        3. `EN_CURSO` — hay un intento reservado.
+        4. `FALLIDA` — el intento falló (recuperable).
+        5. `PENDIENTE` — la activación está registrada y sin resolver.
+        """
+        if not existe:
+            return EstadoActivacionPago.SIN_ACTIVACION
+        if activada:
+            return EstadoActivacionPago.ACTIVADA
+        if en_curso:
+            return EstadoActivacionPago.EN_CURSO
+        if fallida:
+            return EstadoActivacionPago.FALLIDA
+        if pendiente:
+            return EstadoActivacionPago.PENDIENTE
+        return EstadoActivacionPago.SIN_ACTIVACION
+
+    def calcular_activacion_para_orden(self, orden) -> EstadoActivacionResult | None:
+        """Calcula el veredicto de activación de una orden real.
+
+        Es el **segundo canal** del veredicto del pago: el operativo responde
+        «¿está pagado esto?» y este responde «¿está habilitado el derecho?».
+        El vocabulario del veredicto operativo NO se amplía ni se renumera
+        (D-07): la garantía de FND-04 se mantiene intacta y la incidencia de
+        activación viaja separada (RN-C08, FR-04 §4 · §6).
+
+        Args:
+            orden: la `OrdenPago`.
+
+        Returns:
+            El `EstadoActivacionResult`, o `None` cuando no hay puerto de
+            activación disponible o la orden no existe.
+        """
+        if orden is None:
+            return None
+
+        estado = self.activacion_service.estado_activacion(str(orden.id))
+        if estado is None:
+            return None
+
+        codigo = self.calcular_activacion(
+            existe=estado.existe,
+            activada=estado.activada,
+            pendiente=estado.pendiente,
+            fallida=estado.fallida,
+            en_curso=estado.en_curso,
+            recuperable=estado.recuperable,
+        )
+        return EstadoActivacionResult(
+            codigo=codigo,
+            etiqueta=EstadoActivacionPago(codigo).label,
+            descripcion=DESCRIPCIONES_ESTADO_ACTIVACION.get(codigo, ""),
+            recuperable=estado.recuperable,
+            proxima_accion=estado.proxima_accion,
+        )
 
     def _origen_pago(self, orden) -> str:
         """Procedencia de la evidencia de una orden.

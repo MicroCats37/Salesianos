@@ -560,6 +560,257 @@ PUBLIC_ERROR_MESSAGES = {
     ),
     # `PERSONA_NO_ENCONTRADA` (404) ya estaba catalogado por FND-03: no se
     # duplicó.
+    # ── DOM-05 · Pedido de marketplace (A0 · cierre del cableado) ────────────
+    # Códigos estables del módulo `modules.marketplace` (DOM-05). El status lo
+    # fija la CLASE de excepción del dominio; aquí sólo se les da la prosa
+    # pública segura. Ninguna prosa interpola tokens, ids, slugs, precios,
+    # rutas de disco ni texto crudo (`contract/api-wrapper-presenter-contract.md`
+    # §8).
+    # 404 — el pedido no existe dentro del alcance. La denegación es NEUTRAL:
+    # un token desconocido y un pedido de otra persona se responden igual.
+    "PEDIDO_NO_ENCONTRADO": (
+        "No se encontró el pedido solicitado."
+    ),
+    # 403 — el actor autenticado NO es el comprador del pedido. Ser
+    # administrador NO sustituye la titularidad (`RN-U02`).
+    "PEDIDO_NO_AUTORIZADO": (
+        "No tienes autorización para consultar este pedido."
+    ),
+    # 422 — el pedido mezcla artículos de distintos orígenes (`RN-C01`).
+    "PEDIDO_ITEMS_MIXTOS": (
+        "No se pueden combinar artículos de distintos orígenes."
+    ),
+    # 409 — el pedido declara un artículo que no pertenece a la tienda.
+    "PEDIDO_ITEM_NO_PERMITIDO": (
+        "El pedido sólo puede incluir productos de la tienda."
+    ),
+    # 422 — la cantidad declarada de un artículo no es válida.
+    "PEDIDO_CANTIDAD_INVALIDA": (
+        "La cantidad solicitada no es válida."
+    ),
+    # ── DOM-06 · Inventario, reserva y entrega (A0 · cierre del cableado) ────
+    # 409 — no hay existencias suficientes para la cantidad pedida (`RN-M06`).
+    # CÓDIGO CONGELADO por el ledger `FR-07` §3.3 para `RT-CM-03`.
+    "STOCK_INSUFICIENTE": (
+        "No hay existencias suficientes para la cantidad solicitada."
+    ),
+    # 404 — el movimiento de inventario indicado no existe.
+    "MOVIMIENTO_INVENTARIO_NO_ENCONTRADO": (
+        "No se encontró el movimiento de inventario solicitado."
+    ),
+    # 422 — el movimiento declarado no es coherente con su naturaleza (`RN-M04`).
+    "MOVIMIENTO_INVENTARIO_INVALIDO": (
+        "El movimiento de inventario no es válido."
+    ),
+    # 409 — un movimiento ya registrado no se puede modificar: la bitácora es
+    # INMUTABLE y la corrección es un movimiento compensatorio.
+    "MOVIMIENTO_INVENTARIO_INMUTABLE": (
+        "El movimiento de inventario no se puede modificar."
+    ),
+    # 409 — el pedido todavía no está pagado: no se puede entregar (`RN-M07`).
+    "PEDIDO_NO_PAGADO": (
+        "El pedido todavía no está pagado."
+    ),
+    # 409 — el pedido no se puede entregar en su estado actual.
+    "PEDIDO_NO_ENTREGABLE": (
+        "El pedido no se puede entregar."
+    ),
+    # 409 — el pedido no tiene existencias reservadas (`RN-M06`).
+    "PEDIDO_SIN_RESERVA": (
+        "El pedido no tiene existencias reservadas."
+    ),
+    # 409 — la reserva del pedido fue liberada: su venta ya no se puede
+    # confirmar (`RN-C08`).
+    "RESERVA_NO_CONFIRMABLE": (
+        "Las existencias del pedido ya no están reservadas."
+    ),
+    # ── DOM-07 · Competencias, cuadro y agenda (A0 · cierre del cableado) ────
+    # Códigos estables del módulo `modules.competencias` (DOM-07). Los códigos
+    # ya catalogados por A0 (`COMPETENCIA_DUPLICADA`, `COMPETENCIA_NOT_FOUND`,
+    # `RONDA_NOT_FOUND`, `ENCUENTRO_NOT_FOUND`, `COMPETENCIA_EQUIPO_NOT_FOUND`,
+    # `EQUIPO_NO_ELEGIBLE`, `EQUIPO_SOLAPADO`, `SLOT_OCUPADO`,
+    # `DESTINO_BLOQUEADO`, `INVALID_STATE_TRANSITION`, `INVALID_SCHEDULE`,
+    # `INVALID_WINNER`, `INVALID_LINK`, `REASON_REQUIRED`, `DELETE_NOT_ALLOWED`,
+    # `RESOURCE_CHANGED`) NO se duplican.
+    # 404 — el recurso no existe dentro del alcance de la edición.
+    "COMPETENCIA_NO_ENCONTRADA": (
+        "No se encontró la competencia solicitada."
+    ),
+    "COMPETENCIA_EQUIPO_NO_ENCONTRADA": (
+        "No se encontró la participación del equipo en la competencia."
+    ),
+    "RONDA_NO_ENCONTRADA": (
+        "No se encontró la ronda solicitada."
+    ),
+    "ENCUENTRO_NO_ENCONTRADO": (
+        "No se encontró el encuentro solicitado."
+    ),
+    "DISCIPLINA_NO_ENCONTRADA": (
+        "No se encontró la disciplina solicitada."
+    ),
+    # 404 — la categoría es un hecho del DUEÑO (`salesianos_fest`) que
+    # `competencias` sólo REFERENCIA: si no existe —o es de otra edición— no
+    # se puede usar en una competencia. El código lo declara el módulo que lo
+    # usa; la PROSA es de A0.
+    "CATEGORIA_NO_ENCONTRADA": (
+        "No se encontró la categoría solicitada."
+    ),
+    # 409 — el equipo ya está incorporado a la competencia.
+    "COMPETENCIA_EQUIPO_DUPLICADO": (
+        "El equipo ya está incorporado a esta competencia."
+    ),
+    # 409 — el orden ya está ocupado por otra entrada activa.
+    "ORDEN_DUPLICADO": (
+        "Ese orden ya está ocupado."
+    ),
+    # 409 — ya existe una ronda con esa etiqueta o ese orden.
+    "RONDA_DUPLICADA": (
+        "Ya existe una ronda con esa etiqueta o ese orden."
+    ),
+    # 409 — el equipo ya juega en esa franja horaria (`RN-K03`).
+    "SOLAPAMIENTO_HORARIO": (
+        "Uno de los equipos ya tiene un encuentro en esa franja horaria."
+    ),
+    # 422 — el horario no es un intervalo positivo del día de la competencia.
+    "HORARIO_INVALIDO": (
+        "El horario debe ser un intervalo positivo dentro del día de la competencia."
+    ),
+    # 422 — la operación protegida exige un motivo auditado.
+    "MOTIVO_REQUERIDO": (
+        "Debes indicar el motivo del cambio."
+    ),
+    # 409 — el estado actual del encuentro no admite la operación.
+    "TRANSICION_INVALIDA": (
+        "El estado actual del encuentro no admite esta operación."
+    ),
+    # 422 — el ganador propuesto no ocupa ninguno de los dos slots.
+    "GANADOR_INVALIDO": (
+        "El ganador debe ser uno de los participantes del encuentro."
+    ),
+    # 422 — el enlace al siguiente encuentro no es válido.
+    "ENLACE_INVALIDO": (
+        "El enlace al siguiente encuentro no es válido."
+    ),
+    # 422 — un bye manual exige exactamente un equipo.
+    "BYE_INVALIDO": (
+        "Un bye manual requiere exactamente un equipo en el encuentro."
+    ),
+    # 422 — el participante propuesto no pertenece a la competencia.
+    "PARTICIPANTE_INVALIDO": (
+        "El participante no pertenece a esta competencia."
+    ),
+    # ── DOM-08 · Patrocinadores, logo y galería (A0 · cierre del cableado) ────
+    # Códigos estables del módulo `modules.patrocinadores` (DOM-08).
+    # 404 — el patrocinador no existe dentro del alcance de edición.
+    "PATROCINADOR_NO_ENCONTRADO": (
+        "No se encontró el patrocinador solicitado."
+    ),
+    # 409 — ya existe un patrocinador con el mismo identificador en la edición.
+    "PATROCINADOR_SLUG_DUPLICADO": (
+        "Ya existe un patrocinador con ese identificador en la edición."
+    ),
+    # 404 — la imagen indicada no pertenece al patrocinador del alcance.
+    "PATROCINADOR_IMAGEN_NO_ENCONTRADA": (
+        "No se encontró la imagen de patrocinador solicitada."
+    ),
+    # 422 — la galería no es coherente con el tope declarado del carrusel.
+    "GALERIA_PATROCINADOR_INVALIDA": (
+        "La galería del patrocinador no es válida."
+    ),
+    # ── XCT-01 · Validaciones (A0 · cierre del cableado) ─────────────────────
+    # Códigos estables del módulo `modules.validaciones`. El catálogo es
+    # GLOBAL: un código declarado por un módulo existente va aquí, esté
+    # registrado o no.
+    # `IDEMPOTENCY_KEY_REUTILIZADA` (409) ya estaba catalogado por FND-04: no
+    # se duplicó.
+    # 404 — la credencial no existe en el alcance. La credencial es un
+    # SECRETO: la respuesta nunca dice qué códigos existen ni qué derechos hay.
+    "TICKET_NO_ENCONTRADO": (
+        "No se encontró la credencial solicitada."
+    ),
+    # 409 — la credencial ya se canjeó por completo (`FL-10` paso 5).
+    "TICKET_YA_CONSUMIDO": (
+        "La credencial ya fue utilizada."
+    ),
+    # 409 — la cantidad pedida no se puede confirmar (`FR-05` §2.2).
+    "CANTIDAD_EXCEDIDA": (
+        "La cantidad solicitada no se puede confirmar."
+    ),
+    # 409 — el derecho no está vigente para esta operación (`RN-P08`).
+    "DERECHO_REVOCADO": (
+        "El derecho no está vigente para esta operación."
+    ),
+    # 500 — no hay adaptador para ese tipo de derecho: es una FALLA DE
+    # CONFIGURACIÓN, no un problema del cliente. La prosa es la del status 500
+    # (genérica): nunca explica qué tipo de derecho falló.
+    "VERIFICADOR_NO_DISPONIBLE": (
+        "Ocurrió un error inesperado. Inténtalo nuevamente."
+    ),
+    # ── Promociones, categorías y cotización (A0 · solicitud del dueño) ─────
+    # Códigos estables del módulo `modules.salesianos_fest`. El módulo los
+    # declara y REQUIERE su prosa pública ("Código REQUESTED a A0").
+    # `CANTIDAD_INVALIDA` ya existía (lo declaró DOM-03 para los pases) y NO
+    # se reutiliza aquí: `CANTIDAD_INSUFICIENTE` es un hecho DISTINTO y tiene
+    # su propio código, porque su prosa habla de participantes y de paquete,
+    # no de pases.
+    # 404 — la promoción indicada no existe o no está activa.
+    "PROMOCION_NO_ENCONTRADA": (
+        "No se encontró la promoción solicitada."
+    ),
+    # 422 — la promoción de la inscripción no cae en ninguna categoría activa
+    # de la edición: la inscripción no tiene banda con la que competir.
+    "CATEGORIA_NO_RESUELTA": (
+        "La promoción seleccionada no corresponde a ninguna categoría de esta edición."
+    ),
+    # 422 — la promoción fusionada es la MISMA que la principal.
+    "FUSION_PROMOCION_INVALIDA": (
+        "La promoción fusionada debe ser distinta de la promoción principal."
+    ),
+    # 422 — la cantidad de participantes no alcanza el mínimo comercial del
+    # paquete.
+    "CANTIDAD_INSUFICIENTE": (
+        "La cantidad de participantes no alcanza el mínimo de compra del paquete."
+    ),
+    # 422 — los equipos declarados no cumplen la regla de disciplinas del
+    # paquete (`FIJO` exige exactamente las vinculadas; `ELEGIBLE` admite hasta
+    # el número declarado por el paquete).
+    "EQUIPOS_FUERA_DE_PAQUETE": (
+        "Los equipos declarados no cumplen las disciplinas del paquete."
+    ),
+    # 409 — el precio del catálogo se movió entre la cotización y el alta
+    # (`RN-C02`). Es la regla de CONCURRENCIA de la cotización: el comprador
+    # devuelve el token `cotizacion_version` y, si el catálogo ya no está en
+    # la versión cotizada, el alta se rechaza en vez de cobrar una cantidad
+    # que nadie vio. La prosa NO interpola el precio ni su importe: la
+    # siguiente acción segura (volver a cotizar) es lo que el cliente necesita.
+    "PRECIO_CAMBIADO": (
+        "El precio del paquete cambió desde la cotización. Vuelve a cotizar."
+    ),
+    # ── Identidad y pagos (A0 · cierre del cableado) ─────────────────────────
+    # 403 — la cuenta está desactivada: la contraseña es correcta pero la
+    # cuenta no puede operar. Es un estado DISTINTO de "credenciales
+    # inválidas" (401).
+    "CUENTA_INACTIVA": (
+        "La cuenta está desactivada."
+    ),
+    # 400 — la petición de pago es malformada o no verificable. La clase base
+    # `ErrorPago400` la lanzan los errores tipados de pago que reutilizan su
+    # status de ledger (`FR-07` §3.3).
+    "PAGO_INVALIDO": (
+        "La solicitud de pago no es válida."
+    ),
+    # ── Sala de proyección (cambio `public-video-streaming-crud`) ───────────
+    # Códigos estables del módulo `modules.videos`. La prosa es FIJA y no
+    # interpola URLs, UUIDs ni identificadores: un `javascript:` o un `data:`
+    # rechazados no se leen de vuelta en la respuesta.
+    # 404 — el video solicitado no existe.
+    "VIDEO_NO_ENCONTRADO": (
+        "No se encontró el video solicitado."
+    ),
+    # 422 — la URL no es una dirección `http`/`https` válida.
+    "VIDEO_URL_INVALIDA": (
+        "La URL del video no es válida."
+    ),
 }
 
 # Fallback genérico por status HTTP (FR-01 §4.4). Se usa cuando el código de

@@ -127,6 +127,27 @@ class PersonaDuplicadaError(ConflictError):
         )
 
 
+class EmailYaRegistradoError(ConflictError):
+    """El correo electrónico ya está vinculado a una cuenta (409).
+
+    El email es la clave ÚNICA y NO NULA de la cuenta
+    (`unique_email_usuario_no_vacio`): dos cuentas no pueden compartirlo.
+
+    El código `CONFLICT` es el del catálogo público de `core/exceptions.py`:
+    mientras A0 no catalogue un código propio para este caso
+    (`EMAIL_YA_REGISTRADO`), la prosa pública es la genérica del 409 — nunca
+    el texto técnico de esta excepción (`FR-01` §4.4).
+    """
+
+    code = "CONFLICT"
+
+    def __init__(self):
+        super().__init__(
+            message="El correo electrónico ya está registrado.",
+            code=self.code,
+        )
+
+
 class FuenteExternaNoDisponibleError(HttpError):
     """La fuente externa de documentos falló o no está configurada (503).
 
@@ -155,6 +176,7 @@ class FuenteExternaTimeoutError(HttpError):
 __all__ = [
     "CredencialesInvalidasError",
     "CuentaInactivaError",
+    "EmailYaRegistradoError",
     "FuenteExternaNoDisponibleError",
     "FuenteExternaTimeoutError",
     "PersonaDatosIncompletosError",

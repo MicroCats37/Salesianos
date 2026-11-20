@@ -33,6 +33,96 @@ class EstadoOperativoResult(BaseModel):
     )
 
 
+class EstadoActivacionResult(BaseModel):
+    """El veredicto de la ACTIVACIÓN de derechos de una compra pagada.
+
+    Es un canal **SEPARADO** del veredicto operativo: el veredicto operativo
+    responde «¿está pagado esto?» y este responde «¿está habilitado el
+    derecho?». Los dos los publica `pagos`, su único dueño (FR-01 §5,
+    FR-04 §6).
+
+    El vocabulario de `EstadoOperativoPago` NO se amplía ni se renumera: la
+    garantía de FND-04 (`PAGADA` tras una confirmación correcta) se mantiene
+    intacta y la incidencia de activación viaja en su propio canal.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    codigo: str = Field(..., description="Código estable del veredicto.")
+    etiqueta: str = Field(..., description="Etiqueta corta en español.")
+    descripcion: str = Field(
+        ...,
+        description="Una línea con la causa y el siguiente paso seguro.",
+    )
+    recuperable: bool = Field(
+        default=False,
+        description="Si la incidencia admite un reintento seguro.",
+    )
+    proxima_accion: str = Field(
+        default="",
+        description="La acción segura que sigue (REINTENTAR_ACTIVACION, …).",
+    )
+
+
+class ItemReconciliacion(BaseModel):
+    """Una orden revisada por la conciliación de activaciones."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    orden_pago_id: str = Field(..., description="Identificador de la orden.")
+    referencia: str = Field(..., description="Referencia visible de la orden.")
+    estado_orden: str = Field(..., description="Estado de la orden de pago.")
+    estado_activacion: str = Field(
+        ...,
+        description="Veredicto de activación ANTES de la conciliación.",
+    )
+    codigo: str = Field(
+        ...,
+        description="Código de máquina del resultado del reintento.",
+    )
+    proxima_accion: str = Field(
+        default="",
+        description="La acción segura que sigue.",
+    )
+    recuperable: bool = Field(
+        default=False,
+        description="Si la incidencia admite un reintento seguro.",
+    )
+    aplicada: bool = Field(
+        default=False,
+        description="Si se intentó el reintento de la activación.",
+    )
+
+
+class ResultadoReconciliacion(BaseModel):
+    """El informe de una pasada de conciliación de activaciones.
+
+    Es un informe, no una mutación: la conciliación **no** toca el estado de
+    la orden ni el de la compra. Sólo pide al coordinador que reintente la
+    activación, y el reintento es seguro (converge) (FR-04 I-2, RN-C08).
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    revisadas: int = Field(default=0, description="Órdenes confirmadas revisadas.")
+    con_incidencia: int = Field(
+        default=0,
+        description="Órdenes cuya activación no estaba resuelta.",
+    )
+    recuperadas: int = Field(
+        default=0,
+        description="Órdenes cuyo derecho quedó habilitado en esta pasada.",
+    )
+    pendientes: int = Field(
+        default=0,
+        description="Órdenes que siguen con la activación sin resolver.",
+    )
+    items: list[ItemReconciliacion] = Field(
+        default_factory=list,
+        description="El detalle por orden.",
+    )
+
+
 class IntentoPagoResult(BaseModel):
     """Un intento de pago, con su posición y su evidencia de verificación."""
 
@@ -73,6 +163,13 @@ class OrdenPagoResult(BaseModel):
         ...,
         description="Veredicto operativo del pago.",
     )
+    estado_activacion: EstadoActivacionResult | None = Field(
+        default=None,
+        description=(
+            "Veredicto de la activación de derechos. Es un canal SEPARADO del "
+            "veredicto operativo (FR-04 §6)."
+        ),
+    )
     intentos: list[LineaIntentoData] = Field(
         default_factory=list,
         description="Historial de intentos contra el proveedor.",
@@ -101,6 +198,13 @@ class PagoConfirmadoResult(BaseModel):
         ...,
         description="Veredicto operativo del pago.",
     )
+    estado_activacion: EstadoActivacionResult | None = Field(
+        default=None,
+        description=(
+            "Veredicto de la activación de derechos. Es un canal SEPARADO del "
+            "veredicto operativo (FR-04 §6)."
+        ),
+    )
     ya_confirmado: bool = Field(
         default=False,
         description="Si el pago ya estaba confirmado antes de esta llamada.",
@@ -118,8 +222,11 @@ class PagoConfirmadoResult(BaseModel):
 
 
 __all__ = [
+    "EstadoActivacionResult",
     "EstadoOperativoResult",
     "IntentoPagoResult",
+    "ItemReconciliacion",
     "OrdenPagoResult",
     "PagoConfirmadoResult",
+    "ResultadoReconciliacion",
 ]

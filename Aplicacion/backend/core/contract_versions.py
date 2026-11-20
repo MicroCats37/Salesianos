@@ -52,16 +52,56 @@ SCHEMA_VERSIONS: dict[str, str] = {
     "validaciones": "1.0.0",
     "marketplace": "1.2.0",
     "patrocinadores": "1.0.0",
+    # DOM-07 · Reconciliación A0 de 2026-11-19 (cierre del cableado global):
+    # el módulo `competencias` declara `SCHEMA_VERSION` en
+    # `modules/competencias/presentation/schemas/__init__.py`. Sin esta
+    # entrada NO hay mecanismo de detección de drift entre el contrato del
+    # backend y su espejo Zod (FR-07 §1.3).
+    #
+    # A0 · Reconciliación de 2026-11-20 (cierre de la RESTAURACIÓN DE LA
+    # CATEGORÍA, cambio `restore-registration-promotion-catalog-flow`): el
+    # módulo `competencias` subió a `2.0.0` (MAJOR, ROMPEDOR) porque el alta
+    # `POST /api/competencias` exige `categoria_id` (ENTRADA OBLIGATORIA
+    # nueva: la identidad pasa de tres partes a cuatro — edición, disciplina,
+    # categoría, nombre) y las salidas publican `categoria_id` y
+    # `categoria_nombre`. El registro global es de A0 y refleja la versión que
+    # DECLARA el módulo: mientras no se actualice, el test de drift de
+    # `core/tests/integration/test_contract_versions.py` falla
+    # (`hay_drift('2.0.0', '1.0.0')`).
+    "competencias": "2.0.0",
     # DOM-01 · Reconciliación A0 de 2026-11-19 (A0-06): el módulo declara
     # `SCHEMA_VERSION = "1.0.0"` y el registro global es de A0.
     #
     # DOM-03 · Reconciliación A0 de 2026-11-19 (A0-02): el módulo `salesianos_fest`
     # subió a `1.2.0` (MINOR, ADITIVO) con el dominio de pases, beneficiarios y
     # cortesía — diez rutas nuevas, ninguna forma de respuesta eliminada ni
-    # renombrada. El registro global es de A0: mientras no se actualice, el
-    # test de drift de `core/tests/integration/test_contract_versions.py` falla
-    # (F-59). DOM-02 (pool de cupos, `1.1.0`) queda subsumido en este valor.
-    "salesianos_fest": "1.2.0",
+    # renombrada. DOM-02 (pool de cupos, `1.1.0`) queda subsumido en este valor.
+    #
+    # A0 · Corrección de los residuales de VER-01 (2026-11-20): el cambio
+    # `restore-registration-promotion-catalog-flow` subió el módulo a `2.0.0`
+    # (MAJOR, ROMPEDOR) por tres hechos: `POST /api/inscripciones` exige dos
+    # campos NUEVOS y obligatorios (`promocion_id` y `cantidad`),
+    # `InscripcionDetalleOut` publica dos hechos NUEVOS y obligatorios
+    # (`promocion` y la `categoria` derivada por el servidor) y se AÑADEN tres
+    # rutas (`GET /api/catalogo/promociones`, `GET /api/catalogo/categorias` y
+    # `POST /api/cotizaciones`). El registro global es de A0 y refleja la
+    # versión que DECLARA el módulo: mientras no se actualice, el test de
+    # drift de `core/tests/integration/test_contract_versions.py` falla
+    # (`hay_drift('2.0.0', '1.2.0')`).
+    "salesianos_fest": "2.0.0",
+    # XCT-02 · Reconciliación A0 de 2026-11-20 (cierre del cableado global):
+    # el módulo `administracion` declara `SCHEMA_VERSION = "1.0.0"` en
+    # `modules/administracion/presentation/schemas/__init__.py`. Sin esta
+    # entrada NO hay mecanismo de detección de drift entre el contrato del
+    # backend y el de su módulo dueño (FR-07 §1.3): el panel publicaría
+    # formas nuevas sin que nadie lo notara.
+    "administracion": "1.0.0",
+    # `public-video-streaming-crud` (2026-11-20): el módulo `videos` declara
+    # `SCHEMA_VERSION = "1.0.0"` en
+    # `modules/videos/presentation/schemas/__init__.py`. Sin esta entrada NO
+    # hay mecanismo de detección de drift entre el contrato del backend y su
+    # espejo Zod (FR-07 §1.3).
+    "videos": "1.0.0",
 }
 
 

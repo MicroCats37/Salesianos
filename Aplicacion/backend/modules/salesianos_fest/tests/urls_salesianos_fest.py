@@ -4,9 +4,9 @@
 el registro permanente de los controllers lo pide A0 (petición A0-02 de este
 paquete). Para poder probar las rutas HTTP sin tocar la configuración
 compartida, este URLconf monta una instancia propia de `NinjaExtraAPI` con
-los controllers `CatalogoController`, `InscripcionController`, `PaseController`
-y `AdminPaseController` registrados, la autenticación JWT y los handlers de
-error globales.
+los controllers `CatalogoController`, `CotizacionController`,
+`InscripcionController`, `PaseController` y `AdminPaseController`
+registrados, la autenticación JWT y los handlers de error globales.
 
 El test usa el marcador `pytest.mark.urls("modules.salesianos_fest.tests.urls_salesianos_fest")`
 para apuntar el `ROOT_URLCONF` a este módulo durante el test.
@@ -25,6 +25,9 @@ from core.exceptions import register_exception_handlers
 from modules.salesianos_fest.presentation.controllers.catalogo_controller import (
     CatalogoController,
 )
+from modules.salesianos_fest.presentation.controllers.cotizacion_controller import (
+    CotizacionController,
+)
 from modules.salesianos_fest.presentation.controllers.inscripcion_controller import (
     InscripcionController,
 )
@@ -42,6 +45,7 @@ api = NinjaExtraAPI(
 register_exception_handlers(api)
 api.register_controllers(
     CatalogoController,
+    CotizacionController,
     InscripcionController,
     PaseController,
     AdminPaseController,

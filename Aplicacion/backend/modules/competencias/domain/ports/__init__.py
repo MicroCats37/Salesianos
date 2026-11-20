@@ -6,7 +6,7 @@ El módulo cruza al DOMINIO en un solo punto, y ese cruce es por PUERTO:
 
 1. **La elegibilidad deportiva de un equipo** — la resuelve
    `modules.salesianos_fest` (DOM-01 + DOM-02), que es su DUEÑO: la
-   inscripción, la disciplina, el estado del equipo y el pool de
+   inscripción, la disciplina, la categoría, el estado del equipo y el pool de
    participantes son hechos suyos. Este módulo NO reimplementa ninguna de esas
    reglas: las CONSUME por el puerto `IEquipoElegibleService` (`RN-K01`,
    `QA-K01`).
@@ -74,8 +74,13 @@ class IEquipoElegibleService(ABC):
 
     Es una consulta de SOLO LECTURA sobre el módulo dueño de la inscripción.
     No crea equipos, no cambia inscripciones y no toca el pool: sólo responde
-    si un equipo puede competir en una edición y disciplina concretas, y POR
-    QUÉ no puede si no puede.
+    si un equipo puede competir en una edición, disciplina y categoría
+    concretas, y POR QUÉ no puede si no puede.
+
+    **La CATEGORÍA es obligatoria en las dos operaciones**: la elegibilidad
+    deportiva es la coincidencia de EDICIÓN + DISCIPLINA + CATEGORÍA
+    (`RN-K01`). Un equipo de otra categoría no compite en este cuadro, y un
+    equipo sin categoría asignada tampoco: la categoría NUNCA se adivina.
     """
 
     @abstractmethod
@@ -83,12 +88,15 @@ class IEquipoElegibleService(ABC):
         self,
         edicion_id,
         disciplina_id,
+        categoria_id,
     ) -> list[EquipoElegibleData]:
         """Los equipos de la edición y disciplina que PUEDEN competir.
 
         Args:
             edicion_id: edición del torneo.
             disciplina_id: disciplina del torneo.
+            categoria_id: categoría del torneo. Es OBLIGATORIA: cada
+                veredicto se calcula contra ella.
 
         Returns:
             Un veredicto por cada equipo CANDIDATO de esa edición y
@@ -103,6 +111,7 @@ class IEquipoElegibleService(ABC):
         equipo_id,
         edicion_id,
         disciplina_id,
+        categoria_id,
     ) -> EquipoElegibleData:
         """El veredicto de elegibilidad de UN equipo.
 

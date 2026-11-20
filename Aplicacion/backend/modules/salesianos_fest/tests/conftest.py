@@ -11,6 +11,7 @@ import pytest
 from modules.salesianos_fest.tests.fixtures.fest_fixtures import (  # noqa: F401
     beneficio,
     beneficio_por_cupo,
+    categoria,
     disciplina,
     disciplina_inactiva,
     disciplina_otra_edicion,
@@ -31,6 +32,10 @@ from modules.salesianos_fest.tests.fixtures.fest_fixtures import (  # noqa: F401
     persona_otro_participante,
     persona_participante,
     precio,
+    promocion,
+    promocion_fusion,
+    promocion_inactiva,
+    promocion_sin_categoria,
     usuario_ajeno,
     usuario_responsable,
 )

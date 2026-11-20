@@ -20,19 +20,29 @@ from uuid import UUID
 
 from modules.salesianos_fest.domain.results.catalogo_result import (
     BeneficioCatalogoResult,
+    CatalogoCategoriasResult,
     CatalogoDisciplinasResult,
     CatalogoPaquetesResult,
+    CatalogoPromocionesResult,
+    CategoriaCatalogoResult,
+    CotizacionResult,
     DisciplinaCatalogoResult,
     PaqueteCatalogoResult,
     PrecioCatalogoResult,
+    PromocionCatalogoResult,
 )
 from modules.salesianos_fest.presentation.schemas.catalogo_schemas import (
     BeneficioOut,
+    CatalogoCategoriasOut,
     CatalogoDisciplinasOut,
     CatalogoPaquetesOut,
+    CatalogoPromocionesOut,
+    CategoriaOut,
+    CotizacionOut,
     DisciplinaOut,
     PaqueteOut,
     PrecioOut,
+    PromocionOut,
 )
 
 
@@ -65,6 +75,50 @@ class CatalogoPresenter:
             ],
         )
 
+    @staticmethod
+    def present_promociones(
+        result: CatalogoPromocionesResult,
+    ) -> CatalogoPromocionesOut:
+        """Proyecta el catálogo global de promociones del alcance."""
+        return CatalogoPromocionesOut(
+            edicion_id=UUID(result.edicion_id),
+            edicion_nombre=result.edicion_nombre,
+            promociones=[
+                CatalogoPresenter._present_promocion(promocion)
+                for promocion in result.promociones
+            ],
+        )
+
+    @staticmethod
+    def present_categorias(
+        result: CatalogoCategoriasResult,
+    ) -> CatalogoCategoriasOut:
+        """Proyecta el catálogo de categorías de la edición."""
+        return CatalogoCategoriasOut(
+            edicion_id=UUID(result.edicion_id),
+            edicion_nombre=result.edicion_nombre,
+            categorias=[
+                CatalogoPresenter._present_categoria(categoria)
+                for categoria in result.categorias
+            ],
+        )
+
+    @staticmethod
+    def present_cotizacion(result: CotizacionResult) -> CotizacionOut:
+        """Proyecta la cotización de un paquete."""
+        return CotizacionOut(
+            paquete_id=UUID(result.paquete_id),
+            paquete_nombre=result.paquete_nombre,
+            minimo_cantidad=result.minimo_cantidad,
+            cantidad_cotizada=result.cantidad_cotizada,
+            precio_unitario=result.precio_unitario,
+            total=result.total,
+            moneda=result.moneda,
+            version=result.version,
+            estado=result.estado,
+            validez_hasta=result.validez_hasta,
+        )
+
     # ── Internos ────────────────────────────────────────────────────────────
 
     @staticmethod
@@ -80,7 +134,11 @@ class CatalogoPresenter:
             slug=paquete.slug,
             descripcion=paquete.descripcion,
             estado=paquete.estado,
+            tipo=paquete.tipo,
+            modo_disciplinas=paquete.modo_disciplinas,
+            cantidad_disciplinas=paquete.cantidad_disciplinas,
             cupos_incluidos=paquete.cupos_incluidos,
+            minimo_compra_inicial=paquete.minimo_compra_inicial,
             precio=CatalogoPresenter._present_precio(paquete.precio),
             beneficios=[
                 CatalogoPresenter._present_beneficio(beneficio)
@@ -90,6 +148,33 @@ class CatalogoPresenter:
                 CatalogoPresenter._present_disciplina(disciplina)
                 for disciplina in paquete.disciplinas
             ],
+        )
+
+    @staticmethod
+    def _present_promocion(promocion: PromocionCatalogoResult) -> PromocionOut:
+        """Proyecta una promoción del catálogo global."""
+        return PromocionOut(
+            id=UUID(promocion.id),
+            created_at=promocion.created_at,
+            updated_at=promocion.updated_at,
+            anio=promocion.anio,
+            nombre=promocion.nombre,
+            estado=promocion.estado,
+        )
+
+    @staticmethod
+    def _present_categoria(categoria: CategoriaCatalogoResult) -> CategoriaOut:
+        """Proyecta una categoría de la edición."""
+        return CategoriaOut(
+            id=UUID(categoria.id),
+            created_at=categoria.created_at,
+            updated_at=categoria.updated_at,
+            edicion_id=UUID(categoria.edicion_id),
+            edicion_nombre=categoria.edicion_nombre,
+            nombre=categoria.nombre,
+            promocion_desde=categoria.promocion_desde,
+            promocion_hasta=categoria.promocion_hasta,
+            estado=categoria.estado,
         )
 
     @staticmethod

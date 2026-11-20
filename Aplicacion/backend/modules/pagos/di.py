@@ -17,6 +17,7 @@ from injector import Binder, Module, singleton
 from modules.pagos.domain.ports import (
     IActivacionCompraService,
     IEstadoCompraOrdenPagoService,
+    INotificadorCompraService,
     IPropietarioOrdenPagoService,
     IProveedorPagoService,
 )
@@ -32,6 +33,9 @@ from modules.pagos.domain.services.core.idempotencia_pago_service import (
 )
 from modules.pagos.domain.services.core.orden_pago_core_service import (
     OrdenPagoCoreService,
+)
+from modules.pagos.domain.services.core.reconciliacion_pago_service import (
+    ReconciliacionPagoService,
 )
 from modules.pagos.domain.services.core.transaccion_pago_core_service import (
     TransaccionPagoCoreService,
@@ -80,6 +84,19 @@ def _activacion_service_factory() -> IActivacionCompraService:
     return ActivacionCompraAdapter()
 
 
+def _notificador_service_factory() -> INotificadorCompraService:
+    """Construye el notificador del comprador de `notificaciones`.
+
+    El import es perezoso a propósito: `pagos` no importa `notificaciones` en
+    tiempo de módulo, sólo cuando el puerto se resuelve.
+    """
+    from modules.notificaciones.infrastructure.services.notificador_comprador import (
+        NotificadorCompradorAdapter,
+    )
+
+    return NotificadorCompradorAdapter()
+
+
 class PagosModule(Module):
     """Bindings de dependencias del módulo `pagos`."""
 
@@ -120,7 +137,15 @@ class PagosModule(Module):
             scope=singleton,
         )
         binder.bind(
+            INotificadorCompraService,
+            to=_notificador_service_factory,
+            scope=singleton,
+        )
+        binder.bind(
             EstadoOperativoPagoService, to=EstadoOperativoPagoService, scope=singleton
+        )
+        binder.bind(
+            ReconciliacionPagoService, to=ReconciliacionPagoService, scope=singleton
         )
         binder.bind(PagoConfirmacionFlujo, to=PagoConfirmacionFlujo, scope=singleton)
         binder.bind(PagoIntentoFlujo, to=PagoIntentoFlujo, scope=singleton)

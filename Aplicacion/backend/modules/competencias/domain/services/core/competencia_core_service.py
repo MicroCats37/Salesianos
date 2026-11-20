@@ -9,10 +9,11 @@ NO contienen reglas que el dueño de otro módulo ya decide: la elegibilidad
 del equipo se CONSUME por el puerto `IEquipoElegibleService`
 (`modules.competencias.domain.ports`).
 
-**El modelo de `Disciplina` y el de `Equipo` se resuelven por METADATOS del
-propio campo `Competencia.disciplina` / `CompetenciaEquipo.equipo`**: este
-módulo ya declara esa dependencia en sus propios modelos, así que la resuelve
-explícitamente en vez de importar el dominio de otro módulo.
+**El modelo de `Disciplina`, el de `Categoria` y el de `Equipo` se resuelven
+por METADATOS del propio campo `Competencia.disciplina` /
+`Competencia.categoria` / `CompetenciaEquipo.equipo`**: este módulo ya declara
+esa dependencia en sus propios modelos, así que la resuelve explícitamente en
+vez de importar el dominio de otro módulo.
 """
 
 from modules.competencias.domain.constants import (
@@ -23,6 +24,7 @@ from modules.competencias.domain.constants import (
     EstadoRonda,
 )
 from modules.competencias.domain.exceptions import (
+    CategoriaNoEncontradaError,
     CompetenciaDuplicadaError,
     CompetenciaEquipoDuplicadoError,
     DisciplinaNoEncontradaError,
@@ -47,6 +49,9 @@ from modules.competencias.domain.services.core.base_service import BaseCoreServi
 #: Modelo `Disciplina`, resuelto desde el PROPIO campo de este módulo.
 MODELO_DISCIPLINA = Competencia._meta.get_field("disciplina").related_model
 
+#: Modelo `Categoria`, resuelto desde el PROPIO campo de este módulo.
+MODELO_CATEGORIA = Competencia._meta.get_field("categoria").related_model
+
 #: Estados en los que una competencia ya no admite cambios.
 ESTADOS_TERMINALES_COMPETENCIA = {
     EstadoCompetencia.FINALIZADA,
@@ -60,21 +65,25 @@ class CompetenciaCoreService(BaseCoreService):
     def crear(self, edicion, data: CompetenciaCreateData) -> Competencia:
         """Crea la competencia con su identidad y su día.
 
-        La identidad es (edición, disciplina, nombre) comparada SIN distinguir
-        mayúsculas: "Final" y "final" son la MISMA competencia.
+        La identidad es (edición, disciplina, categoría, nombre) comparada SIN
+        distinguir mayúsculas: "Final" y "final" son la MISMA competencia.
 
         La disciplina tiene que ser de la MISMA edición que la competencia: la
-        disciplina es del catálogo por edición (`RN-E01`).
+        disciplina es del catálogo por edición (`RN-E01`). La CATEGORÍA
+        también: es del mismo catálogo y es la que discrimina el cuadro.
         """
         self._validar_disciplina(edicion, data.disciplina_id)
+        self._validar_categoria(edicion, data.categoria_id)
         self._validar_identidad(
             edicion_id=edicion.id,
             disciplina_id=data.disciplina_id,
+            categoria_id=data.categoria_id,
             nombre=data.nombre,
         )
         competencia = Competencia(
             edicion=edicion,
             disciplina_id=data.disciplina_id,
+            categoria_id=data.categoria_id,
             nombre=data.nombre.strip(),
             estado=EstadoCompetencia.PLANIFICADA,
             fecha=data.fecha,
@@ -93,10 +102,25 @@ class CompetenciaCoreService(BaseCoreService):
             raise DisciplinaNoEncontradaError()
 
     @staticmethod
+    def _validar_categoria(edicion, categoria_id) -> None:
+        """La categoría existe y es de la MISMA edición que la competencia.
+
+        La CATEGORÍA es un hecho del DUEÑO (`modules.salesianos_fest`): este
+        módulo sólo la REFERENCIA. Una categoría de otra edición NO sirve:
+        el cuadro es de UNA edición (`RN-E01`).
+        """
+        categoria = MODELO_CATEGORIA.objects.filter(id=categoria_id).first()
+        if categoria is None:
+            raise CategoriaNoEncontradaError()
+        if str(categoria.edicion_id) != str(edicion.id):
+            raise CategoriaNoEncontradaError()
+
+    @staticmethod
     def _validar_identidad(
         *,
         edicion_id,
         disciplina_id,
+        categoria_id,
         nombre,
         excluir_id=None,
     ) -> None:
@@ -104,6 +128,7 @@ class CompetenciaCoreService(BaseCoreService):
         consulta = Competencia.objects.filter(
             edicion_id=edicion_id,
             disciplina_id=disciplina_id,
+            categoria_id=categoria_id,
             nombre__iexact=nombre.strip(),
         )
         if excluir_id is not None:
@@ -252,6 +277,7 @@ class RondaCoreService(BaseCoreService):
 
 __all__ = [
     "ESTADOS_TERMINALES_COMPETENCIA",
+    "MODELO_CATEGORIA",
     "MODELO_DISCIPLINA",
     "CompetenciaCoreService",
     "CompetenciaEquipoCoreService",

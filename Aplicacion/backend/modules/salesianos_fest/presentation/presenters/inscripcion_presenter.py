@@ -22,13 +22,16 @@ from modules.salesianos_fest.domain.results.inscripcion_result import (
     EquipoResult,
     InscripcionDetalleResult,
     InscripcionInicialResult,
+    PromocionResult,
 )
 from modules.salesianos_fest.presentation.schemas.inscripcion_schemas import (
+    CategoriaReferenciaOut,
     CompraOut,
     EquipoOut,
     EquiposInscripcionOut,
     InscripcionDetalleOut,
     InscripcionInicialOut,
+    PromocionReferenciaOut,
 )
 
 
@@ -47,6 +50,12 @@ class InscripcionPresenter:
             responsable_id=UUID(result.responsable_id),
             paquete_id=UUID(result.paquete_id),
             paquete_nombre=result.paquete_nombre,
+            promocion=InscripcionPresenter._present_promocion(result.promocion),
+            fusion_promocion=(
+                InscripcionPresenter._present_promocion(result.fusion_promocion)
+                if result.fusion_promocion is not None
+                else None
+            ),
             estado=result.estado,
             referencia=result.referencia,
             cupos_solicitados=result.cupos_solicitados,
@@ -96,8 +105,21 @@ class InscripcionPresenter:
             updated_at=equipo.updated_at,
             disciplina_id=UUID(equipo.disciplina_id),
             disciplina_nombre=equipo.disciplina_nombre,
+            categoria=CategoriaReferenciaOut(
+                id=UUID(equipo.categoria_id),
+                nombre=equipo.categoria_nombre,
+            ),
             nombre=equipo.nombre,
             estado=equipo.estado,
+        )
+
+    @staticmethod
+    def _present_promocion(promocion: PromocionResult) -> PromocionReferenciaOut:
+        """Proyecta la promoción (cohorte) de la inscripción."""
+        return PromocionReferenciaOut(
+            id=UUID(promocion.id),
+            anio=promocion.anio,
+            nombre=promocion.nombre,
         )
 
     @staticmethod

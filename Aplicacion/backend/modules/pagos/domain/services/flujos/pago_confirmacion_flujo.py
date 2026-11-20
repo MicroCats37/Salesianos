@@ -60,10 +60,12 @@ from modules.pagos.domain.models import TransaccionPago
 from modules.pagos.domain.ports import (
     IActivacionCompraService,
     IEstadoCompraOrdenPagoService,
+    INotificadorCompraService,
     IPropietarioOrdenPagoService,
     IProveedorPagoService,
 )
 from modules.pagos.domain.results.pago_result import PagoConfirmadoResult
+from modules.pagos.domain.schemas.pago_schemas import ContextoNotificacionCompra
 from modules.pagos.domain.services.core.estado_operativo_pago_service import (
     EstadoOperativoPagoService,
 )
@@ -99,6 +101,7 @@ class PagoConfirmacionFlujo:
         propietario_service: IPropietarioOrdenPagoService,
         activacion_service: IActivacionCompraService,
         proveedor: IProveedorPagoService,
+        notificador_service: INotificadorCompraService,
     ):
         self.orden_core = orden_core
         self.transaccion_core = transaccion_core
@@ -109,6 +112,9 @@ class PagoConfirmacionFlujo:
         self.propietario_service = propietario_service
         self.activacion_service = activacion_service
         self.proveedor = proveedor
+        # El notificador es el ÚLTIMO paso de la secuencia congelada y su
+        # fallo nunca revierte el cobro (RN-C08).
+        self.notificador_service = notificador_service
 
     # ── Canales ──────────────────────────────────────────────────────────────
 
@@ -288,11 +294,22 @@ class PagoConfirmacionFlujo:
 
         # 8. La entrega del derecho: un hecho POSTERIOR y separado (RN-C08).
         #    La resuelve el coordinador, una sola vez por (compra, origen).
+        activacion = None
         if confirmar:
-            await sync_to_async(self._activar_compra)(str(orden.id))
+            activacion = await sync_to_async(self._activar_compra)(str(orden.id))
+
+        # 9. La notificación al comprador: el ÚLTIMO paso de la secuencia
+        #    congelada (FR-04 §2.3). Es opcional y reintentable, y su fallo
+        #    NUNCA revierte el cobro ni el derecho (RN-C08, FR-04 §4).
+        if confirmar and not ya_confirmado:
+            await sync_to_async(self._notificar_comprador)(orden, activacion)
 
         estado_operativo = await sync_to_async(
             self.estado_operativo_service.calcular_para_orden
+        )(orden)
+
+        estado_activacion = await sync_to_async(
+            self.estado_operativo_service.calcular_activacion_para_orden
         )(orden)
 
         resultado = PagoConfirmadoResult(
@@ -300,6 +317,7 @@ class PagoConfirmacionFlujo:
             referencia=orden.referencia,
             estado_orden=orden.estado,
             estado_operativo=estado_operativo,
+            estado_activacion=estado_activacion,
             ya_confirmado=ya_confirmado,
             transaccion_id=str(intento.id),
             monto=orden.monto,
@@ -527,6 +545,66 @@ class PagoConfirmacionFlujo:
                 orden_pago_id,
             )
             return None
+
+    # ── Notificación al comprador (FR-04 §2.3 paso 6 · RN-C08) ──────────────
+
+    def _notificar_comprador(self, orden, activacion) -> None:
+        """Notifica al comprador que su compra quedó confirmada.
+
+        Es el paso `NotificarComprador(compra_id)` de la secuencia congelada
+        (FR-04 §2.3): **opcional y reintentable**.
+
+        La garantía congelada es una sola y es fuerte: **el fallo de la
+        notificación NUNCA revierte el pago ni el derecho** (RN-C08, FR-04
+        §4). Por eso el fallo se captura aquí, se registra y el flujo sigue:
+        la compra queda pagada y el derecho queda habilitado.
+
+        Sólo se notifica cuando el derecho quedó habilitado: avisar de una
+        compra cuyo derecho todavía no se ha concedido sería afirmar un hecho
+        que no ocurrió.
+        """
+        if self.notificador_service is None:
+            return
+
+        if not self._derecho_habilitado(activacion):
+            logger.info(
+                "No se notifica la compra de la orden %s: el derecho todavía no "
+                "está habilitado. La incidencia queda reintentable (RN-C08).",
+                getattr(orden, "id", orden),
+            )
+            return
+
+        # `pagos` es agnóstico del dominio: la orden no declara la persona
+        # compradora. El contexto lleva los hechos que el pago SÍ conoce; el
+        # proveedor, cuando exista, resolverá el destinatario.
+        contexto = ContextoNotificacionCompra(
+            orden_pago_id=str(orden.id),
+            persona_id=None,
+            referencia=orden.referencia,
+            total=orden.monto,
+            moneda=orden.moneda,
+        )
+
+        try:
+            self.notificador_service.notificar_compra_confirmada(contexto)
+        except Exception:
+            # El fallo de la notificación NO revierte el cobro: la incidencia
+            # queda registrada por el módulo `notificaciones` y el pago
+            # confirmado se conserva (RN-C08).
+            logger.exception(
+                "No se pudo notificar la compra de la orden %s. El pago "
+                "confirmado y el derecho habilitado se conservan.",
+                getattr(orden, "id", orden),
+            )
+
+    @staticmethod
+    def _derecho_habilitado(activacion) -> bool:
+        """Si el coordinador confirmó que el derecho quedó habilitado."""
+        if activacion is None:
+            return False
+        return bool(getattr(activacion, "activada", False) or getattr(
+            activacion, "ya_activada", False
+        ))
 
     # ── Extracción ──────────────────────────────────────────────────────────
 

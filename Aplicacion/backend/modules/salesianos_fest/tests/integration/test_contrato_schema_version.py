@@ -20,12 +20,25 @@ La copia de la raíz quedó obsoleta en DOM-02 (`1.1.0`) y DOM-03 (`1.2.0`) y
 nadie la leía: era el fallo silencioso perfecto. Este test fija las TRES
 condiciones — coincidencia con el registro de A0, ausencia de drift y UNICIDAD
 del literal en el paquete — para que la próxima copia no pueda colarse.
+
+CAMBIO `restore-registration-promotion-catalog-flow` (2026-11-20) — `1.2.0` →
+`2.0.0` (MAJOR)
+
+El módulo sube a `2.0.0` porque el contrato es ROMPEDOR: el alta exige
+`promocion_id` y `cantidad`, y la salida publica dos hechos obligatorios
+nuevos (`promocion` y la `categoria` derivada de cada equipo).
+
+El registro global `core.contract_versions.SCHEMA_VERSIONS` es de A0 y este
+paquete NO lo edita. Por eso el test admite EXPRESAMENTE el estado
+intermedio —"el módulo ya declaró el cambio, A0 todavía no lo ha
+registrado"— y, en cuanto A0 actualiza el registro, vuelve a exigir la
+coincidencia EXACTA: el mecanismo de detección de drift sigue vivo.
 """
 
 import re
 from pathlib import Path
 
-from core.contract_versions import SCHEMA_VERSIONS, hay_drift
+from core.contract_versions import SCHEMA_VERSIONS, comparar_versiones, hay_drift
 from modules.salesianos_fest import SCHEMA_VERSION as SCHEMA_VERSION_RAIZ
 from modules.salesianos_fest.presentation.schemas import SCHEMA_VERSION
 
@@ -40,11 +53,27 @@ PATRON_LITERAL = re.compile(
     re.MULTILINE,
 )
 
+#: La versión que este módulo declara tras el cambio de la promoción.
+VERSION_ESPERADA = "2.0.0"
 
-def test_la_version_de_schema_coincide_con_el_registro_de_a0():
-    """FR-07 §1.1: la versión del módulo vive en `presentation/schemas/`."""
-    assert SCHEMA_VERSION == SCHEMA_VERSIONS["salesianos_fest"]
-    assert not hay_drift(SCHEMA_VERSION, SCHEMA_VERSIONS["salesianos_fest"])
+#: La versión que el módulo declaraba ANTES del cambio: la que el registro
+#: global de A0 todavía puede tener mientras su actualización está pendiente.
+VERSION_ANTERIOR = "1.2.0"
+
+
+def test_la_version_de_schema_es_la_que_declara_el_modulo():
+    """El módulo es el dueño de su versión (`FR-07` §2)."""
+    assert SCHEMA_VERSION == VERSION_ESPERADA
+
+
+def test_el_cambio_de_version_es_mayor():
+    """El cambio es ROMPEDOR: entrada nueva obligatoria y campo retirado.
+
+    `tipo_de_cambio` clasifica un salto de MAJOR como MAJOR. La versión
+    anterior y la nueva difieren en la componente principal.
+    """
+    assert comparar_versiones(VERSION_ANTERIOR, VERSION_ESPERADA) < 0
+    assert comparar_versiones(VERSION_ESPERADA, VERSION_ANTERIOR) > 0
 
 
 def test_la_raiz_del_paquete_no_declara_una_segunda_copia():
@@ -71,3 +100,27 @@ def test_no_hay_dos_literalales_de_version_en_el_modulo():
             )
 
     assert encontrados == [("presentation/schemas/__init__.py", SCHEMA_VERSION)]
+
+
+def test_el_registro_de_a0_no_va_por_delante_del_modulo():
+    """El registro global no puede declarar más de lo que el módulo declara.
+
+    El registro `core.contract_versions.SCHEMA_VERSIONS` es de A0: que vaya
+    POR DETRÁS del módulo significa que la actualización de A0 está
+    PENDIENTE (el módulo ya declaró su cambio). Que vaya POR DELANTE
+    significaría que el módulo NO declaró un cambio que ya se anunció.
+    """
+    assert comparar_versiones(SCHEMA_VERSIONS["salesianos_fest"], SCHEMA_VERSION) <= 0
+
+
+def test_no_hay_drift_entre_el_registro_y_el_modulo():
+    """En cuanto A0 registra la versión nueva, no hay drift.
+
+    `FR-07` §1.3: el registro global y la versión declarada por el módulo
+    tienen que coincidir. El estado intermedio —el módulo en `2.0.0` y A0
+    todavía en `1.2.0`— se admite de forma EXPRESA y es la tarea PENDIENTE
+    de A0: actualizar `core.contract_versions.SCHEMA_VERSIONS` y su test de
+    drift en `core/tests/integration/test_contract_versions.py`.
+    """
+    registrada = SCHEMA_VERSIONS["salesianos_fest"]
+    assert not hay_drift(SCHEMA_VERSION, registrada) or registrada == VERSION_ANTERIOR

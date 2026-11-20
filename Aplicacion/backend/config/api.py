@@ -18,7 +18,8 @@ Reglas de registro (FREEZE-PS-1.0.0 · FR-07 §3.1.2):
 - A0 no registra controllers de dominio INACABADOS: sólo se registran los
   controllers cuyo módulo está completado, verificado y versionado
   (reconciliación A0 de FND-01, 2026-11-19 · DOM-01 y DOM-04, 2026-11-19 ·
-  DOM-03, 2026-11-19).
+  DOM-03, 2026-11-19 · DOM-05, DOM-06, DOM-07 y DOM-08, 2026-11-19 ·
+  XCT-01, 2026-11-19).
 """
 
 from ninja_extra import NinjaExtraAPI
@@ -27,11 +28,42 @@ from ninja_jwt.controller import NinjaJWTDefaultController
 
 from core.exceptions import register_exception_handlers
 
+from modules.administracion.presentation.controllers.admin_controller import (
+    AdminController,
+)
+from modules.administracion.presentation.controllers.admin_equipo_controller import (
+    AdminEquipoController,
+)
+from modules.administracion.presentation.controllers.admin_inscripcion_controller import (
+    AdminInscripcionController,
+)
+from modules.administracion.presentation.controllers.admin_pago_controller import (
+    AdminPagoController,
+)
+from modules.administracion.presentation.controllers.admin_participante_controller import (
+    AdminParticipanteController,
+)
+from modules.administracion.presentation.controllers.admin_persona_controller import (
+    AdminPersonaController,
+)
+from modules.competencias.presentation.controllers.competencias_controller import (
+    CompetenciasController,
+)
 from modules.eventos.presentation.controllers.edicion_controller import EdicionController
+from modules.marketplace.presentation.controllers.inventario_controller import (
+    InventarioController,
+)
+from modules.marketplace.presentation.controllers.pedido_controller import PedidoController
 from modules.marketplace.presentation.controllers.producto_controller import ProductoController
 from modules.pagos.presentation.controllers.pagos_controller import PagosController
+from modules.patrocinadores.presentation.controllers.patrocinadores_controller import (
+    PatrocinadorController,
+)
 from modules.salesianos_fest.presentation.controllers.catalogo_controller import (
     CatalogoController,
+)
+from modules.salesianos_fest.presentation.controllers.cotizacion_controller import (
+    CotizacionController,
 )
 from modules.salesianos_fest.presentation.controllers.inscripcion_controller import (
     InscripcionController,
@@ -41,6 +73,13 @@ from modules.salesianos_fest.presentation.controllers.pase_controller import (
     PaseController,
 )
 from modules.usuarios.presentation.controllers import AuthController, PersonaController
+from modules.validaciones.presentation.controllers.validacion_controller import (
+    ValidacionController,
+)
+from modules.videos.presentation.controllers.admin_videos_controller import (
+    AdminVideosController,
+)
+from modules.videos.presentation.controllers.videos_controller import VideoController
 
 import os
 
@@ -139,23 +178,67 @@ registrar_controladores(NinjaJWTDefaultController)
 #   - `InscripcionController` → DOM-01 (`salesianos_fest`) · RT-IN-02,
 #                             RT-IN-04, RT-IN-14 (provisional, ratificada)
 #   - `ProductoController` → DOM-04 (`marketplace`) · RT-MD-01, RT-MK-01…03
+#   - `PedidoController` → DOM-05 (`marketplace`) · RT-CM-03, RT-MK-04
+#   - `InventarioController` → DOM-06 (`marketplace`) · RT-MK-08…RT-MK-12
 #   - `PaseController` → DOM-03 (`salesianos_fest`) · RT-PS-01…RT-PS-05,
 #                             RT-CM-02, RT-RT-03
 #   - `AdminPaseController` → DOM-03 (`salesianos_fest`) · RT-PS-06…RT-PS-08
+#   - `CompetenciasController` → DOM-07 (`competencias`) · 16 rutas
+#   - `PatrocinadorController` → DOM-08 (`patrocinadores`) · RT-MD-02
+#   - `ValidacionController` → XCT-01 (`validaciones`) · RT-RT-01, RT-RT-02
+#   - `CotizacionController` → DOM-01 (`salesianos_fest`) · POST /cotizaciones
+#   - `AdminController` → XCT-02 (`administracion`) · RT-ADM-01, RT-ADM-02
+#   - `AdminInscripcionController` → XCT-02 (`administracion`) · inscripciones
+#   - `AdminEquipoController` → XCT-02 (`administracion`) · equipos
+#   - `AdminParticipanteController` → XCT-02 (`administracion`) · participantes
+#   - `AdminPagoController` → XCT-02 (`administracion`) · pagos
+#   - `AdminPersonaController` → XCT-02 (`administracion`) · personas
+#   - `VideoController` → `public-video-streaming-crud` · GET /api/videos,
+#                             GET /api/videos/{video_id}
+#   - `AdminVideosController` → `public-video-streaming-crud` · la gestión de
+#                             la sala de proyección
 #
 # `commerce` NO aporta surface HTTP (D-FND-04-06): sus compras las crean los
-# dominios in-process. Ningún dominio INACABADO (`beneficios`,
-# `validaciones`, `patrocinadores`, `competencias`, …) se registra aquí.
+# dominios in-process. Ningún dominio INACABADO (`beneficios`, …) se registra
+# aquí.
+#
+# `validaciones` (XCT-01) tiene módulo, DI, migración, controller y SUITE
+# VERDE (20 de 20): se registra (reconciliación A0 de XCT-01, 2026-11-19 ·
+# cierre del cableado global).
+#
+# `administracion` (XCT-02) tiene módulo, DI, migración, controllers y SUITE
+# VERDE (15 de 15 con el overlay de registro): se registra (reconciliación A0
+# de XCT-02, 2026-11-20 · cierre del cableado global; correcting
+# `evidence/verification/VER-01-baseline-regression-payments.md` §7).
+#
+# `CotizacionController` (DOM-01) expone la ruta PROVISIONAL `POST
+# /cotizaciones`: el módulo, el presenter y la suite e2e existen y están
+# verdes, así que la ruta deja de ser código muerto (reconciliación A0 de
+# DOM-01, 2026-11-20 · petición `A0-API02-09`).
 registrar_controladores(
     EdicionController,
     PersonaController,
     AuthController,
     PagosController,
     CatalogoController,
+    CotizacionController,
     InscripcionController,
     ProductoController,
+    PedidoController,
+    InventarioController,
     PaseController,
     AdminPaseController,
+    CompetenciasController,
+    PatrocinadorController,
+    ValidacionController,
+    AdminController,
+    AdminInscripcionController,
+    AdminEquipoController,
+    AdminParticipanteController,
+    AdminPagoController,
+    AdminPersonaController,
+    VideoController,
+    AdminVideosController,
 )
 
 # ── Exception handlers globales ────────────────────────────────

@@ -1,9 +1,15 @@
 """
 Test settings.
 """
+import os
 from datetime import timedelta
 
-from .base import *  # noqa
+# Los tests NUNCA dependen de una credencial de base de datos: el motor se fija
+# en SQLite ANTES de importar `base` (que, si no, exigiría `DB_PASSWORD` en el
+# entorno). Explícito y determinista, con o sin `.env` presente (A0-VER03-05).
+os.environ["USE_SQLITE"] = "true"
+
+from .base import *  # noqa: E402,F403,F405
 
 DEBUG = True
 SECRET_KEY = "django-insecure-test-secret-key-1234567890"

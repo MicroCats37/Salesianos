@@ -33,6 +33,14 @@ class EquipoElegibleData(BaseModel):
     edicion_id: str = Field(..., description="Edición a la que pertenece el equipo.")
     disciplina_id: str = Field(..., description="Disciplina del equipo.")
     disciplina_nombre: str = Field(..., description="Nombre de la disciplina.")
+    categoria_id: str | None = Field(
+        default=None,
+        description="Categoría del equipo. Vacía si el equipo no tiene categoría asignada.",
+    )
+    categoria_nombre: str = Field(
+        default="",
+        description="Nombre de la categoría del equipo.",
+    )
     estado: str = Field(..., description="Estado del equipo en su inscripción.")
     es_elegible: bool = Field(..., description="Si el equipo puede competir.")
     motivo: str = Field(
@@ -56,6 +64,13 @@ class CompetenciaCreateData(BaseModel):
 
     edicion_id: str = Field(..., description="Edición de la competencia.")
     disciplina_id: str = Field(..., description="Disciplina del torneo.")
+    categoria_id: str = Field(
+        ...,
+        description=(
+            "Categoría del torneo. Es OBLIGATORIA: la identidad de una "
+            "competencia es (edición, disciplina, categoría, nombre)."
+        ),
+    )
     nombre: str = Field(..., max_length=200, description="Nombre del torneo.")
     fecha: date = Field(..., description="Día de la competencia.")
 

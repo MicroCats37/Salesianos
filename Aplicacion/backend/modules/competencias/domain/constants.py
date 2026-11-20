@@ -87,15 +87,25 @@ class MotivoNoElegibilidad(models.TextChoices):
     el backend publica la razón y el cliente nunca la adivina (`QA-K01`).
 
     Los motivos que describen el estado de la INSCRIPCIÓN (edición,
-    disciplina, inscripción viva, equipo activo, plantilla) los decide
-    `modules.salesianos_fest`; este módulo los consume por PUERTO y sólo los
-    traduce a su vocabulario público.
+    disciplina, categoría, inscripción viva, equipo activo, plantilla) los
+    decide `modules.salesianos_fest`; este módulo los consume por PUERTO y
+    sólo los traduce a su vocabulario público.
+
+    La CATEGORÍA (franja etaria) es la segunda mitad de la elegibilidad
+    deportiva: el equipo compite en la disciplina Y en la categoría del
+    torneo (`RN-K01`). Un equipo sin categoría asignada NO compite: no se
+    adivina una.
     """
 
     ELEGIBLE = "ELEGIBLE", "Elegible"
     EQUIPO_NO_ENCONTRADO = "EQUIPO_NO_ENCONTRADO", "El equipo no existe"
     EDICION_DISTINTA = "EDICION_DISTINTA", "El equipo pertenece a otra edición"
     DISCIPLINA_DISTINTA = "DISCIPLINA_DISTINTA", "El equipo pertenece a otra disciplina"
+    CATEGORIA_DISTINTA = "CATEGORIA_DISTINTA", "El equipo pertenece a otra categoría"
+    CATEGORIA_NO_ASIGNADA = (
+        "CATEGORIA_NO_ASIGNADA",
+        "El equipo no tiene categoría asignada",
+    )
     DISCIPLINA_INACTIVA = "DISCIPLINA_INACTIVA", "La disciplina no está activa"
     INSCRIPCION_CANCELADA = "INSCRIPCION_CANCELADA", "La inscripción está cancelada"
     EQUIPO_NO_ACTIVO = "EQUIPO_NO_ACTIVO", "El equipo está retirado"

@@ -30,12 +30,23 @@ def flujo(injector):
 
 
 @pytest.fixture
-def inscripcion_creada(flujo, edicion_publicada, paquete, disciplina, persona, precio):
+def inscripcion_creada(
+    flujo,
+    edicion_publicada,
+    paquete,
+    disciplina,
+    persona,
+    precio,
+    promocion,
+    categoria,
+):
     """Una inscripción inicial ya creada (con su compra pendiente)."""
     intencion = InscripcionInicialData(
         responsable_id=persona.id,
         edicion_id=edicion_publicada.id,
         paquete_id=paquete.id,
+        promocion_id=promocion.id,
+        cantidad=10,
         equipos=[
             EquipoCreateData(disciplina_id=disciplina.id, nombre="EquipoUno"),
         ],

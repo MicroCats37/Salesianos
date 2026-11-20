@@ -107,10 +107,18 @@ class InscripcionController:
         Crea la inscripción del responsable autenticado, sus equipos y la
         COMPRA PENDIENTE de los cupos iniciales (`FL-03` paso 3).
 
+        El precio es POR PERSONA (`D-CAT-01`): el cliente declara la
+        cantidad de participantes, el servidor lo contrasta contra el mínimo
+        comercial del paquete, resuelve el precio UNITARIO vigente y deriva
+        el total como `cantidad × precio_unitario` (`RN-C02`).
+
+        La categoría de los equipos la DERIVA el servidor desde la promoción
+        (`D-CAT-05`): el cliente declara la promoción, nunca la categoría.
+
         La compra queda `PENDIENTE` y la inscripción nace con **cero cupos
         pagados**: una compra no pagada NO habilita cupos (`RN-I02`,
-        `QA-I01`). El pago habilita los cupos en la ACTIVACIÓN de derechos,
-        que es de `DOM-02`.
+        `QA-I01`). El pago habilita EXACTAMENTE los cupos comprados en la
+        ACTIVACIÓN de derechos, que es de `DOM-02`.
 
         Un reintento NO crea una segunda inscripción ni una segunda compra:
         devuelve la inscripción existente y su compra pendiente.
@@ -118,6 +126,10 @@ class InscripcionController:
         data = InscripcionInicialData(
             edicion_id=payload.edicion_id,
             paquete_id=payload.paquete_id,
+            promocion_id=payload.promocion_id,
+            fusion_promocion_id=payload.fusion_promocion_id,
+            cantidad=payload.cantidad,
+            cotizacion_version=payload.cotizacion_version,
             equipos=[
                 EquipoCreateData(
                     disciplina_id=equipo.disciplina_id,

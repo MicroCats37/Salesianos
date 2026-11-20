@@ -3,6 +3,11 @@
 Contract: `contract/TEST_ARCHITECTURE_CONTRACT.md` §3 — las fixtures viven
 aquí; `tests/conftest.py` sólo las importa y registra.
 
+Cambio: `restore-registration-promotion-catalog-flow` (2026-11-20) — se
+añaden las fixtures de PROMOCIÓN y CATEGORÍA, que son el catálogo de la
+cohorte y de la banda competitiva, y los paquetes pasan a declarar su
+MÍNIMO COMERCIAL (el precio es unitario).
+
 La compra se crea con el `CompraFlujo` REAL de `commerce`: este paquete
 consume la interfaz CONGELADA de `commerce`, así que los tests la prueban
 contra la implementación real y no contra un doble.
@@ -16,11 +21,16 @@ import pytest
 from modules.eventos.domain.constants import EstadoEdicion, ModuloLogico
 from modules.eventos.domain.models import Edicion, Evento
 from modules.salesianos_fest.domain.constants import (
+    EstadoCategoria,
     EstadoDisciplina,
     EstadoPaquete,
+    EstadoPromocion,
+    ModoDisciplinas,
     TipoBeneficioPaquete,
+    TipoPaquete,
 )
 from modules.salesianos_fest.domain.models import (
+    Categoria,
     Disciplina,
     Equipo,
     Inscripcion,
@@ -28,8 +38,10 @@ from modules.salesianos_fest.domain.models import (
     PaqueteBeneficio,
     PaqueteDisciplina,
     PaquetePrecio,
+    Promocion,
 )
 from modules.usuarios.domain.models import Persona, Usuario
+
 
 
 # ── Edición ─────────────────────────────────────────────────────────────────
@@ -102,6 +114,62 @@ def edicion_sin_modulo(db):
 
 
 @pytest.fixture
+def promocion(db):
+    """Promoción (cohorte) GLOBAL y activa: la de la categoría `Junior`."""
+    return Promocion.objects.create(
+        anio=2015,
+        nombre="Junior",
+        estado=EstadoPromocion.ACTIVA,
+    )
+
+
+@pytest.fixture
+def promocion_fusion(db):
+    """Una segunda cohorte activa, para probar la promoción FUSIONADA."""
+    return Promocion.objects.create(
+        anio=2016,
+        nombre="Junior",
+        estado=EstadoPromocion.ACTIVA,
+    )
+
+
+@pytest.fixture
+def promocion_inactiva(db):
+    """Promoción INACTIVA: no se puede elegir en un alta."""
+    return Promocion.objects.create(
+        anio=2014,
+        nombre="Junior",
+        estado=EstadoPromocion.INACTIVA,
+    )
+
+
+@pytest.fixture
+def promocion_sin_categoria(db):
+    """Cohorte que NO cae en ninguna categoría de la edición.
+
+    Es el caso de `CATEGORIA_NO_RESUELTA`: el servidor NO inventa una banda
+    competitiva para una cohorte que el catálogo no cubre.
+    """
+    return Promocion.objects.create(
+        anio=1960,
+        nombre="Sin categoría",
+        estado=EstadoPromocion.ACTIVA,
+    )
+
+
+@pytest.fixture
+def categoria(db, edicion_publicada):
+    """Categoría ACTIVA de la edición publicada (banda `Junior`)."""
+    return Categoria.objects.create(
+        edicion=edicion_publicada,
+        nombre="Junior",
+        promocion_desde=2012,
+        promocion_hasta=2025,
+        estado=EstadoCategoria.ACTIVA,
+    )
+
+
+@pytest.fixture
 def disciplina(db, edicion_publicada):
     """Disciplina activa de la edición publicada."""
     return Disciplina.objects.create(
@@ -136,13 +204,21 @@ def disciplina_otra_edicion(db, edicion_otra):
 
 @pytest.fixture
 def paquete(db, edicion_publicada, disciplina):
-    """Paquete vigente de la edición publicada, con su disciplina."""
+    """Paquete vigente de la edición publicada, con su disciplina.
+
+    El precio del catálogo es UNITARIO (`D-CAT-01`) y el paquete declara su
+    MÍNIMO COMERCIAL de participantes.
+    """
     paquete = Paquete.objects.create(
         edicion=edicion_publicada,
         nombre="Paquete competitivo",
         slug="competitivo",
         descripcion="Paquete de la edición publicada.",
+        tipo=TipoPaquete.PACK,
+        modo_disciplinas=ModoDisciplinas.ELEGIBLE,
+        cantidad_disciplinas=1,
         cupos_incluidos=10,
+        minimo_compra_inicial=10,
     )
     PaqueteDisciplina.objects.create(paquete=paquete, disciplina=disciplina)
     return paquete
@@ -156,6 +232,7 @@ def paquete_sin_precio(db, edicion_publicada, disciplina):
         nombre="Paquete sin precio",
         slug="sin-precio",
         cupos_incluidos=5,
+        minimo_compra_inicial=5,
     )
     PaqueteDisciplina.objects.create(paquete=paquete, disciplina=disciplina)
     return paquete
@@ -170,9 +247,11 @@ def paquete_retirado(db, edicion_publicada, disciplina):
         slug="retirado",
         estado=EstadoPaquete.RETIRADO,
         cupos_incluidos=5,
+        minimo_compra_inicial=5,
     )
     PaqueteDisciplina.objects.create(paquete=paquete, disciplina=disciplina)
     return paquete
+
 
 
 @pytest.fixture
@@ -217,7 +296,7 @@ def beneficio_por_cupo(db, paquete):
 
 
 @pytest.fixture
-def inscripcion(db, edicion_publicada, paquete, persona):
+def inscripcion(db, edicion_publicada, paquete, persona, promocion):
     """Inscripción viva con la capacidad YA pagada.
 
     La capacidad pagada se escribe DIRECTAMENTE porque estos tests ejercitan
@@ -228,6 +307,7 @@ def inscripcion(db, edicion_publicada, paquete, persona):
         edicion=edicion_publicada,
         responsable=persona,
         paquete=paquete,
+        promocion=promocion,
         referencia="INS-TEST-0001",
         cupos_solicitados=10,
         cupos_pagados=10,
@@ -236,7 +316,7 @@ def inscripcion(db, edicion_publicada, paquete, persona):
 
 
 @pytest.fixture
-def inscripcion_sin_pagos(db, edicion_publicada, paquete, persona):
+def inscripcion_sin_pagos(db, edicion_publicada, paquete, persona, promocion):
     """Inscripción viva SIN capacidad pagada.
 
     Es el estado en el que queda una inscripción cuya compra está PENDIENTE:
@@ -246,6 +326,7 @@ def inscripcion_sin_pagos(db, edicion_publicada, paquete, persona):
         edicion=edicion_publicada,
         responsable=persona,
         paquete=paquete,
+        promocion=promocion,
         referencia="INS-TEST-0002",
         cupos_solicitados=10,
         cupos_pagados=0,
@@ -254,13 +335,20 @@ def inscripcion_sin_pagos(db, edicion_publicada, paquete, persona):
 
 
 @pytest.fixture
-def equipo(db, inscripcion, disciplina):
-    """Equipo de la inscripción, de la disciplina del paquete."""
+def equipo(db, inscripcion, disciplina, categoria):
+    """Equipo de la inscripción, de la disciplina del paquete.
+
+    La categoría es la DERIVADA por el servidor desde la promoción de la
+    inscripción (`D-CAT-05`): aquí se escribe porque estos tests no
+    ejercitan el alta.
+    """
     return Equipo.objects.create(
         inscripcion=inscripcion,
         disciplina=disciplina,
+        categoria=categoria,
         nombre="Equipo Vóley",
     )
+
 
 
 @pytest.fixture
@@ -365,6 +453,7 @@ def injector():
 __all__ = [
     "beneficio",
     "beneficio_por_cupo",
+    "categoria",
     "disciplina",
     "disciplina_inactiva",
     "disciplina_otra_edicion",
@@ -385,6 +474,10 @@ __all__ = [
     "persona_otro_participante",
     "persona_participante",
     "precio",
+    "promocion",
+    "promocion_fusion",
+    "promocion_inactiva",
+    "promocion_sin_categoria",
     "usuario_ajeno",
     "usuario_responsable",
 ]

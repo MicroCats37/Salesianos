@@ -551,9 +551,164 @@ class CortesiaNoEncontradaError(NotFoundError):
         super().__init__(resource="Cortesía", code=self.code)
 
 
+# ── PROMOCIONES, CATEGORÍAS Y COTIZACIÓN (restore-registration-promotion-…) ──
+#
+# `PROMOCION_NO_ENCONTRADA` (404), `CATEGORIA_NO_RESUELTA` (422),
+# `FUSION_PROMOCION_INVALIDA` (422) y `CANTIDAD_INVALIDA` (422) son códigos
+# PROPUESTOS: A0 debe añadirlos al catálogo público con su prosa. `CANTIDAD_INVALIDA`
+# ya existe en el catálogo (lo declaró `DOM-03` para los pases) y se REUSA: es
+# el mismo hecho — "la cantidad pedida no es válida" — en otro flujo.
+
+
+class PromocionNoEncontradaError(NotFoundError):
+    """La promoción indicada no existe o no está activa (404).
+
+    La promoción es GLOBAL: no cuelga de ninguna edición. La compara el
+    servidor contra el catálogo; el cliente no puede declarar una promoción
+    que no existe.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "PROMOCION_NO_ENCONTRADA"
+
+    def __init__(self):
+        super().__init__(resource="Promoción", code=self.code)
+
+
+class CategoriaNoResueltaError(UnprocessableEntityError):
+    """La promoción de la inscripción no cae en ninguna categoría (422).
+
+    Es la DERIVACIÓN server-side de la banda competitiva: la promoción
+    principal se proyecta contra el rango `[promocion_desde, promocion_hasta]`
+    de las categorías ACTIVAS de la edición. Si ninguna categoría contiene el
+    año de la cohorte, la inscripción NO tiene banda con la que competir: se
+    rechaza en vez de inventar una.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "CATEGORIA_NO_RESUELTA"
+
+    def __init__(self):
+        super().__init__(
+            message=(
+                "La promoción seleccionada no corresponde a ninguna categoría "
+                "de esta edición."
+            ),
+            code=self.code,
+        )
+
+
+class FusionPromocionInvalidaError(UnprocessableEntityError):
+    """La promoción fusionada no es válida (422).
+
+    Cubre el único caso que el servidor puede rechazar por sí mismo: la
+    promoción fusionada es la MISMA que la principal. Una fusión no es un
+    alias de la promoción principal: no aporta información.
+
+    La fusión es DESCRIPTIVA (`D-CAT-02`): no altera cupos, pago, categoría,
+    elegibilidad de equipo ni cuadro competitivo.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "FUSION_PROMOCION_INVALIDA"
+
+    def __init__(self):
+        super().__init__(
+            message=(
+                "La promoción fusionada debe ser distinta de la promoción "
+                "principal."
+            ),
+            code=self.code,
+        )
+
+
+class CantidadInsuficienteError(UnprocessableEntityError):
+    """La cantidad de participantes no alcanza el mínimo del paquete (422).
+
+    El mínimo COMERCIAL es del paquete (`Paquete.minimo_compra_inicial`): el
+    cliente declara cuántos participantes inscriben, y el servidor exige que
+    la cantidad sea válida contra ese mínimo.
+
+    No hay un máximo global de participantes: el tope de un equipo es el de
+    su disciplina (`Disciplina.maximo_por_equipo`), que es una regla
+    deportiva, no comercial.
+
+    Código REQUESTED a A0. Es un código PROPIO y no reutiliza el
+    `CANTIDAD_INVALIDA` de los pases: ese código ya tiene una prosa pública
+    que habla de PASES, y reutilizarlo publicaría una frase falsa.
+    """
+
+    code = "CANTIDAD_INSUFICIENTE"
+
+    def __init__(self):
+        super().__init__(
+            message=(
+                "La cantidad de participantes no alcanza el mínimo de compra "
+                "del paquete."
+            ),
+            code=self.code,
+        )
+
+
+class PrecioCambiadoError(ConflictError):
+    """El precio del catálogo se movió entre la cotización y el alta (409).
+
+    Es la regla de CONCURRENCIA de la cotización: el cliente devuelve el
+    token `cotizacion_version` que recibió y, si el catálogo ya no está en
+    la versión que se cotizó, el alta se rechaza en vez de cobrar una
+    cantidad sin que el comprador la haya visto.
+
+    Sin token (alta sin cotización previa) NO hay comprobación: el precio
+    vigente es el que rige (`RN-C02`).
+
+    Código REQUESTED a A0.
+    """
+
+    code = "PRECIO_CAMBIADO"
+
+    def __init__(self):
+        super().__init__(
+            "El precio del paquete cambió desde la cotización. Vuelve a cotizar.",
+            code=self.code,
+        )
+
+
+class EquiposFueraDePaqueteError(UnprocessableEntityError):
+    """Los equipos declarados no cumplen la regla de disciplinas (422).
+
+    El servidor, no el cliente, decide cuántos equipos puede declarar una
+    inscripción con un paquete concreto:
+
+    - `modo_disciplinas = FIJO` — hay que declarar EXACTAMENTE las
+      disciplinas vinculadas al paquete.
+    - `modo_disciplinas = ELEGIBLE` — hay que declarar hasta
+      `cantidad_disciplinas` de las disciplinas vinculadas al paquete.
+
+    El cliente no puede declarar equipos de más ni de menos.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "EQUIPOS_FUERA_DE_PAQUETE"
+
+    def __init__(self):
+        super().__init__(
+            message=(
+                "Los equipos declarados no corresponden a las disciplinas "
+                "permitidas por el paquete."
+            ),
+            code=self.code,
+        )
+
+
 __all__ = [
     "ActorRequeridoError",
+    "CantidadInsuficienteError",
     "CantidadInvalidaError",
+    "CategoriaNoResueltaError",
     "CompraNoAutorizadaError",
     "CompraPaseNoAutorizadaError",
     "CompraPaseNoEncontradaError",
@@ -566,6 +721,8 @@ __all__ = [
     "EquipoCompletoError",
     "EquipoDuplicadoError",
     "EquipoNoEncontradoError",
+    "EquiposFueraDePaqueteError",
+    "FusionPromocionInvalidaError",
     "InscripcionNoAutorizadaError",
     "InscripcionNoEncontradaError",
     "PaqueteNoVigenteError",
@@ -578,6 +735,8 @@ __all__ = [
     "ParticipanteNoElegibleError",
     "ParticipanteNoEncontradoError",
     "PersonaNoEncontradaError",
+    "PrecioCambiadoError",
+    "PromocionNoEncontradaError",
     "SinCuposDisponiblesError",
     "SinPasesDisponiblesError",
     "TokenPaseInvalidoError",

@@ -16,15 +16,19 @@ El puerto se expresa en **vocabulario de pago** (`orden_pago_id`,
 | `IEstadoCompraOrdenPagoService` | `pagos` | `commerce` | `commerce/infrastructure/services/` |
 | `IPropietarioOrdenPagoService` | `pagos` | `commerce` | `commerce/infrastructure/services/` |
 | `IActivacionCompraService` | `pagos` | `commerce` (coordinador) | `commerce/infrastructure/services/` |
+| `INotificadorCompraService` | `pagos` | `notificaciones` | `notificaciones/infrastructure/services/` |
 | `IProveedorPagoService` | `pagos` | el proveedor de pago | `pagos/infrastructure/services.py` |
 """
 
 from abc import ABC, abstractmethod
 
 from modules.pagos.domain.schemas.pago_schemas import (
+    ContextoNotificacionCompra,
+    EstadoActivacionCompraData,
     EstadoCompraOrdenPago,
     MarcaCompraPagadaResult,
     ResultadoActivacionCompra,
+    ResultadoNotificacion,
 )
 
 
@@ -137,6 +141,65 @@ class IActivacionCompraService(ABC):
         """
         ...
 
+    @abstractmethod
+    def estado_activacion(self, orden_pago_id: str) -> EstadoActivacionCompraData:
+        """El estado de la activación de derechos de la orden (sólo lectura).
+
+        Es el puerto que permite a `pagos` **publicar** el estado de la
+        activación como un canal separado del veredicto operativo, sin
+        recalcular el veredicto y sin duplicar la propiedad del dominio
+        (FR-04 §6 · XCT-03).
+
+        Args:
+            orden_pago_id: UUID de la `OrdenPago`.
+
+        Returns:
+            `EstadoActivacionCompraData` con banderas y el código de la
+            incidencia. `existe=False` cuando la orden no tiene compra ni
+            activación registrada.
+        """
+        ...
+
+
+class INotificadorCompraService(ABC):
+    """Notificación al comprador de una compra pagada.
+
+    El puerto lo declara `pagos` (el consumidor) y lo implementa el módulo
+    `notificaciones` (el proveedor). La dirección de dependencias queda
+    `notificaciones -> pagos` y el grafo de módulos sigue acíclico.
+
+    Reglas congeladas:
+
+    1. La notificación es el ÚLTIMO paso de la secuencia de activación
+       (FR-04 §2.3) y es **opcional y reintentable**.
+    2. **Un fallo de notificación NUNCA revierte la compra ni el derecho**
+       (RN-C08, FR-04 §4). El llamador captura el fallo y lo registra; el
+       cobro confirmado se conserva.
+    3. El puerto expone **banderas y códigos**, nunca texto libre, credenciales
+       ni el contenido de un mensaje.
+    4. Mientras `PD-08` no se ratifique, **no hay proveedor**: la única
+       implementación vigente OMITE el envío y lo dice con un código. No se
+       inventa un proveedor de correo ni se=configura SMTP.
+    """
+
+    @abstractmethod
+    def notificar_compra_confirmada(
+        self, contexto: ContextoNotificacionCompra
+    ) -> ResultadoNotificacion:
+        """Notifica al comprador que su compra quedó confirmada.
+
+        Args:
+            contexto: los hechos congelados de la compra.
+
+        Returns:
+            `ResultadoNotificacion` con las banderas y el código del intento.
+
+        Raises:
+            Exception: cualquier fallo del proveedor. El llamador lo captura:
+                el pago confirmado nunca se revierte por una notificación.
+        """
+        ...
+
 
 class IProveedorPagoService(ABC):
     """Frontera tipada con el proveedor de pago.
@@ -177,6 +240,7 @@ class IProveedorPagoService(ABC):
 __all__ = [
     "IActivacionCompraService",
     "IEstadoCompraOrdenPagoService",
+    "INotificadorCompraService",
     "IPropietarioOrdenPagoService",
     "IProveedorPagoService",
 ]

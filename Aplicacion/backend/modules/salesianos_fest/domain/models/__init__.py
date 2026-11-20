@@ -5,11 +5,13 @@ from modules.salesianos_fest.domain.models.capacidad import (
     BeneficioConcedido,
 )
 from modules.salesianos_fest.domain.models.catalogo import (
+    Categoria,
     Disciplina,
     Paquete,
     PaqueteBeneficio,
     PaqueteDisciplina,
     PaquetePrecio,
+    Promocion,
 )
 from modules.salesianos_fest.domain.models.derecho_pase import (
     ActivacionPase,
@@ -25,6 +27,7 @@ __all__ = [
     "ActivacionCapacidad",
     "ActivacionPase",
     "BeneficioConcedido",
+    "Categoria",
     "CompraPase",
     "CortesiaPase",
     "Disciplina",
@@ -38,4 +41,5 @@ __all__ = [
     "PaseBeneficiario",
     "PasePrecio",
     "Participacion",
+    "Promocion",
 ]

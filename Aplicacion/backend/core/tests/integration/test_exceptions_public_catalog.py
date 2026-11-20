@@ -297,3 +297,199 @@ def test_cada_codigo_nuevo_responde_con_el_status_pedido(codigo, status):
     from core.exceptions import public_message_for
 
     assert public_message_for(codigo, status) == PUBLIC_ERROR_MESSAGES[codigo]
+
+
+# ── Códigos mergeados por DOM-03 (reconciliación A0) ─────────────────────────
+#
+# A0-03 y A0-04 del paquete DOM-03 (pases, beneficiarios y cortesía): catorce
+# códigos públicos. CUATRO ya estaban catalogados (`PASE_NO_DISPONIBLE`,
+# `PASE_NO_ENCONTRADO`, `PASE_NO_TRANSFERIBLE`,
+# `PASE_BENEFICIARIO_NO_ENCONTRADO`): NO se duplicaron, se ratificaron.
+#
+# La prosa pública la decide A0 y NO puede interpolar identificadores, slugs,
+# precios, rutas ni texto crudo (`contract/api-wrapper-presenter-contract.md`
+# §8).
+
+CODIGOS_DOM03 = (
+    # 409 — el pase no se puede comprar (CONGELADO por `FR-07` §3.3).
+    "PASE_NO_DISPONIBLE",
+    # 422 — la cantidad de pases no es válida (CONGELADO por `FR-07` §3.3).
+    "CANTIDAD_INVALIDA",
+    # 404 — el pase no existe o no pertenece a la edición.
+    "PASE_NO_ENCONTRADO",
+    # 404 — la compra de pases no existe.
+    "COMPRA_PASE_NO_ENCONTRADA",
+    # 404 — el beneficiario no existe en la compra (CONGELADO por `FR-07` §3.3).
+    "PASE_BENEFICIARIO_NO_ENCONTRADO",
+    # 409 — el derecho no admite la operación (CONGELADO por `FR-07` §3.3).
+    "PASE_NO_TRANSFERIBLE",
+    # 409 — la persona ya tiene un derecho activo de ese pase.
+    "PASE_DUPLICADO",
+    # 409 — el lote no tiene capacidad pagada libre.
+    "SIN_PASES_DISPONIBLES",
+    # 409 — una compra pendiente NO habilita pases.
+    "COMPRA_PASE_NO_PAGADA",
+    # 401 — el enlace de gestión no es válido (credencial).
+    "TOKEN_PASE_INVALIDO",
+    # 401 — la operación exige una cuenta autenticada.
+    "ACTOR_REQUERIDO",
+    # 403 — el actor no es el titular de la compra.
+    "COMPRA_PASE_NO_AUTORIZADA",
+    # 422 — el motivo de la cortesía es obligatorio.
+    "CORTESIA_MOTIVO_INVALIDO",
+    # 404 — la cortesía no existe.
+    "CORTESIA_NO_ENCONTRADA",
+)
+
+#: Código → status esperado. El status lo DECIDE la clase de excepción del
+#: dominio: el catálogo sólo aporta la prosa. La aserción de abajo lo comprueba
+#: contra la clase real, así que catálogo y dominio no pueden divergir.
+STATUS_DOM03 = {
+    "PASE_NO_DISPONIBLE": 409,
+    "CANTIDAD_INVALIDA": 422,
+    "PASE_NO_ENCONTRADO": 404,
+    "COMPRA_PASE_NO_ENCONTRADA": 404,
+    "PASE_BENEFICIARIO_NO_ENCONTRADO": 404,
+    "PASE_NO_TRANSFERIBLE": 409,
+    "PASE_DUPLICADO": 409,
+    "SIN_PASES_DISPONIBLES": 409,
+    "COMPRA_PASE_NO_PAGADA": 409,
+    "TOKEN_PASE_INVALIDO": 401,
+    "ACTOR_REQUERIDO": 401,
+    "COMPRA_PASE_NO_AUTORIZADA": 403,
+    "CORTESIA_MOTIVO_INVALIDO": 422,
+    "CORTESIA_NO_ENCONTRADA": 404,
+}
+
+#: Códigos mergeados por DOM-02 (A0-DOM02-03) que quedaron PENDIENTES y se
+#: absorben en esta reconciliación: la misma raíz compartida
+#: (`salesianos_fest`) y `CUPO_INVALIDO` está CONGELADO por `FR-07` §3.3 para
+#: `RT-CM-01`, que es una ruta VIVA. `PERSONA_NO_ENCONTRADA` ya estaba
+#: catalogado por FND-03: no se duplicó.
+CODIGOS_DOM02 = (
+    "CUPO_INVALIDO",
+    "SIN_CUPOS_DISPONIBLES",
+    "PARTICIPANTE_NO_ELEGIBLE",
+    "PARTICIPANTE_DUPLICADO",
+    "EQUIPO_COMPLETO",
+    "PARTICIPANTE_NO_ENCONTRADO",
+    "EQUIPO_NO_ENCONTRADO",
+)
+
+STATUS_DOM02 = {
+    "CUPO_INVALIDO": 422,
+    "SIN_CUPOS_DISPONIBLES": 409,
+    "PARTICIPANTE_NO_ELEGIBLE": 422,
+    "PARTICIPANTE_DUPLICADO": 422,
+    "EQUIPO_COMPLETO": 409,
+    "PARTICIPANTE_NO_ENCONTRADO": 404,
+    "EQUIPO_NO_ENCONTRADO": 404,
+}
+
+CODIGOS_A0R3 = CODIGOS_DOM03 + CODIGOS_DOM02
+
+
+@pytest.mark.parametrize("codigo", CODIGOS_A0R3)
+def test_los_codigos_de_dom03_y_dom02_estan_en_el_catalogo(codigo):
+    """Cada código público del paquete tiene prosa en el catálogo."""
+    assert codigo in PUBLIC_ERROR_MESSAGES
+    assert PUBLIC_ERROR_MESSAGES[codigo]
+
+
+@pytest.mark.parametrize("codigo", CODIGOS_A0R3)
+def test_la_prosa_de_los_codigos_de_dom03_y_dom02_es_prosa_fija(codigo):
+    """La prosa pública no interpola nada: es texto fijo y seguro."""
+    mensaje = PUBLIC_ERROR_MESSAGES[codigo]
+
+    assert "{" not in mensaje
+    assert "}" not in mensaje
+    assert "%" not in mensaje
+    assert "$" not in mensaje
+
+
+@pytest.mark.parametrize("codigo,status", sorted(STATUS_DOM03.items()))
+def test_cada_codigo_de_dom03_responde_con_el_status_pedido(codigo, status):
+    """El status lo fija la clase de excepción del dominio, no la prosa."""
+    from core.exceptions import public_message_for
+
+    assert public_message_for(codigo, status) == PUBLIC_ERROR_MESSAGES[codigo]
+
+
+@pytest.mark.parametrize("codigo,status", sorted(STATUS_DOM02.items()))
+def test_cada_codigo_de_dom02_responde_con_el_status_pedido(codigo, status):
+    """El status lo fija la clase de excepción del dominio, no la prosa."""
+    from core.exceptions import public_message_for
+
+    assert public_message_for(codigo, status) == PUBLIC_ERROR_MESSAGES[codigo]
+
+
+@pytest.mark.parametrize(
+    "nombre_excepcion,codigo,status",
+    [
+        ("PaseNoDisponibleError", "PASE_NO_DISPONIBLE", 409),
+        ("CantidadInvalidaError", "CANTIDAD_INVALIDA", 422),
+        ("PaseNoEncontradoError", "PASE_NO_ENCONTRADO", 404),
+        ("CompraPaseNoEncontradaError", "COMPRA_PASE_NO_ENCONTRADA", 404),
+        (
+            "PaseBeneficiarioNoEncontradoError",
+            "PASE_BENEFICIARIO_NO_ENCONTRADO",
+            404,
+        ),
+        ("PaseNoTransferibleError", "PASE_NO_TRANSFERIBLE", 409),
+        ("PaseDuplicadoError", "PASE_DUPLICADO", 409),
+        ("SinPasesDisponiblesError", "SIN_PASES_DISPONIBLES", 409),
+        ("CompraPaseNoPagadaError", "COMPRA_PASE_NO_PAGADA", 409),
+        ("TokenPaseInvalidoError", "TOKEN_PASE_INVALIDO", 401),
+        ("ActorRequeridoError", "ACTOR_REQUERIDO", 401),
+        ("CompraPaseNoAutorizadaError", "COMPRA_PASE_NO_AUTORIZADA", 403),
+        ("CortesiaMotivoInvalidoError", "CORTESIA_MOTIVO_INVALIDO", 422),
+        ("CortesiaNoEncontradaError", "CORTESIA_NO_ENCONTRADA", 404),
+    ],
+)
+def test_el_status_del_codigo_es_el_de_la_clase_de_dominio(
+    nombre_excepcion,
+    codigo,
+    status,
+):
+    """El catálogo y la clase de dominio NO pueden divergir.
+
+    La prosa la elige A0; el status lo fija la excepción que el dominio
+    lanza. Este test ata las dos cosas: si una clase cambia de status, el
+    catálogo tiene que cambiar con ella.
+    """
+    from importlib import import_module
+
+    dominio = import_module("modules.salesianos_fest.domain.exceptions")
+    exccepcion = getattr(dominio, nombre_excepcion)()
+
+    assert exccepcion.code == codigo
+    assert exccepcion.status_code == status
+    assert codigo in PUBLIC_ERROR_MESSAGES
+
+
+@pytest.mark.parametrize(
+    "nombre_excepcion,codigo,status",
+    [
+        ("CupoInvalidoError", "CUPO_INVALIDO", 422),
+        ("SinCuposDisponiblesError", "SIN_CUPOS_DISPONIBLES", 409),
+        ("ParticipanteNoElegibleError", "PARTICIPANTE_NO_ELEGIBLE", 422),
+        ("ParticipanteDuplicadoError", "PARTICIPANTE_DUPLICADO", 422),
+        ("EquipoCompletoError", "EQUIPO_COMPLETO", 409),
+        ("ParticipanteNoEncontradoError", "PARTICIPANTE_NO_ENCONTRADO", 404),
+        ("EquipoNoEncontradoError", "EQUIPO_NO_ENCONTRADO", 404),
+    ],
+)
+def test_el_status_del_codigo_de_dom02_es_el_de_la_clase_de_dominio(
+    nombre_excepcion,
+    codigo,
+    status,
+):
+    """Misma invariante para los códigos absorbidos de DOM-02."""
+    from importlib import import_module
+
+    dominio = import_module("modules.salesianos_fest.domain.exceptions")
+    exccepcion = getattr(dominio, nombre_excepcion)()
+
+    assert exccepcion.code == codigo
+    assert exccepcion.status_code == status
+    assert codigo in PUBLIC_ERROR_MESSAGES

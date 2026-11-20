@@ -266,21 +266,156 @@ class CompradorSinPersonaError(UnprocessableEntityError):
         )
 
 
+# ── Inventario, reserva y entrega (DOM-06) ───────────────────────────────────
+#
+# Los códigos de esta familia todavía NO están en el catálogo público de A0:
+# se registran como petición explícita (A0-03 del evidence de DOM-06). Hasta
+# que A0 los catalogue, el `error.code` sigue siendo estable y la prosa
+# pública cae al mensaje genérico del status (F-21).
+
+
+class StockInsuficienteError(ConflictError):
+    """No hay existencias suficientes para la cantidad pedida (RN-M06).
+
+    El CÓDIGO es el CONGELADO por el ledger `FR-07` §3.3 para `RT-CM-03`:
+    `STOCK_INSUFICIENTE` con 409. La comprobación la hace la BASE DE DATOS
+    (una sentencia condicional), no la aplicación: dos pedidos simultáneos
+    no pueden sobreventa porque sólo uno gana la reserva.
+    """
+
+    code = "STOCK_INSUFICIENTE"
+
+    def __init__(self):
+        super().__init__(
+            message="No hay existencias suficientes para la cantidad solicitada.",
+            code=self.code,
+        )
+
+
+class MovimientoInventarioNoEncontradoError(NotFoundError):
+    """El movimiento de inventario indicado no existe."""
+
+    code = "MOVIMIENTO_INVENTARIO_NO_ENCONTRADO"
+
+    def __init__(self):
+        super().__init__(resource="Movimiento de inventario", code=self.code)
+
+
+class MovimientoInventarioInvalidoError(UnprocessableEntityError):
+    """El movimiento declarado no es coherente con su naturaleza (RN-M04).
+
+    La cantidad es CON SIGNO (`signo/cantidad`): la naturaleza impone el
+    signo (una reposición entra, una merma sale) y un ajuste declara el suyo.
+    """
+
+    code = "MOVIMIENTO_INVENTARIO_INVALIDO"
+
+    def __init__(self):
+        super().__init__(
+            message="El movimiento de inventario no es válido.",
+            code=self.code,
+        )
+
+
+class MovimientoInmutableError(ConflictError):
+    """Un movimiento de inventario ya registrado no se puede modificar.
+
+    La bitácora es INMUTABLE: una corrección es un movimiento COMPENSATORIO,
+    nunca una edición ni un borrado (plan `funcional/03` §5).
+    """
+
+    code = "MOVIMIENTO_INVENTARIO_INMUTABLE"
+
+    def __init__(self):
+        super().__init__(
+            message="El movimiento de inventario no se puede modificar.",
+            code=self.code,
+        )
+
+
+class PedidoNoPagadoError(ConflictError):
+    """El pedido todavía no está pagado: no se puede entregar (RN-M07).
+
+    El inverso también es cierto: que el pedido esté PAGADO NO habilita la
+    entrega. Son dos hechos separados.
+    """
+
+    code = "PEDIDO_NO_PAGADO"
+
+    def __init__(self):
+        super().__init__(
+            message="El pedido todavía no está pagado.",
+            code=self.code,
+        )
+
+
+class PedidoNoEntregableError(ConflictError):
+    """El pedido no se puede entregar: está cancelado o no pertenece al
+    alcance."""
+
+    code = "PEDIDO_NO_ENTREGABLE"
+
+    def __init__(self):
+        super().__init__(
+            message="El pedido no se puede entregar.",
+            code=self.code,
+        )
+
+
+class PedidoSinReservaError(ConflictError):
+    """El pedido no tiene existencias reservadas: su venta no se puede
+    confirmar (RN-M06)."""
+
+    code = "PEDIDO_SIN_RESERVA"
+
+    def __init__(self):
+        super().__init__(
+            message="El pedido no tiene existencias reservadas.",
+            code=self.code,
+        )
+
+
+class ReservaNoConfirmableError(ConflictError):
+    """La reserva del pedido fue liberada: su venta ya no se puede confirmar.
+
+    Es el caso real de un pedido CANCELADO cuyo pago llega después: el
+    stock ya volvió al catálogo y la venta NO se puede cerrar. El
+    coordinador de `commerce` conserva el pago y registra la incidencia
+    recuperable (`RN-C08`).
+    """
+
+    code = "RESERVA_NO_CONFIRMABLE"
+
+    def __init__(self):
+        super().__init__(
+            message="Las existencias del pedido ya no están reservadas.",
+            code=self.code,
+        )
+
+
 __all__ = [
     "CategoriaProductoNoEncontradaError",
     "CategoriaProductoSlugDuplicadoError",
     "CompradorSinPersonaError",
     "GaleriaInvalidaError",
     "ModuloNoHabilitadoError",
+    "MovimientoInventarioInvalidoError",
+    "MovimientoInventarioNoEncontradoError",
+    "MovimientoInmutableError",
     "OfertaInvalidaError",
     "PedidoCantidadInvalidaError",
     "PedidoItemNoPermitidoError",
     "PedidoItemsMixtosError",
     "PedidoNoAutorizadoError",
     "PedidoNoEncontradoError",
+    "PedidoNoEntregableError",
+    "PedidoNoPagadoError",
+    "PedidoSinReservaError",
     "ProductoCategoriaIncoherenteError",
     "ProductoImagenNoEncontradaError",
     "ProductoNoDisponibleError",
     "ProductoNoEncontradoError",
     "ProductoSlugDuplicadoError",
+    "ReservaNoConfirmableError",
+    "StockInsuficienteError",
 ]

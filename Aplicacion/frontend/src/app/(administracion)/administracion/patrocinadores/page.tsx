@@ -1,17 +1,8 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { PatrocinadoresAdminView } from "@/features/patrocinadores/views";
 
 /**
- * ADM-21 — Gestionar patrocinadores y sus piezas
- *
- * Shell de ruta (FND-06). La vista la construye UI-05.
+ * ADM-21 - Gestionar patrocinadores y sus piezas
  */
-
 export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="ADM-21"
-      tarea="Gestionar patrocinadores y sus piezas"
-      packet="UI-05"
-    ></RoutePlaceholder>
-  );
+  return <PatrocinadoresAdminView />;
 }

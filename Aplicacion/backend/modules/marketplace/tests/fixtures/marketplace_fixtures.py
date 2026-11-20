@@ -33,6 +33,13 @@ PNG_MINIMO = _bytes_de_imagen("PNG")
 #: Bytes de un JPEG válido.
 JPEG_MINIMO = _bytes_de_imagen("JPEG")
 
+#: Existencias que declaran las fixtures de producto (`DOM-06`).
+#:
+#: Sin `stock` declarado un producto está AGOTADO y no se puede pedir
+#: (`RN-M06`): las fixtures lo declaran para que las pruebas del módulo
+#: sigan siendo válidas.
+STOCK_EJEMPLO = 100
+
 
 def archivo_png(nombre: str = "producto.png") -> SimpleUploadedFile:
     """Un PNG válido con el MIME correcto."""
@@ -132,7 +139,12 @@ def categoria_producto(db, edicion_publicada):
 
 @pytest.fixture
 def producto(db, edicion_publicada, categoria_producto):
-    """Producto de ejemplo, con precio normal y sin oferta."""
+    """Producto de ejemplo, con precio normal, sin oferta y CON existencias.
+
+    `DOM-06` introdujo el control de existencias: un producto sin `stock`
+    declarado está AGOTADO y no se puede pedir (`RN-M06`). La fixture declara
+    un stock para que el resto de las pruebas del módulo siga siendo válida.
+    """
     return Producto.objects.create(
         edicion=edicion_publicada,
         categoria=categoria_producto,
@@ -141,6 +153,7 @@ def producto(db, edicion_publicada, categoria_producto):
         descripcion="Botella de 500 ml.",
         precio="3.50",
         estado="ACTIVO",
+        stock=STOCK_EJEMPLO,
     )
 
 

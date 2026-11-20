@@ -1,8 +1,14 @@
-import { type UseMutationOptions, useMutation } from "@tanstack/react-query";
-import type { AxiosError, AxiosResponse } from "axios";
+import {
+  type QueryKey,
+  type UseMutationOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import type { ZodType } from "zod";
-import { getErrorMessage, handleApiError, notify } from "@/errors";
-import api from "@/lib/api";
+import { handleApiError, notify } from "@/errors";
+import { apiSend } from "@/lib/api";
+import { invalidateDatasets } from "@/shared/utils/cache-policy";
 import { buildApiPayload } from "@/utils";
 
 interface UseApiCreateProps<TData, TVariables> {
@@ -15,6 +21,13 @@ interface UseApiCreateProps<TData, TVariables> {
    * generic hooks surface success feedback without per-call boilerplate.
    */
   showSuccessToast?: boolean;
+  /**
+   * The keys invalidated when the mutation settles.
+   *
+   * The invalidation is EXPLICIT: a mutation that changes a dataset declares
+   * the keys it dirties. A mutation that declares nothing dirties nothing.
+   */
+  invalidateKeys?: readonly QueryKey[];
   options?: Omit<
     UseMutationOptions<TData, AxiosError, TVariables>,
     "mutationFn"
@@ -26,14 +39,21 @@ export function useApiCreate<TData = unknown, TVariables = unknown>({
   schema,
   showToast = true,
   showSuccessToast = true,
+  invalidateKeys = [],
   options,
 }: UseApiCreateProps<TData, TVariables>) {
+  const queryClient = useQueryClient();
+
   return useMutation<TData, AxiosError, TVariables>({
     mutationFn: async (variables) => {
       try {
         const payload = buildApiPayload(variables);
-        const response: AxiosResponse<unknown> = await api.post(url, payload);
-        const envelope = response.data as { message?: string } | null;
+        const { status, data } = await apiSend<unknown>("post", url, payload);
+
+        // 204 No Content: the body is empty and it is NEVER parsed.
+        if (status === 204) return undefined as unknown as TData;
+
+        const envelope = data as { message?: string } | null;
         if (
           showSuccessToast &&
           envelope &&
@@ -42,11 +62,19 @@ export function useApiCreate<TData = unknown, TVariables = unknown>({
         ) {
           notify.success(envelope.message);
         }
-        return schema ? schema.parse(response.data) : (response.data as TData);
+        return schema ? schema.parse(data) : (data as TData);
       } catch (error) {
         const apiError = handleApiError(error);
         if (showToast) notify.error(apiError.message);
         throw error;
+      } finally {
+        /**
+         * The invalidation lives in the mutation itself and NOT in
+         * `onSettled`: a component that unmounts while the mutation is in
+         * flight would never invalidate, and the cache would keep the old
+         * answer.
+         */
+        await invalidateDatasets(queryClient, invalidateKeys);
       }
     },
     ...options,

@@ -44,17 +44,24 @@ ENVELOPE_VERSION = "1.0.0"
 SCHEMA_VERSIONS: dict[str, str] = {
     "envelope": ENVELOPE_VERSION,
     "eventos": "1.0.0",
-    "usuarios": "1.0.0",
+    "usuarios": "1.1.0",
     "commerce": "1.0.0",
     "pagos": "1.0.0",
     "pases": "1.0.0",
     "beneficios": "1.0.0",
     "validaciones": "1.0.0",
-    "marketplace": "1.0.0",
+    "marketplace": "1.2.0",
     "patrocinadores": "1.0.0",
     # DOM-01 · Reconciliación A0 de 2026-11-19 (A0-06): el módulo declara
     # `SCHEMA_VERSION = "1.0.0"` y el registro global es de A0.
-    "salesianos_fest": "1.0.0",
+    #
+    # DOM-03 · Reconciliación A0 de 2026-11-19 (A0-02): el módulo `salesianos_fest`
+    # subió a `1.2.0` (MINOR, ADITIVO) con el dominio de pases, beneficiarios y
+    # cortesía — diez rutas nuevas, ninguna forma de respuesta eliminada ni
+    # renombrada. El registro global es de A0: mientras no se actualice, el
+    # test de drift de `core/tests/integration/test_contract_versions.py` falla
+    # (F-59). DOM-02 (pool de cupos, `1.1.0`) queda subsumido en este valor.
+    "salesianos_fest": "1.2.0",
 }
 
 

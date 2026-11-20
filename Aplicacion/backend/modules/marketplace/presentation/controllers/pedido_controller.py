@@ -14,8 +14,15 @@ Rutas (ledger FR-07 §3.3):
 
 | Ruta | Método | Scope | Permiso | Errores |
 |---|---|---|---|---|
-| `/marketplace/pedidos` | POST | implícito | autenticado | `PEDIDO_ITEMS_MIXTOS` 422 · `PEDIDO_ITEM_NO_PERMITIDO` 409 · `PEDIDO_CANTIDAD_INVALIDA` 422 · `PRODUCTO_NO_ENCONTRADO` 404 · `PRODUCTO_NO_DISPONIBLE` 409 · `MODULO_NO_HABILITADO` 409 · `COMPRADOR_SIN_PERSONA` 422 |
+| `/marketplace/pedidos` | POST | implícito | autenticado (`JWTAuth` + `IsAuthenticated`) | `PEDIDO_ITEMS_MIXTOS` 422 · `PEDIDO_ITEM_NO_PERMITIDO` 409 · `PEDIDO_CANTIDAD_INVALIDA` 422 · `PRODUCTO_NO_ENCONTRADO` 404 · `PRODUCTO_NO_DISPONIBLE` 409 · `MODULO_NO_HABILITADO` 409 · `COMPRADOR_SIN_PERSONA` 422 |
 | `/marketplace/pedidos/{token}` | GET | implícito | público (el token es la credencial) | `PEDIDO_NO_ENCONTRADO` 404 · `PEDIDO_NO_AUTORIZADO` 403 |
+
+**El alta exige una cuenta con `Persona` vinculada.** El comprador es la
+`Persona` de la cuenta autenticada (`Compra.persona` es obligatorio y el
+documento de identidad NO es una credencial, RN-U04). Una cuenta sin persona
+recibe 422 `COMPRADOR_SIN_PERSONA`. La compra de invitado con datos de
+comprador es un flujo de IDENTIDAD (`RT-ID-02`/`RT-ID-03`), no de este
+paquete: se registra como desviación `D-DOM05-06` y como petición A0-05.
 
 **NO hay control de existencias.** La reserva de stock es de `DOM-06`
 (`RN-M06`): este paquete NO inventa existencias ni las descuenta. El catálogo
@@ -31,7 +38,9 @@ from asgiref.sync import sync_to_async
 from injector import inject
 from ninja_extra import api_controller, route
 
+from core.permissions import IsAuthenticated
 from core.responses import ApiResponse, success_response
+from core.security import JWTAuth
 from modules.marketplace.domain.schemas.pedido_schemas import PedidoCreateData
 from modules.marketplace.domain.services.orchestrators.pedido_orchestrator import (
     PedidoOrchestrator,
@@ -61,6 +70,8 @@ class PedidoController:
         "/pedidos",
         response={201: ApiResponse[PedidoCreadoOut]},
         summary="Alta del pedido de marketplace con su snapshot de precio",
+        auth=JWTAuth(),
+        permissions=[IsAuthenticated],
     )
     async def crear_pedido(self, request, payload: CrearPedidoIn):
         """Crea el pedido de una intención de compra.
@@ -117,6 +128,12 @@ class PedidoController:
         return success_response(PedidoSeguimientoPresenter.present(result))
 
 
+#: La autenticación JWT del proyecto (`core.security`), reutilizada por la
+#: ruta del enlace privado. Se instancia UNA vez: `JWTAuth` resuelve el modelo
+#: de usuario al construirse.
+_AUTENTICACION = JWTAuth()
+
+
 async def _actor_opcional(request):
     """El actor de la petición, o `None` si la petición es anónima.
 
@@ -126,15 +143,15 @@ async def _actor_opcional(request):
     (RN-U02). La credencial se resuelve SÓLO si viene.
 
     Una credencial presente pero rota responde 401 con el catálogo global:
-    el módulo no decide el status de la autenticación.
+    el módulo no decide el status de la autenticación. Por eso NO se usa
+    `core.security.OptionalJWTAuth`, que degrada un token inválido a
+    "invitado" en silencio.
     """
-    from ninja_jwt.authentication import JWTAuth
-
     cabecera = request.headers.get("Authorization") or ""
     partes = cabecera.split(" ")
     if len(partes) != 2 or partes[0].lower() != "bearer":
         return None
-    return await sync_to_async(JWTAuth().authenticate)(request, partes[1])
+    return await sync_to_async(_AUTENTICACION.authenticate)(request, partes[1])
 
 
 __all__ = ["PedidoController"]

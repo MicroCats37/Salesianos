@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { DESTINOS_PUBLICOS, RUTAS } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./ThemeToggle";
 
 /**
  * SiteHeader - the public header.
@@ -49,10 +50,10 @@ export function SiteHeader({
 
   return (
     <header className="sticky top-0 z-(--z-sticky) border-b border-border bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
+      <div className="mx-auto flex h-16 max-w-page items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
         <Link
           href={RUTAS.publico.inicio}
-          className="rounded-[--radius-sm] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="rounded-[var(--radius-sm)] py-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <BrandMark size={26} />
           <span className="sr-only">Salesianos FEST — Portada</span>
@@ -69,7 +70,7 @@ export function SiteHeader({
                     href={destino.href}
                     aria-current={activo ? "page" : undefined}
                     className={cn(
-                      "rounded-full border-b-2 px-4 py-2 text-sm font-medium transition-colors duration-(--motion-duration-fast) hover:bg-muted hover:text-foreground",
+                      "rounded-full border-b-2 px-4 py-3 text-sm font-medium transition-colors duration-(--motion-duration-fast) hover:bg-muted hover:text-foreground",
                       activo
                         ? "border-accent bg-muted font-semibold text-foreground"
                         : "border-transparent text-foreground-muted",
@@ -86,7 +87,7 @@ export function SiteHeader({
         <div className="flex items-center gap-2">
           <Button
             asChild
-            className="hidden rounded-full bg-brand-gradient px-5 font-bold uppercase tracking-wider text-primary-foreground sm:inline-flex"
+            className="hidden min-h-11 rounded-full bg-brand-gradient px-5 font-bold uppercase tracking-wider text-primary-foreground sm:inline-flex"
           >
             <Link
               href={autenticado ? RUTAS.cuenta.miCuenta : RUTAS.publico.pases}
@@ -95,6 +96,13 @@ export function SiteHeader({
               {autenticado ? "Mi cuenta" : "Conseguir pase"}
             </Link>
           </Button>
+
+          {/*
+            El selector de tema vive en la barra, no dentro del menú: cambiar
+            el tema es una decisión de la persona, no una navegación, y debe
+            estar a un clic en cualquier ancho.
+          */}
+          <ThemeToggle />
 
           <Sheet open={abierto} onOpenChange={setAbierto}>
             <SheetTrigger asChild>
@@ -122,7 +130,7 @@ export function SiteHeader({
                           onClick={() => setAbierto(false)}
                           aria-current={activo ? "page" : undefined}
                           className={cn(
-                            "block rounded-[--radius-md] border-l-2 px-3 py-3 text-base font-medium transition-colors duration-(--motion-duration-fast) hover:bg-muted",
+                            "block rounded-[var(--radius-md)] border-l-2 px-3 py-3 text-base font-medium transition-colors duration-(--motion-duration-fast) hover:bg-muted",
                             activo
                               ? "border-accent bg-muted font-semibold text-foreground"
                               : "border-transparent text-foreground",
@@ -137,7 +145,7 @@ export function SiteHeader({
               </nav>
               <Button
                 asChild
-                className="mt-6 w-full rounded-full bg-brand-gradient font-bold uppercase tracking-wider text-primary-foreground"
+                className="mt-6 min-h-11 w-full rounded-full bg-brand-gradient font-bold uppercase tracking-wider text-primary-foreground"
               >
                 <Link
                   href={

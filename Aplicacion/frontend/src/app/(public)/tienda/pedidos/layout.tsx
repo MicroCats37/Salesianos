@@ -20,12 +20,14 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
           </Link>
         </div>
       </header>
-      <main
-        id="contenido"
-        className="mx-auto w-full max-w-[720px] flex-1 px-4 py-10 sm:px-6"
-      >
+      {/*
+        El `main` con su enlace de salto lo pone el layout de la familia
+        pública: aquí sólo va la MEDIDA estrecha de la página de invitado.
+        Un `id` duplicado rompería el enlace de salto.
+      */}
+      <div className="mx-auto w-full max-w-[720px] flex-1 px-4 py-10 sm:px-6">
         {children}
-      </main>
+      </div>
     </div>
   );
 }

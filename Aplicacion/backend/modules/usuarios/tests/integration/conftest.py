@@ -10,4 +10,7 @@ identidad cuando la app todavía no está en `INSTALLED_APPS`
 from django.apps import apps
 
 if apps.is_installed("modules.usuarios"):
-    from modules.usuarios.tests.fixtures import persona_fixtures  # noqa: F401
+    from modules.usuarios.tests.fixtures import (  # noqa: F401
+        auth_fixtures,
+        persona_fixtures,
+    )

@@ -22,6 +22,22 @@ Lo que este módulo NO hace:
 """
 
 #: Versión congelada del contrato de presenters/schemas del módulo.
-SCHEMA_VERSION = "1.0.0"
+#:
+#: DOM-03 (2026-11-19) — ESTA COPIA ERA UNA SEGUNDA FUENTE DE VERDAD. El
+#: paquete declaraba aquí un literal (`1.0.0`) mientras la fuente canónica
+#: (`modules.salesianos_fest.presentation.schemas.SCHEMA_VERSION`) ya valía
+#: `1.1.0` (DOM-02) y `1.2.0` (DOM-03). Dos literales para el MISMO
+#: contrato congelado es exactamente el drift que `FR-07` §1.1 mete en
+#: existir: el que se lea por el nombre corto del paquete leería una versión
+#: equivocada sin ningún aviso.
+#:
+#: Ahora este nombre es una REEXPORTACIÓN de la fuente canónica: hay un solo
+#: literal en el módulo. `from modules.salesianos_fest import SCHEMA_VERSION`
+#: sigue funcionando y devuelve el valor correcto.
+#:
+#: `modules/marketplace`, `modules/competencias` y `modules/patrocinadores`
+#: NO declaran una copia en la raíz del paquete: éste era el único módulo con
+#: dos literales.
+from modules.salesianos_fest.presentation.schemas import SCHEMA_VERSION
 
 __all__ = ["SCHEMA_VERSION"]

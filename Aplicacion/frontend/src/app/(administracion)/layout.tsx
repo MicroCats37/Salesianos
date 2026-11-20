@@ -1,12 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { AdminSidebar } from "@/components/shell/AdminSidebar";
-import { Button } from "@/components/ui/button";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { AppShell } from "@/components/shell/AppShell";
+import { RouteTransition } from "@/components/shell/RouteTransition";
 import { adminNivelLabel as nivelLabel } from "@/features/admin/utils/admin.capacidades";
 import {
   ADMIN_RESUMEN,
@@ -60,40 +55,24 @@ export default async function AdministracionLayout({
       */}
       <a
         href="#contenido"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-(--z-toast) focus:rounded-[--radius-md] focus:bg-primary focus:px-4 focus:py-3 focus:font-semibold focus:text-primary-foreground"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-(--z-toast) focus:rounded-[var(--radius-md)] focus:bg-primary focus:px-4 focus:py-3 focus:font-semibold focus:text-primary-foreground"
       >
         Saltar al contenido
       </a>
 
-      <SidebarProvider>
-        <AdminSidebar
-          resumen={ADMIN_RESUMEN}
-          grupos={grupos}
-          usuario={nombre || sesion.email}
-          superusuario={nivelLabel(sesion.nivel) === "Superusuario"}
-        />
-
-        <SidebarInset className="min-w-0">
-          <header className="sticky top-0 z-(--z-sticky) flex h-16 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur sm:px-6">
-            <SidebarTrigger className="size-11" aria-label="Abrir navegación" />
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-semibold text-foreground">
-                Administración
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                {nivelLabel(sesion.nivel)}
-              </span>
-            </div>
-            <Button variant="outline" size="sm" asChild className="ml-auto">
-              <a href={RUTAS.cuenta.miCuenta}>Volver a mi cuenta</a>
-            </Button>
-          </header>
-
-          <main id="contenido" className="min-w-0 flex-1 p-4 lg:p-6">
-            {children}
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
+      <AppShell
+        resumen={ADMIN_RESUMEN}
+        grupos={grupos}
+        usuario={nombre || sesion.email}
+        nivel={nivelLabel(sesion.nivel)}
+        superusuario={nivelLabel(sesion.nivel) === "Superusuario"}
+        area="Administración"
+        areaHref={RUTAS.administracion.resumen}
+      >
+        <main id="contenido" className="min-w-0 flex-1 p-4 lg:p-6">
+          <RouteTransition>{children}</RouteTransition>
+        </main>
+      </AppShell>
     </>
   );
 }

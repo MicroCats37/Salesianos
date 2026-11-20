@@ -1,17 +1,21 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { ParticipantesAdminRuta } from "@/features/admin/participantes";
+import { parametrosDeConsulta } from "@/features/admin/operaciones/utils/parametros";
 
 /**
  * ADM-09 — Buscar personas y participaciones
  *
- * Shell de ruta (FND-06). La vista la construye UI-04.
+ * La búsqueda vive en la URL, así que la página lee la query string y la
+ * pasa al contenedor. El contenedor es el que lee el dato y le entrega el
+ * estado a la vista: la página sólo enruta.
  */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
 
-export default function Page() {
   return (
-    <RoutePlaceholder
-      pageId="ADM-09"
-      tarea="Buscar personas y participaciones"
-      packet="UI-04"
-    ></RoutePlaceholder>
+    <ParticipantesAdminRuta parametros={parametrosDeConsulta(params)} />
   );
 }

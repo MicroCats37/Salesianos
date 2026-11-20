@@ -23,6 +23,7 @@ from injector import Binder, Module, singleton
 
 from modules.salesianos_fest.domain.ports import (
     IAlcanceEdicionService,
+    IObtensionPersonaService,
     IResolucionPersonaService,
     ITitularidadService,
 )
@@ -30,7 +31,11 @@ from modules.salesianos_fest.domain.selectors.catalogo_selector import CatalogoS
 from modules.salesianos_fest.domain.selectors.inscripcion_selector import (
     InscripcionSelector,
 )
+from modules.salesianos_fest.domain.selectors.pase_selector import PaseSelector
 from modules.salesianos_fest.domain.selectors.pool_selector import PoolSelector
+from modules.salesianos_fest.domain.services.core.beneficiario_core_service import (
+    BeneficiarioCoreService,
+)
 from modules.salesianos_fest.domain.services.core.beneficio_core_service import (
     BeneficioCoreService,
 )
@@ -40,34 +45,61 @@ from modules.salesianos_fest.domain.services.core.catalogo_core_service import (
 from modules.salesianos_fest.domain.services.core.capacidad_core_service import (
     CapacidadCoreService,
 )
+from modules.salesianos_fest.domain.services.core.cortesia_core_service import (
+    CortesiaCoreService,
+)
 from modules.salesianos_fest.domain.services.core.inscripcion_core_service import (
     InscripcionCoreService,
 )
+from modules.salesianos_fest.domain.services.core.pase_acceso_service import (
+    PaseAccesoService,
+)
+from modules.salesianos_fest.domain.services.core.pase_core_service import (
+    PaseCoreService,
+)
 from modules.salesianos_fest.domain.services.core.pool_core_service import (
     PoolCoreService,
+)
+from modules.salesianos_fest.domain.services.flujos.beneficiario_flujo import (
+    BeneficiarioFlujo,
 )
 from modules.salesianos_fest.domain.services.flujos.catalogo_flujo import CatalogoFlujo
 from modules.salesianos_fest.domain.services.flujos.compra_cupos_flujo import (
     CompraCuposFlujo,
 )
+from modules.salesianos_fest.domain.services.flujos.compra_pase_flujo import (
+    CompraPaseFlujo,
+)
+from modules.salesianos_fest.domain.services.flujos.cortesia_flujo import CortesiaFlujo
 from modules.salesianos_fest.domain.services.flujos.inscripcion_flujo import (
     InscripcionFlujo,
 )
+from modules.salesianos_fest.domain.services.flujos.pase_flujo import PaseFlujo
 from modules.salesianos_fest.domain.services.flujos.pool_flujo import PoolFlujo
+from modules.salesianos_fest.domain.services.orchestrators.beneficiario_orchestrator import (
+    BeneficiarioOrchestrator,
+)
 from modules.salesianos_fest.domain.services.orchestrators.catalogo_orchestrator import (
     CatalogoOrchestrator,
 )
 from modules.salesianos_fest.domain.services.orchestrators.compra_cupos_orchestrator import (
     CompraCuposOrchestrator,
 )
+from modules.salesianos_fest.domain.services.orchestrators.cortesia_orchestrator import (
+    CortesiaOrchestrator,
+)
 from modules.salesianos_fest.domain.services.orchestrators.inscripcion_orchestrator import (
     InscripcionOrchestrator,
+)
+from modules.salesianos_fest.domain.services.orchestrators.pase_orchestrator import (
+    PaseOrchestrator,
 )
 from modules.salesianos_fest.domain.services.orchestrators.pool_orchestrator import (
     PoolOrchestrator,
 )
 from modules.salesianos_fest.infrastructure.services import (
     AlcanceEdicionAdapter,
+    ObtencionPersonaAdapter,
     ResolucionPersonaAdapter,
     TitularidadAdapter,
 )
@@ -86,6 +118,11 @@ def _titularidad_factory() -> ITitularidadService:
 def _resolucion_persona_factory() -> IResolucionPersonaService:
     """Construye el adaptador de resolución de identidades de `usuarios`."""
     return ResolucionPersonaAdapter()
+
+
+def _obtencion_persona_factory() -> IObtensionPersonaService:
+    """Construye el adaptador de obtención de identidades de `usuarios`."""
+    return ObtencionPersonaAdapter()
 
 
 class SalesianosFestModule(Module):
@@ -145,6 +182,36 @@ class SalesianosFestModule(Module):
         binder.bind(
             CompraCuposOrchestrator,
             to=CompraCuposOrchestrator,
+            scope=singleton,
+        )
+        # ── DOM-03 · PASES, BENEFICIARIOS Y CORTESÍA ──────────────────────
+        binder.bind(PaseSelector, to=PaseSelector, scope=singleton)
+        binder.bind(PaseCoreService, to=PaseCoreService, scope=singleton)
+        binder.bind(
+            BeneficiarioCoreService,
+            to=BeneficiarioCoreService,
+            scope=singleton,
+        )
+        binder.bind(CortesiaCoreService, to=CortesiaCoreService, scope=singleton)
+        binder.bind(PaseAccesoService, to=PaseAccesoService, scope=singleton)
+        binder.bind(
+            IObtensionPersonaService,
+            to=_obtencion_persona_factory,
+            scope=singleton,
+        )
+        binder.bind(PaseFlujo, to=PaseFlujo, scope=singleton)
+        binder.bind(CompraPaseFlujo, to=CompraPaseFlujo, scope=singleton)
+        binder.bind(BeneficiarioFlujo, to=BeneficiarioFlujo, scope=singleton)
+        binder.bind(CortesiaFlujo, to=CortesiaFlujo, scope=singleton)
+        binder.bind(PaseOrchestrator, to=PaseOrchestrator, scope=singleton)
+        binder.bind(
+            BeneficiarioOrchestrator,
+            to=BeneficiarioOrchestrator,
+            scope=singleton,
+        )
+        binder.bind(
+            CortesiaOrchestrator,
+            to=CortesiaOrchestrator,
             scope=singleton,
         )
 

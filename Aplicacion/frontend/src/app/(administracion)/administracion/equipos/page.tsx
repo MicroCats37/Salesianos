@@ -1,17 +1,19 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { EquiposAdminRuta } from "@/features/admin/equipos";
+import { parametrosDeConsulta } from "@/features/admin/operaciones/utils/parametros";
 
 /**
  * ADM-07 — Buscar y gestionar equipos
  *
- * Shell de ruta (FND-06). La vista la construye UI-04.
+ * Los filtros viven en la URL, así que la página lee la query string y la
+ * pasa al contenedor. El contenedor es el que lee el dato y le entrega el
+ * estado a la vista: la página sólo enruta.
  */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
 
-export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="ADM-07"
-      tarea="Buscar y gestionar equipos"
-      packet="UI-04"
-    ></RoutePlaceholder>
-  );
+  return <EquiposAdminRuta parametros={parametrosDeConsulta(params)} />;
 }

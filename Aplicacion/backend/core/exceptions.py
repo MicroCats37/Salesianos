@@ -462,6 +462,104 @@ PUBLIC_ERROR_MESSAGES = {
     "GALERIA_INVALIDA": (
         "La galería del producto no es válida."
     ),
+    # ── DOM-03 · Pases, beneficiarios y cortesía (A0-03 / A0-04) ────────────
+    # Reconciliación A0 de 2026-11-19 del paquete DOM-03. Los códigos viajan
+    # estables en `error.code`; aquí sólo se les da la prosa pública segura.
+    # Ninguna prosa interpola UUIDs, ids internos, slugs, precios, rutas de
+    # disco, restricciones SQL, payloads de proveedor ni credenciales.
+    #
+    # CUATRO códigos de este paquete YA estaban catalogados y NO se duplican:
+    # `PASE_NO_DISPONIBLE` (409), `PASE_NO_ENCONTRADO` (404),
+    # `PASE_NO_TRANSFERIBLE` (409) y `PASE_BENEFICIARIO_NO_ENCONTRADO` (404).
+    # Los cuatro están CONGELADOS por el ledger `FR-07` §3.3 para `RT-CM-02` y
+    # `RT-RT-03`, y su status coincide con la clase de dominio.
+    # 422 — la cantidad de pases solicitados no es válida. CÓDIGO CONGELADO
+    # por el ledger `FR-07` §3.3 para `RT-CM-02`.
+    "CANTIDAD_INVALIDA": (
+        "La cantidad de pases solicitados no es válida."
+    ),
+    # 404 — la compra de pases solicitada no existe.
+    "COMPRA_PASE_NO_ENCONTRADA": (
+        "No se encontró la compra de pases solicitada."
+    ),
+    # 409 — la persona ya tiene un derecho activo de ese pase. La no
+    # duplicación la impone la base de datos: es UNA sola regla para los dos
+    # orígenes (compra y cortesía).
+    "PASE_DUPLICADO": (
+        "La persona ya tiene un pase activo de este tipo en la edición."
+    ),
+    # 409 — el lote no tiene capacidad pagada libre para asignar.
+    "SIN_PASES_DISPONIBLES": (
+        "No hay pases disponibles para asignar en esta compra."
+    ),
+    # 409 — una compra pendiente NO habilita ningún pase (`RN-P02`).
+    "COMPRA_PASE_NO_PAGADA": (
+        "La compra de pases todavía no está pagada."
+    ),
+    # 401 — el enlace de gestión no es válido: la credencial está ausente,
+    # expirada o revocada. Es un fallo de AUTENTICACIÓN, no de autorización.
+    "TOKEN_PASE_INVALIDO": (
+        "El enlace de gestión del pase no es válido."
+    ),
+    # 401 — la operación exige una cuenta autenticada: una cortesía sin actor
+    # no es auditable (`RN-P05`).
+    "ACTOR_REQUERIDO": (
+        "Debes iniciar sesión para realizar esta operación."
+    ),
+    # 403 — el actor no es el titular de la compra. Ser administrador NO
+    # sustituye la titularidad (`FR-03` §2.1).
+    "COMPRA_PASE_NO_AUTORIZADA": (
+        "No tiene autorización para gestionar esta compra de pases."
+    ),
+    # 422 — el motivo de la cortesía es obligatorio: sin motivo no es
+    # auditable (`RN-P05`).
+    "CORTESIA_MOTIVO_INVALIDO": (
+        "El motivo de la cortesía es obligatorio."
+    ),
+    # 404 — la cortesía solicitada no existe.
+    "CORTESIA_NO_ENCONTRADA": (
+        "No se encontró la cortesía solicitada."
+    ),
+    # ── DOM-02 · Pool de cupos, asignación y ampliación (A0-DOM02-03) ────────
+    # Petición de A0 del paquete DOM-02 que quedó PENDIENTE y se mergea aquí:
+    # la misma raíz compartida (`salesianos_fest`) y la misma dependencia del
+    # catálogo. `CUPO_INVALIDO` está CONGELADO por el ledger `FR-07` §3.3
+    # para `RT-CM-01`, que es una ruta VIVA: sin prosa pública el mensaje cae
+    # al genérico del status.
+    # 422 — la cantidad de cupos solicitados no es válida. CÓDIGO CONGELADO
+    # por el ledger `FR-07` §3.3 para `RT-CM-01`.
+    "CUPO_INVALIDO": (
+        "La cantidad de cupos solicitados no es válida."
+    ),
+    # 409 — la inscripción no tiene cupos pagados disponibles.
+    "SIN_CUPOS_DISPONIBLES": (
+        "No hay cupos pagados disponibles en esta inscripción."
+    ),
+    # 422 — la persona no cumple las reglas de elegibilidad: disciplina
+    # activa, pertenencia a la edición, compatibilidad de modalidad o
+    # solapamiento. El servidor decide, el cliente no lo sortea.
+    "PARTICIPANTE_NO_ELEGIBLE": (
+        "La persona no cumple las condiciones de elegibilidad para este equipo."
+    ),
+    # 422 — la persona ya participa activamente en esta inscripción.
+    "PARTICIPANTE_DUPLICADO": (
+        "La persona ya participa activamente en esta inscripción."
+    ),
+    # 409 — el equipo alcanzó el máximo de participantes de su disciplina.
+    "EQUIPO_COMPLETO": (
+        "El equipo alcanzó el máximo de participantes permitido."
+    ),
+    # 404 — la participación solicitada no existe o no pertenece a la
+    # inscripción.
+    "PARTICIPANTE_NO_ENCONTRADO": (
+        "No se encontró la participación solicitada."
+    ),
+    # 404 — el equipo solicitado no existe o no pertenece a la inscripción.
+    "EQUIPO_NO_ENCONTRADO": (
+        "No se encontró el equipo solicitado."
+    ),
+    # `PERSONA_NO_ENCONTRADA` (404) ya estaba catalogado por FND-03: no se
+    # duplicó.
 }
 
 # Fallback genérico por status HTTP (FR-01 §4.4). Se usa cuando el código de

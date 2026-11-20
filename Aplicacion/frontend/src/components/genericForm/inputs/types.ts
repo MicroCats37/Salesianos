@@ -21,6 +21,11 @@ export interface FieldConfig {
   disabled?: boolean;
   required?: boolean;
   hidden?: boolean | ((values: any) => boolean);
+  /**
+   * The fields whose values the `hidden` predicate reads. Declaring them
+   * scopes the subscription of the field to THOSE fields only.
+   */
+  dependsOn?: readonly string[];
 
   // Para select/radio
   options?: readonly InputOption[];
@@ -63,6 +68,11 @@ export interface InputComponentProps<
   control: Control<TFieldValues>;
   error?: { message?: string };
   id: string;
+  /**
+   * The id of the element that renders the error of this field, when the
+   * wrapper renders it. A control points at it with `aria-describedby`.
+   */
+  errorId?: string;
   /** When true, the input component should not render error messages (GenericInput's wrapper handles it). Defaults to false. */
   hideErrorMessage?: boolean;
 }

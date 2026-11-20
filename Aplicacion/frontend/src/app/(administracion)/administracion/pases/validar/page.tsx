@@ -1,17 +1,11 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { ValidarPaseRuta } from "@/features/validaciones/views";
 
 /**
- * ADM-16 — Controlar el ingreso a la fiesta
+ * ADM-16 - Controlar el ingreso a la fiesta
  *
- * Shell de ruta (FND-06). La vista la construye UI-05.
+ * La página es SÓLO RUTEO: el contenedor (`ValidarPaseRuta`) es el que
+ * habla con el backend y el que decide el estado de la pantalla.
  */
-
 export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="ADM-16"
-      tarea="Controlar el ingreso a la fiesta"
-      packet="UI-05"
-    ></RoutePlaceholder>
-  );
+  return <ValidarPaseRuta />;
 }

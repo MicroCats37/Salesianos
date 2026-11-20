@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AccountTopbar } from "@/components/shell/AccountTopbar";
+import { AppShell } from "@/components/shell/AppShell";
+import { RouteTransition } from "@/components/shell/RouteTransition";
 import { adminEsAdministrador } from "@/features/admin/utils/admin.secciones";
 import { getUserSession } from "@/lib/auth/actions";
 import { RUTAS } from "@/lib/routes";
@@ -8,8 +10,10 @@ import { RUTAS } from "@/lib/routes";
 /**
  * The account layout.
  *
- * The responsible has five destinations, so there is no sidebar here: a slim
- * top bar and the menu of the user. `/mi-cuenta` is the hub.
+ * The account area shares the shell of the authenticated product: the same
+ * sidebar, the same topbar and the same transition as the administration.
+ * The difference is only the CONTENT of the navigation: here there are no
+ * administration groups, because the backend never granted them.
  *
  * The guard is a COURTESY, not a control: the session cookie is writable by
  * the client and the backend re-evaluates every capability on every request.
@@ -33,25 +37,34 @@ export default async function CuentaLayout({
     .trim();
 
   return (
-    <div className="flex min-h-svh flex-col">
+    <>
       <a
         href="#contenido"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-(--z-toast) focus:rounded-[--radius-md] focus:bg-primary focus:px-4 focus:py-3 focus:font-semibold focus:text-primary-foreground"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-(--z-toast) focus:rounded-[var(--radius-md)] focus:bg-primary focus:px-4 focus:py-3 focus:font-semibold focus:text-primary-foreground"
       >
         Saltar al contenido
       </a>
 
-      <AccountTopbar
+      <AppShell
         usuario={nombre || sesion.email}
-        esAdmin={adminEsAdministrador(sesion)}
-      />
-
-      <main
-        id="contenido"
-        className="mx-auto w-full max-w-[1100px] flex-1 px-4 py-8 sm:px-6 lg:px-8"
+        nivel={adminEsAdministrador(sesion) ? "Administrador" : "Responsable"}
+        area="Mi cuenta"
+        areaHref={RUTAS.cuenta.miCuenta}
+        topbar={
+          <AccountTopbar
+            usuario={nombre || sesion.email}
+            esAdmin={adminEsAdministrador(sesion)}
+            conMarca={false}
+          />
+        }
       >
-        {children}
-      </main>
-    </div>
+        <main
+          id="contenido"
+          className="mx-auto w-full max-w-page min-w-0 flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:px-10"
+        >
+          <RouteTransition>{children}</RouteTransition>
+        </main>
+      </AppShell>
+    </>
   );
 }

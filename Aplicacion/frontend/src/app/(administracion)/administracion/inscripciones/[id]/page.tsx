@@ -1,24 +1,17 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { InscripcionAdminDetalleRuta } from "@/features/admin/inscripciones";
 
 /**
  * ADM-06 — Operar una inscripción: pool, equipos y compras
  *
- * Shell de ruta (FND-06). La vista la construye UI-04.
+ * El contenedor es el que lee el dato y le entrega el estado a la vista: la
+ * página sólo enruta.
  */
-
 export default async function Page({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <RoutePlaceholder
-      pageId="ADM-06"
-      tarea="Operar una inscripción: pool, equipos y compras"
-      packet="UI-04"
-    >
-      <p className="font-mono text-xs text-muted-foreground">id: {id}</p>
-    </RoutePlaceholder>
-  );
+
+  return <InscripcionAdminDetalleRuta id={id} />;
 }

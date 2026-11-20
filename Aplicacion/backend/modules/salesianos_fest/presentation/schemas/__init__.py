@@ -14,11 +14,18 @@ y `RT-CM-01`) con sus presenters y wrappers. El cambio es ADITIVO: no se
 modifica ni se elimina ninguna forma de respuesta existente, así que la
 semántica de versionado es MINOR (`core.contract_versions.tipo_de_cambio`).
 
+**DOM-03 (2026-11-19) — `1.1.0` → `1.2.0` (MINOR).** El paquete DOM-03
+CONGELA diez rutas nuevas del módulo (`RT-PS-01`…`RT-PS-08`, `RT-CM-02` y
+`RT-RT-03`) con sus presenters y wrappers. El cambio es ADITIVO: no se
+modifica ni se elimina ninguna forma de respuesta existente, así que la
+semántica de versionado vuelve a ser MINOR
+(`core.contract_versions.tipo_de_cambio`).
+
 El registro global `core.contract_versions.SCHEMA_VERSIONS` es de A0: este
 paquete NO lo edita y deja constancia del DRIFT pendiente en su evidencia.
 """
 
 #: Versión congelada del contrato de presenters/schemas del módulo.
-SCHEMA_VERSION = "1.1.0"
+SCHEMA_VERSION = "1.2.0"
 
 __all__ = ["SCHEMA_VERSION"]

@@ -16,6 +16,11 @@ El módulo cruza al DOMINIO en DOS puntos, y ambos cruzan por PUERTO:
    "agregar persona existente **o** resolverla por documento": este módulo
    CONSULTA el padrón a través del puerto y NO crea identidades.
 
+4. **La OBTENCIÓN de una identidad** — la resuelve `modules.usuarios`, que
+   es su dueño. La compra de pases puede ser INVITADA (`FL-06` paso 2), y un
+   invitado es una identidad civil **sin cuenta**: este puerto registra la
+   `Persona` que falte y **nunca** un `Usuario`.
+
 La compra, en cambio, NO cruza por puerto: `commerce` es la INFRAESTRUCTURA
 comercial compartida y su interfaz está CONGELADA (`FREEZE-CM-1.0.0`,
 `RN-C01`). El flujo consume `CompraFlujo` directamente, que es el puerto de
@@ -127,8 +132,56 @@ class IResolucionPersonaService(ABC):
         ...
 
 
+class IObtensionPersonaService(ABC):
+    """Obtiene —o registra— la identidad civil de un comprador INVITADO.
+
+    Es el puerto que permite la compra SIN CUENTA (`FL-06` paso 2):
+
+    - Si el documento ya existe en el padrón, devuelve esa `Persona`.
+    - Si NO existe, la REGISTRA como identidad civil **sin cuenta**: crea una
+      `Persona`, y **nunca** un `Usuario` (`FR-03` §1.1 — "la `Persona`
+      EXISTE SIN CUENTA"; `FR-03` §1.2 — "No crear cuenta automática").
+
+    `usuarios` es el DUEÑO del padrón: este puerto no escribe identidades por
+    su cuenta, traduce la intención del dominio a las primitivas de
+    `usuarios`.
+
+    La NO duplicación es autoritativa en la base de datos de `usuarios`
+    (`unique_tipo_numero_documento`): dos compras simultáneas con el mismo
+    documento no crean dos identidades.
+    """
+
+    @abstractmethod
+    def obtener_o_registrar(
+        self,
+        *,
+        tipo_documento: str,
+        numero_documento: str,
+        nombres: str,
+        apellidos: str = "",
+    ):
+        """La `Persona` de ese documento, registrándola si no existía.
+
+        Args:
+            tipo_documento: tipo de documento (DNI, CE, PAS…).
+            numero_documento: número de documento.
+            nombres: nombres declarados en el checkout.
+            apellidos: apellidos declarados en el checkout (opcionales).
+
+        Returns:
+            La `Persona` del padrón.
+
+        Raises:
+            Exception: si el documento ya existe con datos distintos o si la
+                base de datos rechaza el registro. El flujo lo traduce a un
+                error de dominio.
+        """
+        ...
+
+
 __all__ = [
     "IAlcanceEdicionService",
+    "IObtensionPersonaService",
     "IResolucionPersonaService",
     "ITitularidadService",
 ]

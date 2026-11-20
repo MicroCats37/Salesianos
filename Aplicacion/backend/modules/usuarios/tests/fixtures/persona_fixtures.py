@@ -195,7 +195,7 @@ def usuario_administrador(db):
 
 @pytest.fixture(scope="session")
 def api_usuarios():
-    """API de prueba con el controller de identidad registrado.
+    """API de prueba con los controllers de identidad registrados.
 
     Es una API LOCAL del test: el registro real en `config/api.py` es de A0.
 
@@ -206,6 +206,9 @@ def api_usuarios():
     (`Cannot resolve "/personas/resolver"`). Con UNA sola API por sesión el
     estado global es consistente.
 
+    Registra los DOS controllers del módulo: `PersonaController` (FND-03) y
+    `AuthController` (FND-03A — login y sesión).
+
     El `urls_namespace` es único por proceso, igual que en `config/api.py`.
     """
     import uuid
@@ -214,14 +217,17 @@ def api_usuarios():
     from ninja_extra import NinjaExtraAPI
     from ninja_jwt.authentication import JWTAuth
 
-    from modules.usuarios.presentation.controllers import PersonaController
+    from modules.usuarios.presentation.controllers import (
+        AuthController,
+        PersonaController,
+    )
 
     api = NinjaExtraAPI(
         urls_namespace=f"usuarios-test-{uuid.uuid4().hex[:8]}",
         auth=JWTAuth(),
     )
     register_exception_handlers(api)
-    api.register_controllers(PersonaController)
+    api.register_controllers(PersonaController, AuthController)
     return api
 
 

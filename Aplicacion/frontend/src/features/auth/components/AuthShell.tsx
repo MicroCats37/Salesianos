@@ -4,7 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { gsap } from "gsap";
 import { AuthVisualPanel } from "@/features/auth/components/AuthVisualPanel";
 import { BrandMark } from "@/components/brand/BrandMark";
-import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 export type AuthVariant = "login" | "register";
 
@@ -59,11 +59,7 @@ export function AuthShell({
   }, [invertColumns, variant]);
 
   return (
-    <div
-      className={cn(
-        `${variant}-bg flex min-h-dvh w-full flex-col overflow-hidden lg:flex-row lg:min-h-svh`,
-      )}
-    >
+    <div className="flex min-h-dvh w-full flex-col overflow-hidden lg:flex-row lg:min-h-svh">
       <div
         className={`relative hidden min-h-svh w-full overflow-hidden lg:block lg:w-1/2 ${visualOrder}`}
       >
@@ -75,6 +71,15 @@ export function AuthShell({
       <div
         className={`relative flex min-h-dvh w-full items-center justify-center overflow-y-auto bg-brand-gradient-deep px-4 py-8 text-surface-inverse-foreground sm:px-8 lg:min-h-svh lg:w-1/2 lg:px-10 ${formOrder}`}
       >
+        {/*
+          El acceso no tiene barra superior, pero el tema sigue siendo una
+          decisión de la persona: el control vive arriba a la derecha, sobre
+          la banda de marca, con la tinta del gradiente.
+        */}
+        <div className="absolute right-3 top-3 z-20 sm:right-5 sm:top-5">
+          <ThemeToggle className="text-brand-on-gradient hover:bg-brand-on-gradient-soft hover:text-brand-on-gradient" />
+        </div>
+
         <div className="auth-shell-card relative z-10 w-full max-w-[480px] py-4">
           <div className="mb-6 flex justify-center lg:hidden">
             <BrandMark size={26} />

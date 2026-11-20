@@ -72,18 +72,44 @@ function SubtleFormSparks() {
     return () => ctx.revert();
   }, []);
 
+  /**
+   * The clouds and the sparks are DECORATION over the deep-navy column of the
+   * form. Their colours come from the ROLES of the brand — gold, cyan, blue
+   * and indigo — and the white spark is the ink of the inverse surface. There
+   * is no literal colour here: the roles resolve in both themes.
+   */
   const clouds = [
-    { color: "rgba(244,197,74,0.85)", top: "10%", left: "8%", size: "55vh" },
-    { color: "rgba(34,211,238,0.85)", top: "55%", left: "65%", size: "50vh" },
-    { color: "rgba(236,72,153,0.85)", top: "75%", left: "5%", size: "45vh" },
-    { color: "rgba(99,102,241,0.85)", top: "20%", left: "70%", size: "40vh" },
+    {
+      color: "color-mix(in srgb, var(--accent) 85%, transparent)",
+      top: "10%",
+      left: "8%",
+      size: "55vh",
+    },
+    {
+      color: "color-mix(in srgb, var(--brand-cyan) 85%, transparent)",
+      top: "55%",
+      left: "65%",
+      size: "50vh",
+    },
+    {
+      color: "color-mix(in srgb, var(--info) 85%, transparent)",
+      top: "75%",
+      left: "5%",
+      size: "45vh",
+    },
+    {
+      color: "color-mix(in srgb, var(--secondary) 85%, transparent)",
+      top: "20%",
+      left: "70%",
+      size: "40vh",
+    },
   ];
 
   const sparkColors = [
-    "rgba(244,197,74,1)",
-    "rgba(34,211,238,1)",
-    "rgba(236,72,153,1)",
-    "rgba(255,255,255,1)",
+    "var(--accent)",
+    "var(--brand-cyan)",
+    "var(--info)",
+    "var(--surface-inverse-foreground)",
   ];
 
   return (
@@ -143,7 +169,7 @@ export function RegisterClientShell() {
       variant="register"
       invertColumns
       form={
-        <div className="register-form-shell relative">
+        <div className="relative">
           <SubtleFormSparks />
           <AuthGlassCard>
             <RegisterForm />

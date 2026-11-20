@@ -1,3 +1,9 @@
+export { useCyclingText } from "./useCyclingText";
+export {
+  useConfirmarPersona,
+  useConsultaDocumento,
+  useResolverPersona,
+} from "./useIdentidad";
 export { useLogin } from "./useLogin";
 export { useRegister } from "./useRegister";
-export { useCyclingText } from "./useCyclingText";
+export { useSesionActual } from "./useSesionActual";

@@ -1,8 +1,9 @@
 import { getUserSession } from "@/lib/auth/actions";
 import { consumePostAuthRedirect } from "@/lib/post-auth-redirect";
+import { RUTAS } from "@/lib/routes";
 
-export const DESTINO_ADMIN = "/administracion";
-export const DESTINO_POR_DEFECTO = "/mi-cuenta";
+export const DESTINO_ADMIN = RUTAS.administracion.resumen;
+export const DESTINO_POR_DEFECTO = RUTAS.cuenta.miCuenta;
 
 /**
  * Decide a donde va la persona despues de autenticarse.

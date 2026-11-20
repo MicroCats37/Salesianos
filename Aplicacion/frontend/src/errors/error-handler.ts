@@ -1,5 +1,6 @@
 import type { AxiosError } from "axios";
 
+import { parseFieldErrors } from "./field-errors";
 import type { ApiError, ErrorParser } from "./types";
 
 // =====================================================================
@@ -9,6 +10,10 @@ import type { ApiError, ErrorParser } from "./types";
 /**
  * Django Ninja / Pydantic (422 Unprocessable Entity)
  * Format: { detail: [{ loc: ["body", "field"], msg: "...", type: "..." }] }
+ *
+ * The per-field messages of this shape are read by `field-errors.ts`, which
+ * normalizes every channel of the envelope into the `{ field: message }` map
+ * that React Hook Form consumes.
  */
 
 /**
@@ -21,6 +26,31 @@ const genericRestParser: ErrorParser = (_status, data: any) => {
   // when present (backend now concatenates NonFieldErrors + field errors with " • ").
   if (data?.error?.message && typeof data.error.message === "string" && data.error.message.length > 0) {
     return { message: data.error.message, status: _status };
+  }
+
+  // Django Ninja / Pydantic 422: `detail` is an ARRAY of per-field entries,
+  // so the top-level string lookup below cannot read it.
+  if (Array.isArray(data?.detail)) {
+    const summary = data.detail
+      .map((entry: any) => {
+        const message =
+          typeof entry?.msg === "string"
+            ? entry.msg
+            : typeof entry === "string"
+              ? entry
+              : undefined;
+        if (!message) return "";
+        const location = Array.isArray(entry?.loc)
+          ? entry.loc.filter((part: unknown) => part !== "body")
+          : [];
+        const label = location.map((part: unknown) => String(part)).join(".");
+        return label ? `${label}: ${message}` : message;
+      })
+      .filter((part: string) => part.length > 0)
+      .join("; ");
+    if (summary.length > 0) {
+      return { message: summary, status: _status };
+    }
   }
 
   // Handle nested error structure: { success: false, error: { code, message, details: { ... } } }
@@ -89,11 +119,17 @@ const DEFAULT_MESSAGES = {
   network: "Could not connect to the server. Please check your connection.",
   unknown: "An unexpected error occurred.",
   fallback: "An error occurred while processing the request.",
+  validation: "Please correct the highlighted fields.",
 };
 
 /**
  * Processes any error (typically Axios) into a standardized ApiError.
  * Runs through the parser chain — first match wins.
+ *
+ * The field-level errors of the response are attached to EVERY result, no
+ * matter which parser produced the message: the field channel of the frozen
+ * envelope (`error.field_errors[]`) is read by `field-errors.ts` and travels
+ * as `fieldErrors`, the map that React Hook Form's `setError` consumes.
  */
 export function handleApiError(error: unknown): ApiError {
   const axiosError = error as AxiosError<unknown>;
@@ -111,18 +147,28 @@ export function handleApiError(error: unknown): ApiError {
 
   const { status, data } = axiosError.response;
 
+  const fieldErrors = parseFieldErrors(data);
+
   // Run parser chain
   for (const parser of parsers) {
     const result = parser(status, data);
     if (result) {
-      return { ...result, raw: error };
+      return {
+        ...result,
+        ...(fieldErrors ? { fieldErrors } : {}),
+        raw: error,
+      };
     }
   }
 
   // Nothing matched
   return {
-    message: DEFAULT_MESSAGES.fallback,
+    message:
+      fieldErrors && status === 422
+        ? DEFAULT_MESSAGES.validation
+        : DEFAULT_MESSAGES.fallback,
     status,
+    ...(fieldErrors ? { fieldErrors } : {}),
     raw: error,
   };
 }

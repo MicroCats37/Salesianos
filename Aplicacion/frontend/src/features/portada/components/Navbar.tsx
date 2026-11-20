@@ -4,9 +4,11 @@ import { Menu, Radio, User, X } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 import { NavbarBrand } from "@/components/brand/NavbarBrand";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { useAuthUser } from "@/features/auth/store/auth.store";
 import { EN_VIVO } from "@/features/portada/fixtures/festival";
+import { RUTAS } from "@/lib/routes";
 
 export interface NavbarProps {
   navLinks?: { href: string; label: string }[];
@@ -40,22 +42,17 @@ export function Navbar({
 
   const dashboardHref =
     user?.rol === "admin_comite" || user?.rol === "admin_finanzas"
-      ? "/admin/dashboard"
-      : "/dashboard";
-  const registrationHref = user ? "/inscripcion" : "/register";
+      ? RUTAS.administracion.resumen
+      : RUTAS.cuenta.miCuenta;
+  const registrationHref = user
+    ? RUTAS.cuenta.inscripcion
+    : RUTAS.auth.registro;
   /**
    * The party passes are bought with an account: a visitor without a session
    * is sent to the registration, exactly like the sports registration.
    */
-  const pasesHref = user ? "/pases" : "/register";
+  const pasesHref = user ? RUTAS.publico.pases : RUTAS.auth.registro;
   const canShowLive = showLive && EN_VIVO.url.length > 0;
-
-  /**
-   * El separador del navbar se apaga cuando el menú móvil está abierto: en ese
-   * caso el panel abre con su propia línea superior y dos bordes seguidos se
-   * leen como un error de composición.
-   */
-  const separadorVisible = scrolled && !mobileOpen;
 
   return (
     <>
@@ -66,113 +63,112 @@ export function Navbar({
         Saltar al contenido
       </a>
 
-      <header
-        className={`sticky top-0 z-50 backdrop-blur-xl transition-all ${
-          scrolled ? "bg-surface-raised/92 shadow-lg" : "bg-surface-raised/80"
-        }`}
-      >
-        {/*
-          La fila consume el token del chrome: el navbar y las secciones que se
-          miden contra el espacio que deja libre no pueden desincronizarse.
-          El borde va DENTRO de la fila (box-sizing: border-box), así que la
-          altura total del chrome es exactamente el token.
-        */}
+      {/*
+        La barra FLOTA: es una píldora de vidrio pegada al borde superior,
+        no una franja que tape la página. El `pointer-events-none` del
+        contenedor deja pasar el puntero por los huecos que sobran a los
+        lados, y la píldora los recupera: nada de la portada deja de ser
+        clicable por culpa del chrome.
+      */}
+      <header className="pointer-events-none sticky top-0 z-50 pt-3 sm:pt-4">
         <div
-          className={`h-[var(--portada-chrome-height)] border-b transition-colors ${
-            separadorVisible ? "border-primary/10" : "border-transparent"
+          className={`pointer-events-auto mx-auto flex h-16 w-[calc(100%-1.5rem)] max-w-[1400px] items-center justify-between gap-4 rounded-[var(--radius-2xl)] border px-3 transition-all duration-(--motion-duration-base) sm:w-[calc(100%-2rem)] sm:px-5 ${
+            scrolled
+              ? "border-border bg-surface-raised/90 shadow-[var(--elevation-lg)] backdrop-blur-xl"
+              : "border-border/50 bg-surface-raised/65 shadow-[var(--elevation-md)] backdrop-blur-xl"
           }`}
         >
-          <div className="mx-auto flex h-full max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <div className="shrink-0">{brandSlot}</div>
+          <div className="shrink-0">{brandSlot}</div>
 
-            <nav className="hidden min-w-0 items-center justify-center gap-5 text-[13px] font-bold text-muted-foreground xl:flex">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="whitespace-nowrap transition hover:text-primary"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
+          <nav className="hidden min-w-0 items-center justify-center gap-5 text-[13px] font-bold text-muted-foreground xl:flex">
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="whitespace-nowrap transition-colors hover:text-primary"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
 
-            <div className="hidden shrink-0 items-center gap-3 lg:flex">
-              {canShowLive ? (
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 rounded-full border-primary/25 px-4 text-xs font-black uppercase tracking-wider text-primary"
-                >
-                  <a
-                    href={EN_VIVO.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Radio className="mr-2 size-4" />
-                    En vivo
-                  </a>
-                </Button>
-              ) : null}
+          <div className="hidden shrink-0 items-center gap-3 lg:flex">
+            <ThemeToggle />
 
-              {user ? (
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="h-11 rounded-full px-5 text-sm font-black text-muted-foreground"
-                >
-                  <Link href={dashboardHref}>
-                    <User className="mr-2 size-4" />
-                    Mi cuenta
-                  </Link>
-                </Button>
-              ) : (
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="h-11 rounded-full px-5 text-sm font-black text-muted-foreground"
-                >
-                  <Link href="/login">Iniciar sesión</Link>
-                </Button>
-              )}
-
+            {canShowLive ? (
               <Button
                 asChild
                 variant="outline"
                 className="h-11 rounded-full border-primary/25 px-4 text-xs font-black uppercase tracking-wider text-primary"
               >
-                <Link href={pasesHref}>Comprar pase de fiesta</Link>
+                <a
+                  href={EN_VIVO.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Radio className="mr-2 size-4" />
+                  En vivo
+                </a>
               </Button>
+            ) : null}
 
+            {user ? (
               <Button
                 asChild
-                className="btn-brand-gradient btn-shine h-11 rounded-full px-5 text-sm font-black text-primary-foreground"
+                variant="ghost"
+                className="h-11 rounded-full px-5 text-sm font-black text-muted-foreground"
               >
-                <Link href={registrationHref}>{ctaLabel}</Link>
+                <Link href={dashboardHref}>
+                  <User className="mr-2 size-4" />
+                  Mi cuenta
+                </Link>
               </Button>
-            </div>
+            ) : (
+              <Button
+                asChild
+                variant="ghost"
+                className="h-11 rounded-full px-5 text-sm font-black text-muted-foreground"
+              >
+                <Link href={RUTAS.auth.login}>Iniciar sesión</Link>
+              </Button>
+            )}
 
-            <button
-              type="button"
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/10 xl:hidden"
-              aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
-              aria-expanded={mobileOpen}
-              aria-controls="navbar-mobile-menu"
-              onClick={() => setMobileOpen(!mobileOpen)}
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 rounded-full border-primary/25 px-4 text-xs font-black uppercase tracking-wider text-primary"
             >
-              {mobileOpen ? (
-                <X className="size-5 text-primary" />
-              ) : (
-                <Menu className="size-5 text-primary" />
-              )}
-            </button>
+              <Link href={pasesHref}>Comprar pase de fiesta</Link>
+            </Button>
+
+            <Button
+              asChild
+              className="btn-brand-gradient btn-shine h-11 rounded-full px-5 text-sm font-black text-primary-foreground"
+            >
+              <Link href={registrationHref}>{ctaLabel}</Link>
+            </Button>
           </div>
+
+          <button
+            type="button"
+            className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border/60 transition-colors hover:bg-muted xl:hidden"
+            aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={mobileOpen}
+            aria-controls="navbar-mobile-menu"
+            onClick={() => setMobileOpen(!mobileOpen)}
+          >
+            {mobileOpen ? (
+              <X className="size-5 text-primary" />
+            ) : (
+              <Menu className="size-5 text-primary" />
+            )}
+          </button>
         </div>
 
         {mobileOpen ? (
           <div
             id="navbar-mobile-menu"
-            className="border-t border-primary/10 bg-surface-raised px-4 py-4 xl:hidden"
+            className="pointer-events-auto mx-auto mt-2 w-[calc(100%-1.5rem)] max-w-[1400px] rounded-[var(--radius-xl)] border border-border/60 bg-surface-raised/95 p-4 shadow-[var(--elevation-lg)] backdrop-blur-xl sm:w-[calc(100%-2rem)] xl:hidden"
           >
             <nav className="flex flex-col gap-4">
               {navLinks.map((link) => (
@@ -185,6 +181,8 @@ export function Navbar({
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-2">
+                <ThemeToggle />
+
                 {user ? (
                   <Button
                     asChild
@@ -202,7 +200,7 @@ export function Navbar({
                     variant="outline"
                     className="h-11 rounded-xl font-bold"
                   >
-                    <Link href="/login">Iniciar sesión</Link>
+                    <Link href={RUTAS.auth.login}>Iniciar sesión</Link>
                   </Button>
                 )}
 

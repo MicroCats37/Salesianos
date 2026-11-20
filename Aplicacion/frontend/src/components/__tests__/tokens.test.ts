@@ -52,6 +52,52 @@ function recorrer(dir: string): string[] {
   return salida;
 }
 
+/**
+ * The roles that the global system DECLARES.
+ *
+ * A role lives in `globals.css`, at whatever level: `@theme inline`, `:root`
+ * or `.dark`. The scanner reads every custom property declaration of that
+ * file, so the guard does not have to know where each role is declared.
+ */
+function rolesDeclarados(): Set<string> {
+  const globals = readFileSync(join(RAIZ, "app", "globals.css"), "utf8");
+  const declarados = new Set<string>();
+
+  for (const coincidencia of globals.matchAll(/--([a-zA-Z0-9-]+)\s*:/g)) {
+    declarados.add(coincidencia[1]);
+  }
+
+  return declarados;
+}
+
+/**
+ * The roles that the CODE publishes, not the stylesheet.
+ *
+ * A component can publish a custom property through an inline style
+ * (`style={{ "--sidebar-width": … }}`) and `next/font` publishes the family
+ * of the text through `variable: "--font-plus-jakarta-sans"`. Those are
+ * legitimate OWNERS of a variable: the guard only forbids a CONSUMER that
+ * reads a variable nobody declares.
+ */
+function rolesPublicadosPorElCodigo(): Set<string> {
+  const publicados = new Set<string>();
+
+  for (const archivo of recorrer(RAIZ)) {
+    const nombre = relative(RAIZ, archivo).replace(/\\/g, "/");
+
+    // The frozen legacy tree is not part of the target.
+    if (nombre.startsWith("components-app")) continue;
+
+    const fuente = readFileSync(archivo, "utf8");
+
+    for (const coincidencia of fuente.matchAll(/"--([a-zA-Z0-9-]+)"/g)) {
+      publicados.add(coincidencia[1]);
+    }
+  }
+
+  return publicados;
+}
+
 describe("tokens — ningun componente lleva un color literal", () => {
   const archivos = CARPETAS.flatMap((carpeta) => {
     const dir = join(RAIZ, carpeta);
@@ -134,4 +180,54 @@ describe("tokens — el sistema global declara los roles", () => {
     expect(globals).not.toContain("scroll-snap-type");
     expect(globals).not.toContain("overflow-y: scroll");
   });
+});
+
+/**
+ * The second half of the token contract: not only does a component ask for a
+ * ROLE, the role must EXIST.
+ *
+ * A consumer that reads a variable nobody declares is invisible in the
+ * editor and in the review: the property simply falls back to `inherit` (or
+ * to nothing) and the defect only shows on screen. The rebuild proved it:
+ * the auth feature still read `--gold` and `--color-gold`, two variables that
+ * the rewrite of the token system had removed.
+ */
+describe("tokens — ninguna regla lee una variable que nadie declara", () => {
+  const declarados = rolesDeclarados();
+  const publicados = rolesPublicadosPorElCodigo();
+
+  const archivos = CARPETAS.flatMap((carpeta) => {
+    const dir = join(RAIZ, carpeta);
+    return recorrer(dir).filter(
+      (archivo) =>
+        !relative(RAIZ, archivo).replace(/\\/g, "/").includes(EL_GUARD),
+    );
+  });
+
+  it("encuentra los archivos que debe vigilar", () => {
+    expect(archivos.length).toBeGreaterThan(20);
+  });
+
+  it.each(archivos.map((archivo) => [relative(RAIZ, archivo), archivo]))(
+    "%s no lee variables inexistentes",
+    (_nombre, archivo) => {
+      const fuente = readFileSync(archivo, "utf8");
+      const inexistentes: string[] = [];
+
+      for (const coincidencia of fuente.matchAll(
+        /var\(\s*--([a-zA-Z0-9-]+)\s*([,)])/g,
+      )) {
+        const nombre = coincidencia[1];
+
+        // A variable with a fallback declares its own default.
+        if (coincidencia[2] === ",") continue;
+        if (declarados.has(nombre)) continue;
+        if (publicados.has(nombre)) continue;
+
+        inexistentes.push(nombre);
+      }
+
+      expect([...new Set(inexistentes)].join(", ")).toBe("");
+    },
+  );
 });

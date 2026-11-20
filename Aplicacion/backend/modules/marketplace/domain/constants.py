@@ -106,6 +106,61 @@ class AccionPedido(models.TextChoices):
     VER_TICKET = "VER_TICKET", "Ver el ticket"
 
 
+class EstadoReservaInventario(models.TextChoices):
+    """Estado de una reserva de existencias (RN-M06).
+
+    La reserva es la UNIDAD que sostiene la anti-sobreventa: mientras está
+    `ACTIVA` sus unidades están apartadas del catálogo y no se pueden vender
+    dos veces.
+
+    - `ACTIVA` — las unidades están reservadas por un pedido pendiente.
+    - `CONFIRMADA` — la venta se cobró: las unidades salieron del stock
+      físico (RN-M06: no se descuenta dos veces).
+    - `LIBERADA` — el pedido se canceló: las unidades vuelven al catálogo.
+    """
+
+    ACTIVA = "ACTIVA", "Activa"
+    CONFIRMADA = "CONFIRMADA", "Confirmada"
+    LIBERADA = "LIBERADA", "Liberada"
+
+
+class TipoMovimientoInventario(models.TextChoices):
+    """Naturaleza de un movimiento de inventario (RN-M04).
+
+    El movimiento es la BITÁCORA: guarda producto, signo/cantidad, motivo,
+    referencia de origen y actor. Nunca se borra: una corrección es un
+    movimiento COMPENSATORIO, no un borrado (plan `funcional/03` §5).
+
+    - `VENTA` — salida por venta: la genera el sistema al confirmar el pago.
+    - `REPOSICION` — entrada de existencias.
+    - `MERMA` — salida por merma o rotura.
+    - `CONSUMO_INTERNO` — salida por consumo interno.
+    - `AJUSTE` — ajuste de inventario, en cualquiera de los dos sentidos.
+    - `SALIDA_SIN_VENTA` — salida sin venta (regalo, uso interno): NO crea
+      compra ni pago (RN-M05).
+    - `REVERSION` — movimiento compensatorio de otro movimiento.
+    """
+
+    VENTA = "VENTA", "Venta"
+    REPOSICION = "REPOSICION", "Reposición"
+    MERMA = "MERMA", "Merma"
+    CONSUMO_INTERNO = "CONSUMO_INTERNO", "Consumo interno"
+    AJUSTE = "AJUSTE", "Ajuste"
+    SALIDA_SIN_VENTA = "SALIDA_SIN_VENTA", "Salida sin venta"
+    REVERSION = "REVERSION", "Reversión"
+
+
+#: Signo que la NATURALEZA del movimiento manual impone a la cantidad
+#: (RN-M04: "producto, signo/cantidad, motivo, referencia origen y actor").
+#: `AJUSTE` no aparece aquí: su sentido lo declara el operador.
+SIGNO_MOVIMIENTO_MANUAL = {
+    TipoMovimientoInventario.REPOSICION: 1,
+    TipoMovimientoInventario.MERMA: -1,
+    TipoMovimientoInventario.CONSUMO_INTERNO: -1,
+    TipoMovimientoInventario.SALIDA_SIN_VENTA: -1,
+}
+
+
 #: Primer segmento autorizado de la ruta de media del marketplace (FR-06 §2.2).
 DOMINIO_MEDIA = "productos"
 
@@ -129,10 +184,13 @@ __all__ = [
     "MAX_CANTIDAD_ITEM_PEDIDO",
     "MODULO_LOGICO",
     "MONEDA_PEDIDO",
+    "SIGNO_MOVIMIENTO_MANUAL",
     "AccionPedido",
     "EstadoEntregaPedido",
     "EstadoPagoPedido",
     "EstadoPedido",
     "EstadoProducto",
+    "EstadoReservaInventario",
     "TipoItemPedido",
+    "TipoMovimientoInventario",
 ]

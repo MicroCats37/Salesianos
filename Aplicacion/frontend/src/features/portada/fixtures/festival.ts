@@ -6,6 +6,8 @@
  * horario de verano, así que no hace falta ninguna librería de zonas.
  */
 
+import { RUTAS } from "@/lib/routes";
+
 export const FESTIVAL = {
   nombre: "Salesianos FEST 2026",
   edicion: "EDICIÓN 2026",
@@ -45,7 +47,7 @@ export const ENLACES = {
     "https://www.facebook.com/people/Salesianos-2002-Bodas-de-Plata/61593863260385/?sk=photos",
   instagram: "https://www.instagram.com/salesianos2002bodasdeplata",
   tiktok: "https://www.tiktok.com/@salesianos.2002",
-  registro: "/inscripcion",
+  registro: RUTAS.cuenta.inscripcion,
   calendario: "/salesianos-fest-2026.ics",
 } as const;
 

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { RUTAS } from "@/lib/routes";
 
 /**
  * The global error boundary.
@@ -22,13 +24,13 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-[640px] flex-col justify-center gap-6 px-4 py-16 sm:px-6">
+    <main className="mx-auto flex min-h-svh w-full max-w-page animate-in fade-in-0 flex-col justify-center gap-6 px-4 py-16 duration-500 ease-out sm:px-6">
       <p className="text-eyebrow-brand text-primary">Error</p>
       <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+        <h1 className="text-title-page text-foreground">
           Algo se rompió por el camino
         </h1>
-        <p className="text-muted-foreground">
+        <p className="max-w-measure text-lead text-muted-foreground">
           {error.message ||
             "No pudimos completar esta operación. Vuelve a intentarlo o regresa al inicio."}
         </p>
@@ -38,10 +40,12 @@ export default function GlobalError({
           </p>
         ) : null}
       </div>
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={reset}>Reintentar</Button>
-        <Button variant="outline" asChild>
-          <a href="/">Ir al inicio</a>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={reset} className="min-h-11">
+          Reintentar
+        </Button>
+        <Button variant="outline" asChild className="min-h-11">
+          <Link href={RUTAS.publico.inicio}>Ir al inicio</Link>
         </Button>
       </div>
     </main>

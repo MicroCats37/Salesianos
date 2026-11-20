@@ -1,17 +1,8 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { AgendaCompetenciasView } from "@/features/competencias/views";
 
 /**
- * ADM-13 — Consultar la programación
- *
- * Shell de ruta (FND-06). La vista la construye UI-05.
+ * ADM-13 - Consultar la programación
  */
-
 export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="ADM-13"
-      tarea="Consultar la programación"
-      packet="UI-05"
-    ></RoutePlaceholder>
-  );
+  return <AgendaCompetenciasView />;
 }

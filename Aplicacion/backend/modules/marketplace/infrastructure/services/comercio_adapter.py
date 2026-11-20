@@ -20,8 +20,11 @@ necesita, además de crear la compra, LEER su estado para distinguir el
 pago, el pedido y la entrega (RN-M07). El puerto expone las dos
 operaciones; este adaptador las implementa.
 
-Los imports de `commerce` son PEREZOSOS a propósito: el grafo de módulos
-queda acíclico y el orden de carga de Django no importa.
+**Quién construye el adaptador.** `modules/marketplace/di.py`, con una
+fábrica perezosa: `commerce` liga su propio `CompraFlujo` en
+`modules/commerce/di.py` y este adaptador lo CONSUME por el inyector. Así
+el grafo de módulos queda acíclico, el orden de carga de Django no importa y
+este módulo NO duplica el wiring de `commerce`.
 """
 
 import logging
@@ -43,15 +46,7 @@ logger = logging.getLogger(__name__)
 class CommerceMarketplaceAdapter(ICommerceMarketplaceService):
     """La frontera de `marketplace` con la infraestructura comercial."""
 
-    def __init__(self, compra_flujo=None, compra_selector=None):
-        if compra_flujo is None:
-            from modules.commerce.domain.services.flujos.compra_flujo import CompraFlujo
-
-            compra_flujo = CompraFlujo()
-        if compra_selector is None:
-            from modules.commerce.domain.selectors.compra_selector import CompraSelector
-
-            compra_selector = CompraSelector()
+    def __init__(self, compra_flujo, compra_selector):
         self.compra_flujo = compra_flujo
         self.compra_selector = compra_selector
 

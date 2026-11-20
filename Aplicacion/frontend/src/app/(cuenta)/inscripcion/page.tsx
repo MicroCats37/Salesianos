@@ -1,17 +1,18 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { InscripcionWizardView } from "@/features/inscripciones/views";
 
 /**
- * SPORT-01 — Crear una inscripción deportiva
+ * SPORT-01 - Crear una inscripción deportiva
  *
- * Shell de ruta (FND-06). La vista la construye UI-02.
+ * La ruta sólo compone: el asistente vive en la feature. El paso vive en
+ * la URL (`?paso=`), así que un paso se puede recuperar y el navegador
+ * puede recargarlo sin perder el sitio.
  */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ paso?: string }>;
+}) {
+  const { paso } = await searchParams;
 
-export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="SPORT-01"
-      tarea="Crear una inscripción deportiva"
-      packet="UI-02"
-    ></RoutePlaceholder>
-  );
+  return <InscripcionWizardView pasoSolicitado={paso} />;
 }

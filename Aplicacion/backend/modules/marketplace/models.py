@@ -7,16 +7,22 @@ Este archivo NO contiene lógica: sólo re-exporta `domain/models/`.
 
 from modules.marketplace.domain.models import (
     CategoriaProducto,
+    EntregaPedido,
+    MovimientoInventario,
     Pedido,
     PedidoDetalle,
     Producto,
     ProductoImagen,
+    ReservaInventario,
 )
 
 __all__ = [
     "CategoriaProducto",
+    "EntregaPedido",
+    "MovimientoInventario",
     "Pedido",
     "PedidoDetalle",
     "Producto",
     "ProductoImagen",
+    "ReservaInventario",
 ]

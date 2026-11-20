@@ -10,13 +10,19 @@ from django.contrib import admin
 
 from modules.salesianos_fest.domain.models import (
     ActivacionCapacidad,
+    ActivacionPase,
     BeneficioConcedido,
+    CompraPase,
+    CortesiaPase,
     Disciplina,
     Equipo,
     Inscripcion,
     Paquete,
     PaqueteBeneficio,
     PaquetePrecio,
+    Pase,
+    PaseBeneficiario,
+    PasePrecio,
     Participacion,
 )
 
@@ -147,14 +153,138 @@ class BeneficioConcedidoAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at", "concedido_en")
 
 
+@admin.register(Pase)
+class PaseAdmin(admin.ModelAdmin):
+    list_display = ("nombre", "edicion", "estado")
+    list_filter = ("estado", "edicion")
+    search_fields = ("nombre", "slug")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(PasePrecio)
+class PasePrecioAdmin(admin.ModelAdmin):
+    list_display = ("pase", "monto", "moneda", "vigente_desde", "vigente_hasta")
+    list_filter = ("pase", "moneda")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(CompraPase)
+class CompraPaseAdmin(admin.ModelAdmin):
+    """El lote de pases comprado.
+
+    `token` es de SOLO LECTURA: es la credencial del enlace de gestión y
+    nunca se edita a mano. `asignados` lo mueve el servicio de capacidad con
+    una sentencia atómica: tampoco se edita a mano.
+    """
+
+    list_display = (
+        "id",
+        "pase",
+        "comprador",
+        "cantidad",
+        "asignados",
+        "estado",
+        "total",
+    )
+    list_filter = ("estado", "edicion", "pase")
+    search_fields = ("referencia", "contacto_email")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "token",
+        "token_expira_en",
+        "token_revocado_en",
+        "referencia",
+        "asignados",
+        "precio_unitario",
+        "total",
+    )
+
+
+@admin.register(PaseBeneficiario)
+class PaseBeneficiarioAdmin(admin.ModelAdmin):
+    """El derecho efectivo de entrada de una persona."""
+
+    list_display = (
+        "id",
+        "persona",
+        "pase",
+        "origen",
+        "estado",
+        "cantidad",
+        "cantidad_consumida",
+    )
+    list_filter = ("estado", "origen", "edicion")
+    search_fields = ("persona__numero_documento",)
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "asignado_en",
+        "revocado_en",
+        "cantidad_consumida",
+    )
+
+
+@admin.register(CortesiaPase)
+class CortesiaPaseAdmin(admin.ModelAdmin):
+    """El acta auditada de una cortesía.
+
+    El motivo y el actor son de SOLO LECTURA: son la auditoría del
+    otorgamiento y no se editan a mano.
+    """
+
+    list_display = (
+        "id",
+        "pase",
+        "persona",
+        "estado",
+        "concedido_en",
+    )
+    list_filter = ("estado", "edicion")
+    search_fields = ("motivo", "persona__numero_documento")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "motivo",
+        "concedido_en",
+        "revocado_en",
+        "motivo_revocacion",
+    )
+
+
+@admin.register(ActivacionPase)
+class ActivacionPaseAdmin(admin.ModelAdmin):
+    """El acta de las activaciones de derechos de pases.
+
+    `clave` es de SOLO LECTURA: es la clave de idempotencia que produce el
+    coordinador de `commerce` y es la autoridad del "exactamente una vez".
+    """
+
+    list_display = (
+        "id",
+        "compra_pase",
+        "cantidad",
+        "compra_id",
+        "aplicada_en",
+    )
+    search_fields = ("clave", "compra_id")
+    readonly_fields = ("created_at", "updated_at", "clave", "aplicada_en")
+
+
 __all__ = [
     "ActivacionCapacidadAdmin",
+    "ActivacionPaseAdmin",
     "BeneficioConcedidoAdmin",
+    "CompraPaseAdmin",
+    "CortesiaPaseAdmin",
     "DisciplinaAdmin",
     "EquipoAdmin",
     "InscripcionAdmin",
     "PaqueteAdmin",
     "PaqueteBeneficioAdmin",
     "PaquetePrecioAdmin",
+    "PaseAdmin",
+    "PaseBeneficiarioAdmin",
+    "PasePrecioAdmin",
     "ParticipacionAdmin",
 ]

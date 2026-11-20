@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useAuthUser } from "@/features/auth/store/auth.store";
+import { RUTAS } from "@/lib/routes";
 import Link from "next/link";
 
 interface PreinscribirButtonProps {
@@ -16,7 +17,7 @@ export function PreinscribirButton({
   className,
 }: PreinscribirButtonProps) {
   const user = useAuthUser();
-  const href = user ? "/inscripcion" : "/register";
+  const href = user ? RUTAS.cuenta.inscripcion : RUTAS.auth.registro;
 
   return (
     <Button asChild variant={variant} size={size} className={className}>

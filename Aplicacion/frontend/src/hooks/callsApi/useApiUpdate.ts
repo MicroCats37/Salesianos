@@ -1,13 +1,16 @@
 import {
+  type QueryKey,
   type UseMutateFunction,
   type UseMutationOptions,
   type UseMutationResult,
   useMutation,
+  useQueryClient,
 } from "@tanstack/react-query";
-import type { AxiosError, AxiosResponse } from "axios";
+import type { AxiosError } from "axios";
 import type { ZodType } from "zod";
 import { handleApiError, notify } from "@/errors";
-import api from "@/lib/api";
+import { apiSend } from "@/lib/api";
+import { invalidateDatasets } from "@/shared/utils/cache-policy";
 import { buildApiPayload } from "@/utils";
 
 // ---------------------------------------------------------------------------
@@ -23,13 +26,16 @@ type ClassicVariables<TPayload> = {
 /** Direct payload shape (like useApiCreate): variable IS the payload. */
 type DirectVariables<TPayload> = TPayload;
 
-/** Optional envelope message extractor shared between modes. */
-function maybeToastSuccess(
-  response: AxiosResponse<unknown>,
-  showSuccessToast: boolean,
-): void {
+/**
+ * The success message of the envelope.
+ *
+ * `message` lives in the ROOT of the envelope and it is `null` when the
+ * endpoint declares none: it is read, never invented.
+ */
+function maybeToastSuccess(payload: unknown, showSuccessToast: boolean): void {
   if (!showSuccessToast) return;
-  const envelope = response.data as { message?: string } | null;
+
+  const envelope = payload as { message?: string } | null;
   if (
     envelope &&
     typeof envelope.message === "string" &&
@@ -51,6 +57,11 @@ interface UseApiUpdateDirectProps<TData, TVariables> {
   method?: "PUT" | "PATCH";
   showToast?: boolean;
   showSuccessToast?: boolean;
+  /**
+   * The keys invalidated when the mutation settles. The invalidation is
+   * EXPLICIT: a mutation declares the reads it dirties.
+   */
+  invalidateKeys?: readonly QueryKey[];
   options?: Omit<
     UseMutationOptions<TData, AxiosError, DirectVariables<TVariables>>,
     "mutationFn"
@@ -65,6 +76,8 @@ interface UseApiUpdateClassicProps<TData, TPayload> {
   method?: "PUT" | "PATCH";
   showToast?: boolean;
   showSuccessToast?: boolean;
+  /** The keys invalidated when the mutation settles. */
+  invalidateKeys?: readonly QueryKey[];
   options?: Omit<
     UseMutationOptions<TData, AxiosError, ClassicVariables<TPayload>>,
     "mutationFn"
@@ -101,8 +114,10 @@ export function useApiUpdate<TData, TPayload>(
 export function useApiUpdate<TData, TVariables>(
   props:
     | UseApiUpdateDirectProps<TData, TVariables>
-    | UseApiUpdateClassicProps<TData, TVariables>,
+    | UseApiUpdateClassicProps<TData, unknown>,
 ): UseMutationResult<TData, AxiosError, TVariables> {
+  const queryClient = useQueryClient();
+
   // ------------------------------------------------------------------
   // Detect mode: 'url' key present means direct mode
   // ------------------------------------------------------------------
@@ -117,6 +132,7 @@ export function useApiUpdate<TData, TVariables>(
       method = "PUT",
       showToast = true,
       showSuccessToast = true,
+      invalidateKeys = [],
       options,
     } = props as UseApiUpdateDirectProps<TData, TVariables>;
 
@@ -124,19 +140,23 @@ export function useApiUpdate<TData, TVariables>(
       mutationFn: async (variables) => {
         try {
           const payload = buildApiPayload(variables);
-          const response: AxiosResponse<unknown> = await api.request({
-            url,
+          const { status, data } = await apiSend<unknown>(
             method,
-            data: payload,
-          });
-          maybeToastSuccess(response, showSuccessToast);
-          return schema
-            ? schema.parse(response.data)
-            : (response.data as TData);
+            url,
+            payload,
+          );
+
+          // 204 No Content: the body is empty and it is NEVER parsed.
+          if (status === 204) return undefined as unknown as TData;
+
+          maybeToastSuccess(data, showSuccessToast);
+          return schema ? schema.parse(data) : (data as TData);
         } catch (error) {
           const apiError = handleApiError(error);
           if (showToast) notify.error(apiError.message);
           throw error;
+        } finally {
+          await invalidateDatasets(queryClient, invalidateKeys);
         }
       },
       ...options,
@@ -152,24 +172,31 @@ export function useApiUpdate<TData, TVariables>(
     method = "PUT",
     showToast = true,
     showSuccessToast = true,
+    invalidateKeys = [],
     options,
-  } = props as UseApiUpdateClassicProps<TData, TVariables>;
+  } = props as UseApiUpdateClassicProps<TData, unknown>;
 
-  return useMutation<TData, AxiosError, ClassicVariables<TVariables>>({
+  return useMutation<TData, AxiosError, ClassicVariables<unknown>>({
     mutationFn: async ({ id, data }) => {
       try {
         const payload = buildApiPayload(data);
-        const response: AxiosResponse<unknown> = await api.request({
-          url: `${baseUrl}/${id}`,
+        const { status, data: body } = await apiSend<unknown>(
           method,
-          data: payload,
-        });
-        maybeToastSuccess(response, showSuccessToast);
-        return schema ? schema.parse(response.data) : (response.data as TData);
+          `${baseUrl}/${id}`,
+          payload,
+        );
+
+        // 204 No Content: the body is empty and it is NEVER parsed.
+        if (status === 204) return undefined as unknown as TData;
+
+        maybeToastSuccess(body, showSuccessToast);
+        return schema ? schema.parse(body) : (body as TData);
       } catch (error) {
         const apiError = handleApiError(error);
         if (showToast) notify.error(apiError.message);
         throw error;
+      } finally {
+        await invalidateDatasets(queryClient, invalidateKeys);
       }
     },
     ...options,

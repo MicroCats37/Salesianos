@@ -7,6 +7,11 @@ import type { AxiosError } from "axios";
 import type { ZodType } from "zod";
 import { getErrorMessage, notify } from "@/errors";
 import api from "@/lib/api";
+import { buildQueryKey } from "@/shared/utils/query-keys";
+import {
+  type DatasetKind,
+  datasetQueryOptions,
+} from "@/shared/utils/query-options";
 
 interface UseApiQueryProps<T, TData = T> {
   queryKey: QueryKey;
@@ -35,6 +40,21 @@ export class ApiQueryError extends Error {
   }
 }
 
+/**
+ * The read of a resource.
+ *
+ * The body is parsed by the Zod mirror of the wrapper: an answer that does not
+ * match the contract is a failure, never a partially trusted value.
+ */
+async function fetchApiResource<T>(
+  url: string,
+  schema: ZodType<T>,
+  params?: Record<string, unknown>,
+): Promise<T> {
+  const { data } = await api.get(url, { params });
+  return schema.parse(data);
+}
+
 export function useApiQuery<T, TData = T>({
   queryKey,
   url,
@@ -45,9 +65,11 @@ export function useApiQuery<T, TData = T>({
 }: UseApiQueryProps<T, TData>) {
   const isEnabled = !!url && queryOptions?.enabled !== false;
 
-  const finalQueryKey = params
-    ? [...(Array.isArray(queryKey) ? queryKey : [queryKey]), params]
-    : queryKey;
+  /**
+   * EVERY parameter that changes the answer travels in the key, and a
+   * parameter that is `undefined` does NOT create a second cache entry.
+   */
+  const finalQueryKey = buildQueryKey(queryKey, params);
 
   return useQuery<T, ApiQueryError, TData>({
     queryKey: finalQueryKey,
@@ -55,8 +77,7 @@ export function useApiQuery<T, TData = T>({
       if (!url) throw new Error("URL is required");
 
       try {
-        const { data } = await api.get(url, { params });
-        return schema.parse(data);
+        return await fetchApiResource(url, schema, params);
       } catch (error) {
         const axiosError = error as AxiosError;
         const msg = getErrorMessage(error);
@@ -72,5 +93,41 @@ export function useApiQuery<T, TData = T>({
       UseQueryOptions<T, ApiQueryError, TData>,
       "queryKey" | "queryFn"
     >),
+  });
+}
+
+export interface ApiQueryOptionsInput<T> {
+  queryKey: QueryKey;
+  url: string;
+  schema: ZodType<T>;
+  params?: Record<string, unknown>;
+  /** The kind of dataset, which decides the staleness of the read. */
+  kind?: DatasetKind;
+  staleTime?: number;
+  gcTime?: number;
+}
+
+/**
+ * The `queryOptions` of a read.
+ *
+ * It is the SAME read that `useApiQuery` performs, with the SAME key and the
+ * SAME policy: a prefetch, a server-side hydration or a component read share
+ * one cache entry.
+ */
+export function apiQueryOptions<T>({
+  queryKey,
+  url,
+  schema,
+  params,
+  kind = "comercial",
+  staleTime,
+  gcTime,
+}: ApiQueryOptionsInput<T>) {
+  return datasetQueryOptions<T>({
+    queryKey: buildQueryKey(queryKey, params),
+    queryFn: () => fetchApiResource(url, schema, params),
+    kind,
+    staleTime,
+    gcTime,
   });
 }

@@ -3,13 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import type { ComponentType, FC, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   type DefaultValues,
   type FieldValues,
   FormProvider as Form,
   type Path,
-  type PathValue,
   type UseFormReturn,
   useForm,
 } from "react-hook-form";
@@ -23,8 +22,11 @@ import {
 } from "@/components/ui/card";
 
 import { handleApiError, notify } from "@/errors";
+import { buildCreatePayload } from "@/lib/forms/buildCreatePayload";
 import { buildUpdatePayload } from "@/lib/forms/buildUpdatePayload";
-import { isFileKindSchema } from "@/lib/forms/imageField";
+import { stableSerialize } from "@/lib/forms/stableSerialize";
+import { isSameFormValue } from "@/lib/forms/valueEquality";
+import { buildFormDefaults } from "./formDefaults";
 import {
   type FieldWrapperProps,
   type FormField,
@@ -32,6 +34,7 @@ import {
   GenericInput,
   type SectionWrapperProps,
 } from "./GenericInput";
+import { FieldVisibility, SectionVisibility } from "./visibility";
 
 // =====================================================================
 // DEBUG FLAG — silent Zod/RHF validation error logging
@@ -90,6 +93,48 @@ const CardWrapper: FC<SectionWrapperProps> = ({
 );
 
 // =====================================================================
+// VALUE MAPPING
+// =====================================================================
+
+/**
+ * Maps the value of a SELECT or a RADIO to the value declared by its option.
+ *
+ * The DOM only carries strings: the mapping is the IDENTITY of the option
+ * (`"3"` IS the option `3`), NOT a type coercion. The coercion belongs to
+ * Zod, which has already produced the values of the form.
+ *
+ * `undefined` and `null` are values and travel untouched: `undefined` means
+ * "never filled" and `null` means "explicitly empty".
+ */
+function mapOptionValues(
+  data: FieldValues,
+  fields: readonly FormField[],
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined || value === null) {
+      result[key] = value;
+      continue;
+    }
+
+    const field = fields.find((candidate) => candidate.name === key);
+    if (!field || (field.type !== "radio" && field.type !== "select")) {
+      result[key] = value;
+      continue;
+    }
+
+    const option = field.options?.find(
+      (candidate) => String(candidate.value) === String(value),
+    );
+
+    result[key] = option ? option.value : value;
+  }
+
+  return result;
+}
+
+// =====================================================================
 // MAIN COMPONENT
 // =====================================================================
 
@@ -146,6 +191,31 @@ export interface GenericFormProps<T extends FieldValues> {
   customFields?: Record<string, CustomFieldRenderer<T>>;
   showErrorsAsToasts?: boolean;
 
+  /**
+   * The wire mapping the submit uses.
+   *
+   * - `"create"` (the default): the FULL validated create mapping. Every
+   *   declared field that carries a value travels. A create has no previous
+   *   state, so nothing is diffed.
+   * - `"update"`: the STRICT update mapping. A value that is EQUAL to the one
+   *   of `initialData` is omitted, because the user did not touch it.
+   *
+   * The two mappings are never mixed: a create NEVER uses update-diff
+   * semantics.
+   */
+  submitMode?: "create" | "update";
+
+  /**
+   * Re-hydrates the form when the data it edits changes (the default).
+   *
+   * The re-hydration is DETERMINISTIC: it happens when the CONTENT of
+   * `initialData` changes, not when its reference does, so a parent that
+   * rebuilds the object on every render never resets the form twice.
+   *
+   * Pass `false` to keep the values the user typed when the record changes.
+   */
+  resetOnInitialDataChange?: boolean;
+
   // F. FOOTER CONTROL
   /**
    * Suppresses the internal default footer when true.
@@ -182,6 +252,8 @@ export const GenericForm = <T extends FieldValues>({
   children, // Render prop for manual mode
   showErrorsAsToasts = false,
   skipFooter = false,
+  submitMode = "create",
+  resetOnInitialDataChange = true,
 }: GenericFormProps<T>) => {
   // 1. NORMALIZATION (Only matters if NOT using 'children')
   let normalizedSections: FormSection[] = [];
@@ -196,18 +268,7 @@ export const GenericForm = <T extends FieldValues>({
   }
 
   // 2. REACT HOOK FORM SETUP
-  const defaults = { ...initialData } as DefaultValues<T>;
-  // Populate defaults from field config if not already in initialData
-  for (const field of allFieldsFlat) {
-    const name = field.name as Path<T>;
-    if (!(name in defaults) && field.defaultValue !== undefined) {
-      defaults[name] = (
-        field.type === "radio" || field.type === "select"
-          ? String(field.defaultValue)
-          : field.defaultValue
-      ) as PathValue<T, Path<T>>;
-    }
-  }
+  const defaults = buildFormDefaults(initialData, allFieldsFlat);
 
   const internalMethods = useForm<T>({
     resolver: zodResolver(schema),
@@ -230,6 +291,51 @@ export const GenericForm = <T extends FieldValues>({
     message: string;
   } | null>(null);
 
+  // The fields that carry a SERVER error, so a new attempt starts clean.
+  const serverErrorFieldsRef = useRef<string[]>([]);
+
+  // The fields of the form live in a ref: the re-hydration effect must not
+  // depend on the identity of the array.
+  const fieldsRef = useRef<FormField[]>(allFieldsFlat);
+  fieldsRef.current = allFieldsFlat;
+
+  // 3. RE-HYDRATION
+  //
+  // The form is re-hydrated when the CONTENT of `initialData` changes: the
+  // record that is being edited changed, or the data of the edit form
+  // arrived asynchronously.
+  const initialDataKey = useMemo(
+    () => stableSerialize(initialData),
+    [initialData],
+  );
+  const hydratedKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!resetOnInitialDataChange) return;
+    // The data did not change: there is nothing to re-hydrate.
+    if (hydratedKeyRef.current === initialDataKey) return;
+    // A submission in flight is never interrupted by a re-hydration.
+    if (isSubmitting) return;
+
+    const isFirstHydration = hydratedKeyRef.current === null;
+    hydratedKeyRef.current = initialDataKey;
+
+    // The first values were already given to `useForm` as default values.
+    if (isFirstHydration) return;
+
+    // The data the form already holds IS the new data: a parent that feeds
+    // the live values back as `initialData` must never reset the form.
+    if (isSameFormValue(methods.getValues(), initialData)) return;
+
+    methods.reset(buildFormDefaults(initialData, fieldsRef.current));
+  }, [
+    initialDataKey,
+    initialData,
+    isSubmitting,
+    methods,
+    resetOnInitialDataChange,
+  ]);
+
   useEffect(() => {
     if (onFieldChange) {
       const subscription = watch((value, { name }) => {
@@ -239,86 +345,38 @@ export const GenericForm = <T extends FieldValues>({
     }
   }, [watch, onFieldChange]);
 
-  const formValues = watch();
-
-  const isHidden = (field: FormField) => {
-    if (typeof field.hidden === "function") {
-      return field.hidden(formValues);
-    }
-    return !!field.hidden;
-  };
-
-  // 3. SUBMIT HANDLER
+  // 4. SUBMIT HANDLER
   const handleFormSubmit = async (data: FieldValues) => {
     setSubmissionMessage(null);
-    const processedData: any = {};
 
-    // Type processing (Number, Boolean) before sending
-    for (const key in data) {
-      // Look for field config (if existing in automatic mode)
-      const fieldConfig = allFieldsFlat.find((f) => f.name === key);
-
-      if (!fieldConfig) {
-        processedData[key] = data[key];
-        continue;
-      }
-
-      if (fieldConfig.type === "custom") {
-        processedData[key] = data[key];
-        continue;
-      }
-
-      if (fieldConfig.type === "number") {
-        processedData[key] =
-          data[key] === null || data[key] === ""
-            ? undefined
-            : Number(data[key]);
-      } else if (fieldConfig.type === "checkbox") {
-        processedData[key] = Boolean(data[key]);
-      } else if (
-        fieldConfig.type === "radio" ||
-        fieldConfig.type === "select"
-      ) {
-        const optionValue = fieldConfig.options?.find(
-          (opt) => String(opt.value) === String(data[key]),
-        )?.value;
-        processedData[key] = optionValue ?? data[key];
-      } else {
-        processedData[key] = data[key];
-      }
+    // A new attempt starts without the errors of the previous one.
+    for (const field of serverErrorFieldsRef.current) {
+      methods.clearErrors(field as Path<T>);
     }
+    serverErrorFieldsRef.current = [];
 
-    // ── Ensure file-kind fields from custom renderers are included ──
-    // Walk the schema shape to find all file-kind fields
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const schemaAny = schema as any;
-    const schemaShape = schemaAny._def?.shape;
-    if (schemaShape && typeof schemaShape === "function") {
-      try {
-        const shape = schemaShape();
-        for (const [key, fieldSchema] of Object.entries(shape)) {
-          if (
-            isFileKindSchema(fieldSchema) &&
-            !(key in processedData) &&
-            key in data
-          ) {
-            processedData[key] = data[key];
-          }
-        }
-      } catch {
-        // shape() may throw for some schema types — ignore
-      }
-    }
+    // The values are the OUTPUT of the Zod validation: Zod owns the
+    // validation AND the coercion. The form NEVER re-coerces a value, and it
+    // NEVER destroys an `undefined`, a `null` or a `File`.
+    const processedData = mapOptionValues(data, allFieldsFlat);
 
-    // ── Apply buildUpdatePayload to strip unchanged/unwanted values ──
-    const finalData = buildUpdatePayload(
-      processedData,
-      initialData as Partial<typeof processedData>,
-      schema as ZodType<typeof processedData>,
-    );
+    const finalData =
+      submitMode === "update"
+        ? buildUpdatePayload(
+            processedData as Record<string, unknown>,
+            initialData as unknown as
+              | Partial<Record<string, unknown>>
+              | undefined,
+            schema as unknown as ZodType<Record<string, unknown>>,
+            { strict: true },
+          )
+        : buildCreatePayload(
+            processedData as Record<string, unknown>,
+            schema as unknown as ZodType<Record<string, unknown>>,
+          );
 
     try {
-      await onSubmit(finalData as T);
+      await onSubmit(finalData as unknown as T);
       setSubmissionMessage({
         type: "success",
         message: "Operation successful!",
@@ -327,14 +385,20 @@ export const GenericForm = <T extends FieldValues>({
       const errorRes = handleApiError(e);
       setSubmissionMessage({ type: "error", message: errorRes.message });
 
-      // If error contains field failures, apply them to the form
+      // The field errors of the response reach the control they belong to.
+      // The map has ONE entry per field, so `setError` is called EXACTLY ONCE
+      // per field.
       if (errorRes.fieldErrors) {
-        Object.entries(errorRes.fieldErrors).forEach(([field, message]) => {
+        const fieldEntries = Object.entries(errorRes.fieldErrors);
+
+        for (const [field, message] of fieldEntries) {
           methods.setError(field as any, {
             type: "server",
             message: message as string,
           });
-        });
+        }
+
+        serverErrorFieldsRef.current = fieldEntries.map(([field]) => field);
       }
     }
   };
@@ -435,52 +499,49 @@ export const GenericForm = <T extends FieldValues>({
                   section.wrapper ||
                   (formSections ? CardWrapper : GhostWrapper);
 
-                // Verify if all fields in the section are hidden
-                const areAllFieldsHidden = section.fields.every((f) =>
-                  isHidden(f),
-                );
-                if (areAllFieldsHidden) return null;
-
+                // The visibility of the section AND of every field is
+                // resolved by the visibility gates: a field that declares its
+                // dependencies reads only those fields, so the form never
+                // re-renders on every keystroke.
                 return (
-                  <Container
+                  <SectionVisibility
                     key={`section-${idx}`}
-                    title={section.title}
-                    description={section.description}
-                    icon={section.icon}
-                    className={section.className}
+                    section={section}
+                    control={control as any}
                   >
-                    <div className=" grid grid-cols-1 md:grid-cols-12 gap-x-4">
-                      {section.fields.map((field) => {
-                        const fieldIsHidden = isHidden(field);
-
-                        // Custom Fields
-                        if (customFields[field.name]) {
-                          if (fieldIsHidden) return null; // Respect hidden property
-                          return (
-                            <div
-                              key={field.name}
-                              className={`w-full ${field.containerClassName || "col-span-12"}`}
-                            >
-                              {customFields[field.name](methods)}
-                            </div>
-                          );
-                        }
-
-                        if (fieldIsHidden) return null;
-                        // Generic Inputs
-                        return (
-                          <GenericInput
+                    <Container
+                      title={section.title}
+                      description={section.description}
+                      icon={section.icon}
+                      className={section.className}
+                    >
+                      <div className=" grid grid-cols-1 md:grid-cols-12 gap-x-4">
+                        {section.fields.map((field) => (
+                          <FieldVisibility
                             key={field.name}
                             field={field}
-                            register={register as any}
                             control={control as any}
-                            errors={errors}
-                            FieldWrapper={globalFieldWrapper}
-                          />
-                        );
-                      })}
-                    </div>
-                  </Container>
+                          >
+                            {customFields[field.name] ? (
+                              <div
+                                className={`w-full ${field.containerClassName || "col-span-12"}`}
+                              >
+                                {customFields[field.name](methods)}
+                              </div>
+                            ) : (
+                              <GenericInput
+                                field={field}
+                                register={register as any}
+                                control={control as any}
+                                errors={errors}
+                                FieldWrapper={globalFieldWrapper}
+                              />
+                            )}
+                          </FieldVisibility>
+                        ))}
+                      </div>
+                    </Container>
+                  </SectionVisibility>
                 );
               })}
             </fieldset>

@@ -2,23 +2,24 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { consultarDocumento } from "../services/documento.service";
+import { consultarDocumento } from "../services/identidad.service";
 
 export interface DocumentoLookupData {
   tipo_documento: string;
   numero_documento: string;
-  razon_social: string;
+  /** The full name exactly as the external source publishes it. */
+  nombre_completo: string;
   nombres: string;
   apellidos: string;
 }
 
-function splitRazonSocial(razonSocial: string): {
+function splitNombreCompleto(nombreCompleto: string): {
   nombres: string;
   apellidos: string;
 } {
-  if (!razonSocial) return { nombres: "", apellidos: "" };
+  if (!nombreCompleto) return { nombres: "", apellidos: "" };
 
-  const trimmed = razonSocial.replace(/\s+/g, " ").trim();
+  const trimmed = nombreCompleto.replace(/\s+/g, " ").trim();
 
   const sepIndex = trimmed.indexOf(",");
   if (sepIndex !== -1) {
@@ -47,22 +48,20 @@ function splitRazonSocial(razonSocial: string): {
 /**
  * Consulta los datos de un DNI o RUC (`GET /personas/busqueda/{documento}`).
  *
- * Devuelve `{ tipo_documento, numero_documento, razon_social, nombres, apellidos }`.
- * Para un DNI, `razon_social` viene como "APELLIDOS, NOMBRES".
+ * Devuelve `{ tipo_documento, numero_documento, nombre_completo, nombres,
+ * apellidos }`.
+ * Para un DNI, `nombre_completo` viene como "APELLIDOS, NOMBRES".
+ *
+ * The service is the ONE owner of the route `RT-ID-01` and it parses the
+ * answer with the exact mirror of `DocumentoConsultaOut`: an answer that does
+ * not match the presenter is a failure, never a partially trusted value.
  */
 export function useDocumentoLookup() {
   return useMutation<DocumentoLookupData, Error, string>({
     mutationFn: async (documento: string) => {
       const res = await consultarDocumento(documento);
-      if (!res.success || !res.data) {
-        throw new Error(
-          res.error?.message ?? "No se encontraron datos para este documento",
-        );
-      }
-      const { nombres, apellidos } = splitRazonSocial(
-        res.data.razon_social ?? "",
-      );
-      return { ...res.data, nombres, apellidos };
+      const { nombres, apellidos } = splitNombreCompleto(res.nombre_completo ?? "");
+      return { ...res, nombres, apellidos };
     },
     onError: (error) => {
       toast.error(

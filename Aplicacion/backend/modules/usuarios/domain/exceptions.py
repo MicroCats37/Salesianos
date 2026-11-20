@@ -18,10 +18,54 @@ Los códigos `PERSONA_NO_ENCONTRADA` y `TIPO_DOCUMENTO_INVALIDO` ya están en el
 catálogo público. `FUENTE_EXTERNA_NO_DISPONIBLE`, `FUENTE_EXTERNA_TIMEOUT` y
 `PERSONA_DUPLICADA` provenían del ledger `RT-ID-02`/`RT-ID-03` (`FR-07`) y su
 prosa pública está REQUESTED a A0 (ver la evidencia del paquete FND-03).
+
+`AUTH_ERROR` (credenciales inválidas) ya está en el catálogo público.
+`CUENTA_INACTIVA` es un código NUEVO de este módulo: su prosa pública está
+REQUESTED a A0 (evidencia del paquete FND-03A).
 """
 
 from core.exceptions import ConflictError, NotFoundError, UnprocessableEntityError
 from ninja.errors import HttpError
+
+
+class CredencialesInvalidasError(HttpError):
+    """Las credenciales no son válidas (401).
+
+    Es la RESPUESTA NEUTRA del inicio de sesión: el MISMO código, el mismo
+    status y la misma prosa pública tanto si el identificador no existe como
+    si la contraseña no cuadra. La respuesta NO distingue un caso del otro,
+    así que no filtra qué cuentas existen (`FR-01` §4.4 — categoría
+    "Authentication"; `RN-U04`).
+
+    El código `AUTH_ERROR` ya está en el catálogo público de
+    `core/exceptions.py`, así que la prosa que ve el usuario sale de ahí y
+    nunca del texto técnico de esta excepción.
+    """
+
+    code = "AUTH_ERROR"
+
+    def __init__(self):
+        super().__init__(401, "Credenciales inválidas.")
+
+
+class CuentaInactivaError(HttpError):
+    """La cuenta está desactivada (403).
+
+    Es un estado DISTINTO de "credenciales inválidas": la contraseña es
+    correcta, pero la cuenta no puede operar. Django impide que una cuenta
+    inactiva se autentique, así que el módulo lo discrimina antes de
+    responder.
+
+    El código `CUENTA_INACTIVA` viaja estable en `error.code`; la prosa
+    pública la decide el catálogo de `core/exceptions.py` (A0) y, hasta que
+    lo catalogue, cae a la prosa genérica del status 403 — nunca al texto
+    crudo de esta excepción (`FR-01` §4.4).
+    """
+
+    code = "CUENTA_INACTIVA"
+
+    def __init__(self):
+        super().__init__(403, "La cuenta está desactivada.")
 
 
 class PersonaNoEncontradaError(NotFoundError):
@@ -109,6 +153,8 @@ class FuenteExternaTimeoutError(HttpError):
 
 
 __all__ = [
+    "CredencialesInvalidasError",
+    "CuentaInactivaError",
     "FuenteExternaNoDisponibleError",
     "FuenteExternaTimeoutError",
     "PersonaDatosIncompletosError",

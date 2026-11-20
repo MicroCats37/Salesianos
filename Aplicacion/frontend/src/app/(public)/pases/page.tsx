@@ -1,17 +1,11 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { PasesRuta } from "@/features/pases/views";
 
 /**
- * PASS-01 — Comprar un pase de fiesta
+ * PASS-01 - Comprar un pase de fiesta
  *
- * Shell de ruta (FND-06). La vista la construye UI-03.
+ * The page is ROUTING-ONLY: the container (`PasesRuta`) owns the read of
+ * the catalogue and the mutation of the purchase.
  */
-
 export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="PASS-01"
-      tarea="Comprar un pase de fiesta"
-      packet="UI-03"
-    ></RoutePlaceholder>
-  );
+  return <PasesRuta />;
 }

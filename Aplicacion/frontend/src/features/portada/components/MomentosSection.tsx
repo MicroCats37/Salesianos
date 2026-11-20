@@ -21,7 +21,7 @@ import { SEDE } from "@/features/portada/fixtures/festival";
  */
 export function MomentosSection() {
   return (
-    <section className="surface-page-gradient flex snap-start flex-col justify-center scroll-mt-[var(--portada-chrome-height)] py-16 sm:py-20 lg:portada-altura-disponible">
+    <section className="surface-page-gradient flex snap-start flex-col justify-center scroll-mt-[var(--portada-chrome-height)] py-12 sm:py-16 lg:portada-altura-disponible [@media(max-height:900px)]:py-8">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-4 sm:grid-cols-3">
           {COPY.hero.momentos.map((momento) => (

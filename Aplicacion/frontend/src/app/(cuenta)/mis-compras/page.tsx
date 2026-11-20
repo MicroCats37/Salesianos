@@ -1,17 +1,22 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { MisComprasView } from "@/features/cuenta/views";
 
 /**
- * ACCOUNT-04 — Listar tus compras
+ * ACCOUNT-04 - Listar tus compras
  *
- * Shell de ruta (FND-06). La vista la construye UI-01.
+ * The filters live in the URL, so the page reads them from the query
+ * string and hands them to the view.
  */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
 
-export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="ACCOUNT-04"
-      tarea="Listar tus compras"
-      packet="UI-01"
-    ></RoutePlaceholder>
-  );
+  const valor = (clave: string) => {
+    const bruto = params[clave];
+    return Array.isArray(bruto) ? bruto[0] : bruto;
+  };
+
+  return <MisComprasView filtros={{ origen: valor("origen") }} />;
 }

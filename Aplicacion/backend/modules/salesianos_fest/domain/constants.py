@@ -33,8 +33,25 @@ Packet `DOM-02` añade:
 11. `CausaOperativaPool` y `CausaOperativaCompraCupos` — las causas
     operativas que los presenters publican del pool y de la ampliación.
 
+Packet `DOM-03` añade:
+
+12. `EstadoPase` — `VIGENTE` / `RETIRADO`. Un pase `RETIRADO` no se ofrece
+    ni se compra: el catálogo histórico se conserva.
+13. `EstadoCompraPase` — `PENDIENTE` / `PAGADA` / `ANULADA`. Es el hecho
+    COMERCIAL de la compra de pases: una compra `PENDIENTE` NO habilita
+    ningún derecho (`RN-P02`).
+14. `OrigenDerechoPase` — `COMPRA` / `CORTESIA`. Discrimina el ORIGEN de un
+    derecho de entrada. Los dos orígenes convergent en la MISMA tabla de
+    derechos, y por eso la no duplicación es UNA sola regla (`RN-P02`).
+15. `EstadoDerechoPase` — `ACTIVO` / `REVOCADO`. La revocación es
+    PERMANENTE (`RN-P08`).
+16. `EstadoCortesiaPase` — `ACTIVA` / `REVOCADA`.
+17. `CausaOperativaCompraPase` — la causa operativa que el presenter publica
+    de la compra de pases (`RN-A02`).
+
 Este archivo NO declara precios, ni reglas de elegibilidad, ni la regla de
-reparto de beneficios `POR_CUPO` (sigue ABIERTA: `PD-09`).
+reparto de beneficios `POR_CUPO` (sigue ABIERTA: `PD-09`), ni la
+titularidad del beneficio grupal `BOX` (sigue ABIERTA: `PD-01`).
 """
 
 from django.db import models
@@ -145,6 +162,83 @@ class CausaOperativaCompraCupos(models.TextChoices):
     COMPRA_CUPOS_REUTILIZADA = "COMPRA_CUPOS_REUTILIZADA", "Compra de cupos pendiente"
 
 
+class EstadoPase(models.TextChoices):
+    """Estado comercial de un pase dentro de su edición.
+
+    `VIGENTE` es el único estado que se ofrece y se compra. `RETIRADO`
+    conserva el catálogo histórico sin permitir una compra nueva.
+    """
+
+    VIGENTE = "VIGENTE", "Vigente"
+    RETIRADO = "RETIRADO", "Retirado"
+
+
+class EstadoCompraPase(models.TextChoices):
+    """Estado comercial de la COMPRA de un lote de pases.
+
+    `PENDIENTE` es el estado en el que queda la compra recién creada: **no
+    habilita ningún derecho**. Los pases sólo se pueden asignar cuando la
+    compra está `PAGADA`, que es lo que hace la ACTIVACIÓN de derechos de
+    `FND-05` (`RN-P02`, `QA-P01`).
+    """
+
+    PENDIENTE = "PENDIENTE", "Pendiente"
+    PAGADA = "PAGADA", "Pagada"
+    ANULADA = "ANULADA", "Anulada"
+
+
+class OrigenDerechoPase(models.TextChoices):
+    """ORIGEN de un derecho de entrada (`RN-P02`).
+
+    - `COMPRA` — el derecho lo financia una compra pagada.
+    - `CORTESIA` — el derecho lo otorga un administrador, con motivo y
+      auditoría, y **sin** compra, orden ni transacción (`RN-P05`).
+
+    Los dos orígenes se materializan en la MISMA tabla de derechos: así la
+    regla de no duplicación es UNA sola, y un derecho comprado no puede
+    coexistir con una cortesía del mismo tipo para la misma persona.
+    """
+
+    COMPRA = "COMPRA", "Compra"
+    CORTESIA = "CORTESIA", "Cortesía"
+
+
+class EstadoDerechoPase(models.TextChoices):
+    """Estado de un derecho de entrada.
+
+    `REVOCADO` es TERMINAL para validaciones futuras: los consumos ya
+    occurring quedan en el historial (`RN-P08`).
+    """
+
+    ACTIVO = "ACTIVO", "Activo"
+    REVOCADO = "REVOCADO", "Revocado"
+
+
+class EstadoCortesiaPase(models.TextChoices):
+    """Estado del ACTA de una cortesía.
+
+    `REVOCADA` deja el historial: la cortesía existió y se anuló, con actor
+    y motivo (`RN-P05`, `FL-07` paso 4).
+    """
+
+    ACTIVA = "ACTIVA", "Activa"
+    REVOCADA = "REVOCADA", "Revocada"
+
+
+class CausaOperativaCompraPase(models.TextChoices):
+    """Causa operativa de la compra de pases.
+
+    Es la diferencia entre "la acabo de crear" y "ya existía y la reutilicé".
+    La publica el PRESENTER: el controller no decide causas (`RN-A02`).
+    """
+
+    COMPRA_PASE_CREADA = "COMPRA_PASE_CREADA", "Compra de pases creada"
+    COMPRA_PASE_REUTILIZADA = "COMPRA_PASE_REUTILIZADA", "Compra de pases pendiente"
+
+
+#: Tipo de concepto de línea de compra que representa una COMPRA DE PASES.
+CONCEPTO_LINEA_PASE = "PASE"
+
 #: Tipo de concepto de línea de compra que representa el ALTA de un paquete.
 CONCEPTO_LINEA_PAQUETE = "PAQUETE"
 
@@ -193,29 +287,116 @@ CODIGO_INSCRIPCION_NO_ENCONTRADA = "INSCRIPCION_NO_ENCONTRADA"
 #: El snapshot de la compra no habilita ningún cupo.
 CODIGO_SIN_CUPOS_ACTIVABLES = "SIN_CUPOS_ACTIVABLES"
 
+# ── Códigos de máquina del activador de derechos de PASES (DOM-03) ───────────
+#
+# Mismo contrato que los de `DOM-02`: los publica el coordinador de
+# `commerce` como `error.code` de la incidencia y como `detalle.codigo`.
+# Deben cumplir `^[A-Z0-9_]{1,64}$`.
+
+#: Los pases de la compra quedaron habilitados.
+CODIGO_PASES_ACTIVADOS = "PASES_ACTIVADOS"
+
+#: Los pases ya estaban habilitados: la activación es idempotente.
+CODIGO_PASES_YA_ACTIVADOS = "PASES_YA_ACTIVADOS"
+
+#: La compra de pases de la referencia no existe.
+CODIGO_COMPRA_PASE_NO_ENCONTRADA = "COMPRA_PASE_NO_ENCONTRADA"
+
+#: La referencia de la compra no es de este módulo.
+CODIGO_REFERENCIA_PASE_NO_RECONOCIDA = "REFERENCIA_PASE_NO_RECONOCIDA"
+
+#: El snapshot de la compra no habilita ningún pase.
+CODIGO_SIN_PASES_ACTIVABLES = "SIN_PASES_ACTIVABLES"
+
+# ── Límites y credenciales de los pases (DOM-03) ────────────────────────────
+
+#: Mínimo de pases que se pueden comprar en una sola operación.
+MIN_PASES_POR_COMPRA = 1
+
+#: Máximo de pases que se pueden comprar en una sola operación.
+#:
+#: Es un LÍMITE DE DOMINIO declarado, no un dato del cliente: la compra se
+#: rechaza con `CANTIDAD_INVALIDA` si lo supera.
+#:
+#: PENDIENTE DE CONFIRMAR por producto (A0): el número exacto del tope no está
+#: congelado por ningún contrato; se declara un valor conservador y explícito
+#: para que el límite EXISTA sin inventar una política de inventario.
+MAX_PASES_POR_COMPRA = 50
+
+#: Moneda por defecto del catálogo de pases (ISO-4217).
+MONEDA_PASE = "PEN"
+
+#: Longitud máxima del token privado de gestión de una compra de pases.
+MAX_LEN_TOKEN_PASE = 64
+
+#: Longitud máxima de la referencia de intención de una compra de pases.
+MAX_LEN_REFERENCIA_PASE = 200
+
+#: Vigencia por defecto del token privado de gestión, en días.
+#:
+#: PENDIENTE DE CONFIRMAR por producto (A0): `GOV-01-OPEN-05` deja ABIERTA la
+#: política exacta de expiración, rotación de enlaces y verificación de
+#: contacto. El MECANISMO está congelado (vencimiento, ámbito por compra y
+#: revocabilidad); el número concreto se declara conservador y explícito
+#: para que el vencimiento EXISTA sin inventar una política de negocio.
+VIGENCIA_TOKEN_PASE_DIAS = 30
+
+#: Cabecera HTTP por la que viaja el token privado de gestión de la compra.
+#:
+#: Es una CREDENCIAL: nunca viaja en la query string (queda en los logs del
+#: servidor y del proxy) y nunca se publica en un listado.
+CABECERA_TOKEN_PASE = "X-Pase-Token"
+
+#: Longitud mínima del motivo de una cortesía (`RN-P05`).
+MIN_LEN_MOTIVO_CORTESIA = 5
+
+#: Longitud máxima del motivo de una cortesía.
+MAX_LEN_MOTIVO_CORTESIA = 500
+
 
 __all__ = [
+    "CABECERA_TOKEN_PASE",
     "CONCEPTO_LINEA_CUPO",
     "CONCEPTO_LINEA_PAQUETE",
+    "CONCEPTO_LINEA_PASE",
     "CODIGO_CAPACIDAD_ACTIVADA",
     "CODIGO_CAPACIDAD_YA_ACTIVADA",
+    "CODIGO_COMPRA_PASE_NO_ENCONTRADA",
     "CODIGO_INSCRIPCION_NO_ENCONTRADA",
+    "CODIGO_PASES_ACTIVADOS",
+    "CODIGO_PASES_YA_ACTIVADOS",
     "CODIGO_REFERENCIA_NO_RECONOCIDA",
+    "CODIGO_REFERENCIA_PASE_NO_RECONOCIDA",
     "CODIGO_SIN_CUPOS_ACTIVABLES",
+    "CODIGO_SIN_PASES_ACTIVABLES",
     "MAX_CUPOS_POR_AMPLIACION",
     "MAX_EQUIPOS_POR_INSCRIPCION",
+    "MAX_LEN_MOTIVO_CORTESIA",
     "MAX_LEN_REFERENCIA_INSCRIPCION",
+    "MAX_LEN_REFERENCIA_PASE",
+    "MAX_LEN_TOKEN_PASE",
+    "MAX_PASES_POR_COMPRA",
     "MIN_CUPOS_POR_AMPLIACION",
     "MIN_EQUIPOS_POR_INSCRIPCION",
+    "MIN_LEN_MOTIVO_CORTESIA",
+    "MIN_PASES_POR_COMPRA",
+    "MONEDA_PASE",
+    "VIGENCIA_TOKEN_PASE_DIAS",
     "CausaOperativaCompraCupos",
+    "CausaOperativaCompraPase",
     "CausaOperativaInscripcion",
     "CausaOperativaPool",
+    "EstadoCompraPase",
+    "EstadoCortesiaPase",
+    "EstadoDerechoPase",
     "EstadoDisciplina",
     "EstadoEquipo",
     "EstadoInscripcion",
     "EstadoPaquete",
     "EstadoParticipacion",
+    "EstadoPase",
     "ModalidadDisciplina",
+    "OrigenDerechoPase",
     "RolParticipante",
     "TipoActivacionCapacidad",
     "TipoBeneficioPaquete",

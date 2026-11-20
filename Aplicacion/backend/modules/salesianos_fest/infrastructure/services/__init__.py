@@ -5,9 +5,13 @@ from modules.salesianos_fest.infrastructure.services.alcance_y_titularidad impor
     ResolucionPersonaAdapter,
     TitularidadAdapter,
 )
+from modules.salesianos_fest.infrastructure.services.obtencion_persona import (
+    ObtencionPersonaAdapter,
+)
 
 __all__ = [
     "AlcanceEdicionAdapter",
+    "ObtencionPersonaAdapter",
     "ResolucionPersonaAdapter",
     "TitularidadAdapter",
 ]

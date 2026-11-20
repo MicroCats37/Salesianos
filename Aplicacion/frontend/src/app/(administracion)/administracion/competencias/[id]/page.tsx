@@ -1,24 +1,14 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { CompetenciaDetalleView } from "@/features/competencias/views";
 
 /**
- * ADM-11 — Ver la ficha operativa de una competencia
- *
- * Shell de ruta (FND-06). La vista la construye UI-05.
+ * ADM-11 - Ver la ficha operativa de una competencia
  */
-
 export default async function Page({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <RoutePlaceholder
-      pageId="ADM-11"
-      tarea="Ver la ficha operativa de una competencia"
-      packet="UI-05"
-    >
-      <p className="font-mono text-xs text-muted-foreground">id: {id}</p>
-    </RoutePlaceholder>
-  );
+
+  return <CompetenciaDetalleView id={id} />;
 }

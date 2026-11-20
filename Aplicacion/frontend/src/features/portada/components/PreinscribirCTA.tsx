@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { useAuthUser } from "@/features/auth/store/auth.store";
+import { RUTAS } from "@/lib/routes";
 
 /**
  * Auth-aware preinscribir CTA used by landing paquete cards.
@@ -18,7 +19,7 @@ export function PreinscribirCTA() {
         asChild
         className="btn-brand-gradient btn-shine w-full justify-center rounded-2xl h-12 text-sm font-black"
       >
-        <Link href={user ? "/inscripcion" : "/register"}>
+        <Link href={user ? RUTAS.cuenta.inscripcion : RUTAS.auth.registro}>
           Preinscribir equipo
         </Link>
       </Button>

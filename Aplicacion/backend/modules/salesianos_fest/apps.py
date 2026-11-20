@@ -13,10 +13,11 @@ class SalesianosFestConfig(AppConfig):
     verbose_name = "Inscripciones deportivas"
 
     def ready(self):
-        """Importa el paquete de admin y registra el ACTIVADOR de derechos.
+        """Importa el paquete de admin y registra los ACTIVADORES de derechos.
 
         El registro del activador es lo que permite que un pago confirmado
-        habilite los cupos de una inscripción (`RN-I02`, `QA-I02`).
+        habilite los cupos de una inscripción (`RN-I02`, `QA-I02`) y los
+        pases de un lote (`RN-P02`, `QA-P01`).
 
         Se hace AQUÍ, y no en un binding de DI, porque el registro de
         activadores de `commerce` es un objeto ÚNICO DEL PROCESO
@@ -37,8 +38,16 @@ class SalesianosFestConfig(AppConfig):
         from modules.salesianos_fest.domain.services.core.activador_inscripcion import (
             ActivadorInscripcion,
         )
+        from modules.salesianos_fest.domain.services.core.activador_pase import (
+            ActivadorPase,
+        )
 
-        obtener_registro().registrar(
+        registro = obtener_registro()
+        registro.registrar(
             OrigenCompra.INSCRIPCION,
             ActivadorInscripcion(),
+        )
+        registro.registrar(
+            OrigenCompra.PASE,
+            ActivadorPase(),
         )

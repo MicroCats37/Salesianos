@@ -66,6 +66,15 @@
   --color-brand-deep-blue-mid: var(--brand-deep-blue-mid);
   --color-brand-deep-night: var(--brand-deep-night);
 
+  /* --- Tinta sobre la superficie de marca ---
+     El gradiente institucional es OSCURO en los dos temas: por eso el
+     texto que va sobre él no puede depender de `primary-foreground`, que
+     invierte con el tema. Estos tres roles son su propio contrato. */
+  --color-brand-on-gradient: var(--brand-on-gradient);
+  --color-brand-on-gradient-muted: var(--brand-on-gradient-muted);
+  --color-brand-on-gradient-border: var(--brand-on-gradient-border);
+  --color-brand-on-gradient-soft: var(--brand-on-gradient-soft);
+
   /* --- Series de datos (SH-01 §3.3) --- */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -84,20 +93,34 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-elevated: var(--sidebar-elevated);
+  --color-sidebar-elevated-border: var(--sidebar-elevated-border);
+
+  /* --- Anchos de lectura y de página (consolidados) --- */
+  --container-page: 1200px;
+  --container-wide: 1440px;
+  --container-admin: 1600px;
+  --container-reading: 68ch;
+  --container-measure: 72ch;
 
   /* --- Elevación (resuelve por tema) --- */
   --shadow-sm: var(--elevation-sm);
   --shadow-md: var(--elevation-md);
   --shadow-lg: var(--elevation-lg);
+  --shadow-xl: var(--elevation-xl);
   --shadow-focus: var(--elevation-focus);
 
-  /* --- Radios: el 언어 blando de Salesianos se conserva (SH-01 §3.6) --- */
+
+  /* --- Radios: el lenguaje blando de Salesianos (SH-01 §3.6) ---
+     La jerarquía del producto se lee TAMBIÉN por la forma: los controles
+     son cómodos, los paneles intermedios y los contenedores amplios.
+     Un radio grande es la diferencia entre "un panel" y "un rectángulo". */
   --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
-  --radius-3xl: 3rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+  --radius-2xl: 2.25rem;
+  --radius-3xl: 2.5rem;
 
   /* --- Tipografía --- */
   --font-sans: var(--font-plus-jakarta-sans);
@@ -191,6 +214,15 @@
   --brand-gold-glow: rgba(244, 197, 74, 0.45);
   --brand-gold-glow-strong: rgba(244, 197, 74, 0.55);
 
+  /* ===== Tinta sobre el gradiente de marca =====
+     El gradiente institucional es siempre oscuro. Estos roles son la tinta
+     legible SOBRE él, y son los mismos en claro y en oscuro porque la
+     superficie que cubren no cambia. */
+  --brand-on-gradient: #ffffff;
+  --brand-on-gradient-muted: rgba(255, 255, 255, 0.78);
+  --brand-on-gradient-border: rgba(255, 255, 255, 0.22);
+  --brand-on-gradient-soft: rgba(255, 255, 255, 0.1);
+
   /* ===== Series de datos (SH-01 §3.3) ===== */
   --chart-1: #312e8e;
   --chart-2: #f4c64e;
@@ -206,28 +238,42 @@
   --elevation-md:
     0 2px 4px rgba(49, 46, 142, 0.06), 0 8px 24px -12px rgba(49, 46, 142, 0.18);
   --elevation-lg: 0 24px 64px -24px rgba(12, 12, 31, 0.45);
+  --elevation-xl: 0 32px 80px -32px rgba(12, 12, 31, 0.55);
   --elevation-focus: 0 0 0 var(--focus-ring-width) var(--ring);
 
-  /* ===== Navegación lateral ===== */
-  --sidebar-background: #f8f9fc;
-  --sidebar-foreground: #17214b;
-  --sidebar-primary: #312e8e;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e8eaf4;
-  --sidebar-accent-foreground: #17214b;
-  --sidebar-border: #d1d5e0;
-  --sidebar-ring: #312e8e;
+  /* ===== Navegación lateral =====
+     El área de administración es la consola institucional del festival: su
+     superficie es el azul profundo de la marca, no el gris de una
+     herramienta. El dorado es el acento y la regla activa.
+
+     Estos valores son los MISMOS en claro y en oscuro a propósito: el azul
+     profundo es la identidad del área, no un modo. Lo que cambia con el
+     tema es el contenido, no la consola. */
+  --sidebar-background: #1a1857;
+  --sidebar-foreground: #f4f6fb;
+  --sidebar-primary: #f4c64e;
+  --sidebar-primary-foreground: #17214b;
+  --sidebar-accent: #2c2a72;
+  --sidebar-accent-foreground: #f4f6fb;
+  --sidebar-border: #3a3784;
+  --sidebar-ring: #f4c64e;
+  --sidebar-elevated: rgba(255, 255, 255, 0.06);
+  --sidebar-elevated-border: rgba(255, 255, 255, 0.12);
 
   /* ===== Radios base ===== */
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 
   /* ===== Chrome de la portada =====
      La portada trae su propio navbar sticky, distinto del chrome del shell.
      Su altura es la ÚNICA fuente de verdad del espacio vertical que queda
      libre debajo: una sección "de una pantalla" tiene que medir el viewport
      MENOS este chrome, no el viewport entero. El navbar consume este mismo
-     token, así que el número no puede desincronizarse del layout. */
-  --portada-chrome-height: 75px;
+     token, así que el número no puede desincronizarse del layout.
+
+     El navbar es una PÍLDORA FLOTANTE: el aire de arriba (12-16px) más la
+     barra (64px) más su sombra. El token reserva ese bloque entero para que
+     la primera sección no quede debajo de la barra al saltar a un ancla. */
+  --portada-chrome-height: 88px;
 }
 
 .dark {
@@ -291,16 +337,21 @@
   --elevation-md:
     0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
   --elevation-lg: 0 24px 64px -24px rgba(0, 0, 0, 0.6);
+  --elevation-xl: 0 32px 80px -32px rgba(0, 0, 0, 0.7);
 
-  /* ===== Navegación lateral ===== */
-  --sidebar-background: #16162e;
-  --sidebar-foreground: #f4f6fb;
-  --sidebar-primary: #6976ff;
-  --sidebar-primary-foreground: #0c0c1f;
-  --sidebar-accent: #252550;
+  /* ===== Navegación lateral =====
+     En el tema oscuro el azul profundo se apaga hacia el azul noche: la
+     consola sigue siendo la misma marca, sólo con menos luz. */
+  --sidebar-background: #0c0c1f;
+  --sidebar-foreground: #eef1fb;
+  --sidebar-primary: #f4c64e;
+  --sidebar-primary-foreground: #17214b;
+  --sidebar-accent: #23214f;
   --sidebar-accent-foreground: #f4f6fb;
-  --sidebar-border: #2a2a4a;
-  --sidebar-ring: #6976ff;
+  --sidebar-border: #2e2c63;
+  --sidebar-ring: #f4c64e;
+  --sidebar-elevated: rgba(255, 255, 255, 0.05);
+  --sidebar-elevated-border: rgba(255, 255, 255, 0.1);
 }
 
 @layer base {
@@ -322,6 +373,36 @@
   :focus-visible {
     outline: var(--focus-ring-width) solid var(--ring);
     outline-offset: var(--focus-ring-offset);
+  }
+
+  /* ===== La barra de desplazamiento del producto =====
+     Es azul de marca y fina: la referencia del producto anterior usaba
+     este mismo gesto y needle es lo que hace que una superficie con
+     muchos datos se lea como un documento y no como una tabla de cálculo. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--brand-blue-bright) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--brand-blue-bright);
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary);
+    background-clip: content-box;
   }
 }
 
@@ -451,7 +532,6 @@
       transparent 60%
     );
   pointer-events: none;
-  z-index: -1;
 }
 
 /** Alias conservado del frontend anterior. */
@@ -475,7 +555,6 @@
       transparent 60%
     );
   pointer-events: none;
-  z-index: -1;
 }
 
 @utility bg-surface-glass {
@@ -580,6 +659,124 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--elevation-md);
+}
+
+/**
+ * La superficie elevada con una sola luz desde arriba.
+ *
+ * Una superficie plana con un borde NO tiene profundidad: el relieve llega
+ * del degradado sutil de la propia superficie, no de una sombra suelta.
+ */
+@utility bg-surface-elevated {
+  background-image: linear-gradient(
+    180deg,
+    var(--surface-raised) 0%,
+    color-mix(in srgb, var(--surface-raised) 94%, var(--primary)) 100%
+  );
+}
+
+/**
+ * La banda de marca de las cabeceras.
+ *
+ * El degradado institucional NO es un bloque de color: es una banda SUAVE
+ * que va del cyan al oro pasando por la superficie. Es la forma en que el
+ * producto anterior saludaba al visitante, y es más hospitalaria que una
+ * franja oscura.
+ *
+ * El degradado se desplaza muy despacio: el color respira sin distraer, y
+ * con `prefers-reduced-motion` la regla global lo detiene.
+ */
+@utility bg-brand-band {
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--brand-cyan) 26%, var(--surface-raised)) 0%,
+    var(--surface-raised) 36%,
+    color-mix(in srgb, var(--accent) 30%, var(--surface-raised)) 72%,
+    color-mix(in srgb, var(--brand-cyan) 24%, var(--surface-raised)) 100%
+  );
+  background-size: 240% 100%;
+  animation: brand-band-drift 22s var(--motion-ease-standard) infinite;
+}
+
+@keyframes brand-band-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/**
+ * El halo de marca de una tarjeta.
+ *
+ * Es el gesto del producto anterior: una luz de color en la esquina que
+ * hace que la tarjeta parezca iluminada. Sólo se usa en superficies
+ * distinguidas, nunca en todas.
+ */
+@utility glow-brand {
+  background-image: radial-gradient(
+    circle at 100% 0%,
+    color-mix(in srgb, var(--primary) 12%, transparent) 0%,
+    transparent 55%
+  );
+}
+
+/**
+ * El halo dorado: la marca donde el producto se siente festivo.
+ */
+@utility glow-accent {
+  background-image: radial-gradient(
+    circle at 100% 0%,
+    color-mix(in srgb, var(--accent) 16%, transparent) 0%,
+    transparent 55%
+  );
+}
+
+/**
+ * El vidrio de las superficies de marca.
+ */
+@utility glass-brand {
+  background-color: color-mix(in srgb, var(--surface-raised) 14%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--surface-raised) 24%, transparent);
+}
+
+/* ==========================================================================
+   Movimiento de las capas emergentes (dropdowns, menús, tooltips)
+   La apertura es más lenta que el cierre: entra con carácter, sale sin
+  bstrechar la atención. El origen de la transformación lo fija Radix.
+   ========================================================================== */
+
+@utility animate-pop-in {
+  animation: pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility animate-pop-out {
+  animation: pop-out 120ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pop-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98) translateY(-4px);
+  }
 }
 
 /**
@@ -692,6 +889,47 @@
   line-height: 1.2;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+/**
+ * La escala tipográfica de las PÁGINAS (no de los componentes).
+ *
+ * Las cuatro familias de rutas comparten la misma jerarquía: un titular de
+ * página, un titular de bloque, un texto de entrada y una anotación. La
+ * escala vive aquí para que una ruta no invente su propio tamaño de título.
+ */
+@utility text-title-page {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  @media (width >= 40rem) {
+    font-size: 2rem;
+  }
+}
+
+@utility text-section-title {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+@utility text-lead {
+  font-size: 1rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+  @media (width >= 40rem) {
+    font-size: 1.0625rem;
+  }
+}
+
+@utility text-caption {
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
 
 @utility label-brand {

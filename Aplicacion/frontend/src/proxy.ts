@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { AUTH_COOKIES } from "./lib/auth";
+import { esRutaPublica, RUTAS } from "./lib/routes";
 
 /**
  * proxy.ts — server-side route protection.
@@ -27,17 +28,12 @@ import { AUTH_COOKIES } from "./lib/auth";
  *   (`app/(administracion)/layout.tsx`) revalidates the session.
  * - Do NOT add role logic here: it would duplicate the authority and it would
  *   be based on a cookie the client controls.
+ *
+ * The list of public routes is NOT declared here: it comes from the route map
+ * (`lib/routes.ts`), the ONE owner of the paths of the product. A second list
+ * is a second truth, and the day the map renames a path the gate would keep
+ * sending visitors to a page that no longer exists.
  */
-const PUBLIC_PATHS = new Set<string>([
-  "/",
-  "/informacion",
-  "/pases",
-  "/tienda",
-  "/recuperar-compra",
-  "/login",
-  "/registro",
-]);
-
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -52,26 +48,20 @@ export default function proxy(request: NextRequest) {
 
   const token = request.cookies.get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
 
-  // The guest links carry their token in the path: the token IS the
-  // credential and its expiry is the server's business.
-  if (
-    pathname.startsWith("/pases/gestionar/") ||
-    pathname.startsWith("/tienda/pedidos/")
-  ) {
-    return NextResponse.next();
-  }
-
   // A visitor that already has a credential does not need the login form.
-  if (pathname === "/login" && token) {
-    return NextResponse.redirect(new URL("/mi-cuenta", request.url));
+  if (pathname === RUTAS.auth.login && token) {
+    return NextResponse.redirect(new URL(RUTAS.cuenta.miCuenta, request.url));
   }
 
-  if (PUBLIC_PATHS.has(pathname)) {
+  // `esRutaPublica` also covers the GUEST links (`/pases/gestionar/*`,
+  // `/tienda/pedidos/*`): they carry their token in the path, the token IS
+  // the credential and its expiry is the server's business.
+  if (esRutaPublica(pathname)) {
     return NextResponse.next();
   }
 
   if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL(RUTAS.auth.login, request.url));
   }
 
   return NextResponse.next();

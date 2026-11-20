@@ -1,0 +1,1 @@
+export { PatrocinadoresAdminView } from "./PatrocinadoresAdminView";

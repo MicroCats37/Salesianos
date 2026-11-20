@@ -47,8 +47,11 @@ class PedidoItemCreateData(BaseModel):
     )
     cantidad: int = Field(
         ...,
-        gt=0,
-        description="Cantidad pedida. La valida el servidor.",
+        description=(
+            "Cantidad pedida. El DOMINIO la valida: el DTO no acota el rango "
+            "para que el rechazo viaje con el código estable "
+            "`PEDIDO_CANTIDAD_INVALIDA` y no con un error de forma."
+        ),
     )
 
 

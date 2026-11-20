@@ -51,6 +51,37 @@ class PedidoSelector:
             .first()
         )
 
+    def obtener_por_id(self, pedido_id) -> Pedido | None:
+        """Un pedido por su identificador, o `None`."""
+        if not pedido_id:
+            return None
+        return (
+            Pedido.objects.filter(id=pedido_id)
+            .select_related("edicion", "comprador", "compra")
+            .first()
+        )
+
+    def listar_pendientes_de_entrega(self, edicion_id) -> list[Pedido]:
+        """Los pedidos PAGADOS cuya entrega sigue pendiente.
+
+        La entrega se lista por su PROPIO estado: un pedido pagado y
+        entregado NO aparece (`RN-M07` · `QA-M04`).
+        """
+        from modules.marketplace.domain.constants import (
+            EstadoEntregaPedido,
+            EstadoPedido,
+        )
+
+        return list(
+            Pedido.objects.filter(
+                edicion_id=edicion_id,
+                estado=EstadoPedido.PAGADO,
+                estado_entrega=EstadoEntregaPedido.PENDIENTE,
+            )
+            .select_related("edicion", "comprador", "compra")
+            .order_by("-created_at")
+        )
+
     def listar_detalles(self, pedido_id) -> list[PedidoDetalle]:
         """El detalle de un pedido, en su orden canónico."""
         return list(PedidoDetalle.objects.filter(pedido_id=pedido_id).order_by("id"))

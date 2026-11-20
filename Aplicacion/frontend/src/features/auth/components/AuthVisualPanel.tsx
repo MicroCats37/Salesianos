@@ -37,16 +37,33 @@ const CAROUSEL_IMAGES = [
   { src: "/images/basket-varones.webp", alt: "Basket 3x3" },
 ];
 
-// Multi-direction text shadow so letters stay readable over any part of the image
+// Multi-direction text shadow so letters stay readable over any part of the image.
+//
+// The panel is an INVERSE surface: a dark photographic base under light ink.
+// Every colour below comes from a ROLE of the token system, never from a
+// literal: the panel is dark in BOTH themes and the roles resolve in both.
 const TEXT_GLOW: React.CSSProperties = {
   textShadow:
-    "0 0 4px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.7), 0 0 18px rgba(7,8,28,0.85), 0 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.6), 1px -1px 0 rgba(0,0,0,0.6), -1px 1px 0 rgba(0,0,0,0.6), 1px 1px 0 rgba(0,0,0,0.6)",
+    "0 0 4px color-mix(in srgb, var(--brand-deep-night) 85%, transparent), 0 0 10px color-mix(in srgb, var(--brand-deep-night) 70%, transparent), 0 0 18px color-mix(in srgb, var(--brand-deep-night) 85%, transparent), 0 2px 4px color-mix(in srgb, var(--brand-deep-night) 90%, transparent), -1px -1px 0 color-mix(in srgb, var(--brand-deep-night) 60%, transparent), 1px -1px 0 color-mix(in srgb, var(--brand-deep-night) 60%, transparent), -1px 1px 0 color-mix(in srgb, var(--brand-deep-night) 60%, transparent), 1px 1px 0 color-mix(in srgb, var(--brand-deep-night) 60%, transparent)",
 };
 
 const TEXT_GLOW_GOLD: React.CSSProperties = {
   textShadow:
-    "0 0 4px rgba(0,0,0,0.85), 0 0 14px rgba(244,197,74,0.7), 0 0 24px rgba(244,197,74,0.5), 0 2px 4px rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.6), 1px -1px 0 rgba(0,0,0,0.6), -1px 1px 0 rgba(0,0,0,0.6), 1px 1px 0 rgba(0,0,0,0.6)",
+    "0 0 4px color-mix(in srgb, var(--brand-deep-night) 85%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 24px color-mix(in srgb, var(--accent) 50%, transparent), 0 2px 4px color-mix(in srgb, var(--brand-deep-night) 90%, transparent), -1px -1px 0 color-mix(in srgb, var(--brand-deep-night) 60%, transparent), 1px -1px 0 color-mix(in srgb, var(--brand-deep-night) 60%, transparent), -1px 1px 0 color-mix(in srgb, var(--brand-deep-night) 60%, transparent), 1px 1px 0 color-mix(in srgb, var(--brand-deep-night) 60%, transparent)",
 };
+
+/** The ink of the inverse surface: light in both themes. */
+const INK = "var(--surface-inverse-foreground)";
+
+/** The smoke of the panel: blue, gold and cyan, as roles. */
+const HUMO_AZUL = "color-mix(in srgb, var(--info) 70%, transparent)";
+const HUMO_ORO = "color-mix(in srgb, var(--accent) 55%, transparent)";
+const HUMO_CIAN = "color-mix(in srgb, var(--brand-cyan) 45%, transparent)";
+
+/** The sparks of the panel: the same three roles, at full strength. */
+const CHISPA_ORO = "color-mix(in srgb, var(--accent) 95%, transparent)";
+const CHISPA_CIAN = "color-mix(in srgb, var(--brand-cyan) 95%, transparent)";
+const CHISPA_AZUL = "color-mix(in srgb, var(--info) 95%, transparent)";
 
 // =============================================================================
 // PARTY SPARKS — animated confetti particles + smoke clouds
@@ -128,7 +145,7 @@ function PartySparks() {
         }}
         className="absolute -left-24 top-1/4 h-[55vh] w-[55vh] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(0,123,255,0.7), transparent 70%)",
+          background: `radial-gradient(circle, ${HUMO_AZUL}, transparent 70%)`,
         }}
       />
       <div
@@ -137,7 +154,7 @@ function PartySparks() {
         }}
         className="absolute -right-24 bottom-10 h-[55vh] w-[55vh] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(244,197,74,0.55), transparent 70%)",
+          background: `radial-gradient(circle, ${HUMO_ORO}, transparent 70%)`,
         }}
       />
       <div
@@ -146,7 +163,7 @@ function PartySparks() {
         }}
         className="absolute left-1/3 top-1/3 h-[40vh] w-[40vh] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(0,183,212,0.45), transparent 70%)",
+          background: `radial-gradient(circle, ${HUMO_CIAN}, transparent 70%)`,
         }}
       />
 
@@ -155,10 +172,10 @@ function PartySparks() {
         const isYellow = i % 3 === 0;
         const isBlue = i % 3 === 1;
         const color = isYellow
-          ? "rgba(244,197,74,0.95)"
+          ? CHISPA_ORO
           : isBlue
-          ? "rgba(0,183,212,0.95)"
-          : "rgba(0,123,255,0.95)";
+          ? CHISPA_CIAN
+          : CHISPA_AZUL;
         const size = i % 4 === 0 ? 6 : 4;
         return (
           <span
@@ -359,31 +376,42 @@ function VisualPanelInner({
         ))}
 
         {/* Fallback gradient if no image loads */}
-        <div className="absolute inset-0 bg-gradient-br-primary z-[5]" />
+        <div className="absolute inset-0 bg-brand-gradient-deep z-[5]" />
       </div>
 
       {/* ---- OVERLAY LAYERS ---- */}
       {/* Strong dark base — keeps text readable across the whole image */}
-      <div className="absolute inset-0 z-[6]" style={{ background: "rgba(7, 8, 28, 0.68)" }} />
+      <div
+        className="absolute inset-0 z-[6]"
+        style={{
+          background:
+            "color-mix(in srgb, var(--brand-deep-night) 68%, transparent)",
+        }}
+      />
 
       {/* Blue/purple tint */}
       <div
         className="absolute inset-0 z-[7]"
         style={{
           background:
-            "linear-gradient(135deg, rgba(33,30,112,0.45) 0%, rgba(21,87,184,0.30) 50%, rgba(10,10,30,0.55) 100%)",
+            "linear-gradient(135deg, color-mix(in srgb, var(--brand-deep-blue) 45%, transparent) 0%, color-mix(in srgb, var(--info) 30%, transparent) 50%, color-mix(in srgb, var(--brand-deep-night) 55%, transparent) 100%)",
         }}
       />
 
       {/* Vignette edges */}
-      <div className="absolute inset-0 z-[8] vp-vignette" />
+      <div
+        className="absolute inset-0 z-[8]"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, transparent 45%, color-mix(in srgb, var(--brand-deep-night) 55%, transparent) 100%)",
+        }}
+      />
 
       {/* Subtle grid */}
       <div
         className="absolute inset-0 z-[9] opacity-[0.04] pointer-events-none"
         style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
+          backgroundImage: `linear-gradient(color-mix(in srgb, ${INK} 50%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, ${INK} 50%, transparent) 1px, transparent 1px)`,
           backgroundSize: "48px 48px",
         }}
       />
@@ -393,7 +421,7 @@ function VisualPanelInner({
         className="absolute inset-0 z-[10]"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(7,8,28,0.85) 0%, rgba(7,8,28,0.35) 30%, rgba(7,8,28,0.55) 70%, rgba(7,8,28,0.92) 100%)",
+            "linear-gradient(to bottom, color-mix(in srgb, var(--brand-deep-night) 85%, transparent) 0%, color-mix(in srgb, var(--brand-deep-night) 35%, transparent) 30%, color-mix(in srgb, var(--brand-deep-night) 55%, transparent) 70%, color-mix(in srgb, var(--brand-deep-night) 92%, transparent) 100%)",
         }}
       />
 
@@ -405,10 +433,13 @@ function VisualPanelInner({
         {/* Eyebrow badge */}
         <div className="vp-stagger">
           <span
-            className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-white backdrop-blur-sm"
+            className="inline-flex items-center gap-2 rounded-full border border-surface-inverse-foreground/25 bg-surface-inverse-foreground/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-surface-inverse-foreground backdrop-blur-sm"
             style={TEXT_GLOW}
           >
-            <span className="badge-dot animate-pulse" />
+            <span
+              className="size-2 shrink-0 animate-pulse rounded-full bg-accent"
+              aria-hidden="true"
+            />
             Promocion 2002 — Bodas de Plata
           </span>
         </div>
@@ -416,20 +447,20 @@ function VisualPanelInner({
         {/* Headline with cycling word */}
         <div className="vp-stagger space-y-2">
           <h2
-            className="text-[2.6rem] font-black leading-[1.05] tracking-[-.04em] text-white xl:text-[3.2rem]"
+            className="text-[2.6rem] font-black leading-[1.05] tracking-[-.04em] text-surface-inverse-foreground xl:text-[3.2rem]"
             style={TEXT_GLOW}
           >
             Tu promocion vuelve a {currentEntry.article}{" "}
             <span
               ref={keywordRef}
-              className="inline-block text-gold-light"
+              className="inline-block text-accent"
               style={TEXT_GLOW_GOLD}
             >
               {currentEntry.word}
             </span>
           </h2>
           <p
-            className="max-w-sm text-base leading-7 text-white"
+            className="max-w-sm text-base leading-7 text-surface-inverse-foreground"
             style={TEXT_GLOW}
           >
             {subtitle}
@@ -439,7 +470,11 @@ function VisualPanelInner({
         {/* Feature pills */}
         <div className="vp-stagger flex flex-wrap gap-3">
           {features.map((feat) => (
-            <span key={feat} className="feature-pill" style={TEXT_GLOW}>
+            <span
+              key={feat}
+              className="inline-flex items-center rounded-full border border-surface-inverse-foreground/25 bg-surface-inverse-foreground/10 px-4 py-2 text-xs font-semibold text-surface-inverse-foreground backdrop-blur-sm"
+              style={TEXT_GLOW}
+            >
               {feat}
             </span>
           ))}
@@ -447,26 +482,32 @@ function VisualPanelInner({
 
         {/* Event info badge */}
         <div className="vp-stagger">
-          <div className="inline-flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 backdrop-blur-sm shadow-xl">
-            <div className="flex flex-col items-center justify-center rounded-xl bg-gold-dim px-3 py-1">
+          <div className="inline-flex items-center gap-3 rounded-2xl border border-surface-inverse-foreground/20 bg-surface-inverse-foreground/10 px-5 py-3 backdrop-blur-sm shadow-xl">
+            <div className="flex flex-col items-center justify-center rounded-xl bg-accent/20 px-3 py-1">
               <span
-                className="text-[10px] font-bold uppercase tracking-wider text-gold"
+                className="text-[10px] font-bold uppercase tracking-wider text-accent"
                 style={TEXT_GLOW}
               >
                 {eventBadge.date.split(" ")[1]}
               </span>
-              <span className="text-xl font-black text-white leading-none" style={TEXT_GLOW}>
+              <span
+                className="text-xl font-black text-surface-inverse-foreground leading-none"
+                style={TEXT_GLOW}
+              >
                 {eventBadge.date.split(" ")[0]}
               </span>
             </div>
             <div className="flex flex-col">
               <p
-                className="text-xs font-black uppercase tracking-[.1em] text-white"
+                className="text-xs font-black uppercase tracking-[.1em] text-surface-inverse-foreground"
                 style={TEXT_GLOW}
               >
                 Evento principal
               </p>
-              <p className="text-sm font-bold text-white" style={TEXT_GLOW}>
+              <p
+                className="text-sm font-bold text-surface-inverse-foreground"
+                style={TEXT_GLOW}
+              >
                 {eventBadge.place}
               </p>
             </div>
@@ -478,14 +519,16 @@ function VisualPanelInner({
           {CAROUSEL_IMAGES.map((_, idx) => (
             <button
               key={idx}
+              type="button"
               onClick={() => goToImage(idx)}
               className={cn(
-                "carousel-dot",
+                "size-2.5 rounded-full transition-colors",
                 idx === currentImageIndex
-                  ? "carousel-dot-active"
-                  : "carousel-dot-inactive",
+                  ? "bg-accent"
+                  : "bg-surface-inverse-foreground/40 hover:bg-surface-inverse-foreground/70",
               )}
               aria-label={`Ir a imagen ${idx + 1}`}
+              aria-current={idx === currentImageIndex ? "true" : undefined}
             />
           ))}
         </div>

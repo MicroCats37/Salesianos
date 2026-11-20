@@ -1,17 +1,14 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { AuditoriaValidacionesView } from "@/features/validaciones/views";
 
 /**
- * ADM-22 — Auditar ingresos, entregas e incidencias
- *
- * Shell de ruta (FND-06). La vista la construye UI-05.
+ * ADM-22 - Auditar ingresos, entregas e incidencias
  */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ veredicto?: string }>;
+}) {
+  const { veredicto } = await searchParams;
 
-export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="ADM-22"
-      tarea="Auditar ingresos, entregas e incidencias"
-      packet="UI-05"
-    ></RoutePlaceholder>
-  );
+  return <AuditoriaValidacionesView filtroVeredicto={veredicto} />;
 }

@@ -52,6 +52,10 @@ export const DefaultFieldWrapper: FC<FieldWrapperProps> = ({
   error,
   labelId,
 }) => {
+  // The error is programmatically associated with the control through this
+  // id: the input announces it through `aria-describedby`.
+  const errorId = `${labelId}-error`;
+
   return (
     <div className={`space-y-2 ${field.containerClassName || "col-span-12"}`}>
       {!field.hidden && (
@@ -65,7 +69,9 @@ export const DefaultFieldWrapper: FC<FieldWrapperProps> = ({
       )}
       {children}
       {error && !field.hidden && (
-        <p className="text-sm text-destructive font-medium">{error.message}</p>
+        <p id={errorId} className="text-sm text-destructive font-medium">
+          {error.message}
+        </p>
       )}
       {field.helperText && !field.hidden && !error && (
         <p className="text-xs text-muted-foreground font-medium px-1">
@@ -112,6 +118,16 @@ export interface FormField {
   isLoading?: boolean;
   helperText?: string;
   hidden?: boolean | ((values: any) => boolean);
+  /**
+   * The fields whose values the `hidden` predicate reads.
+   *
+   * Declaring them makes the field subscribe to THOSE fields only, through
+   * `useWatch`, instead of to the whole form. A change of an unrelated field
+   * never re-renders this one.
+   *
+   * Every value the predicate reads MUST be declared here.
+   */
+  dependsOn?: readonly string[];
   valueType?: "string" | "number" | "boolean";
 
   // Visual Properties
@@ -196,6 +212,10 @@ export const GenericInput: FC<GenericInputProps> = ({
   // because the wrapper handles error rendering. This avoids duplicate error messages.
   const isDefaultWrapper = FieldWrapper === DefaultFieldWrapper;
 
+  // The id of the element that renders the error, so the control can point
+  // at it with `aria-describedby`.
+  const errorId = `${labelId}-error`;
+
   // Render input inside wrapper
   return (
     <FieldWrapper field={field} error={error} labelId={labelId}>
@@ -205,6 +225,7 @@ export const GenericInput: FC<GenericInputProps> = ({
         control={control}
         error={error}
         id={labelId}
+        errorId={errorId}
         hideErrorMessage={isDefaultWrapper}
       />
     </FieldWrapper>

@@ -89,7 +89,7 @@ export function PreventaBanner({
         aria-hidden="true"
       />
 
-      <div className="relative z-10 flex min-h-[18rem] items-center justify-center px-4 py-14 sm:min-h-[22rem] lg:min-h-[26rem]">
+      <div className="relative z-10 flex min-h-[18rem] items-center justify-center px-4 py-14 sm:min-h-[22rem] lg:min-h-[26rem] [@media(max-height:900px)]:min-h-[13rem] [@media(max-height:900px)]:py-8 [@media(max-height:760px)]:min-h-[11rem]">
         <div className="rounded-xl border border-brand-cyan/60 bg-gradient-to-br from-brand-deep-blue to-info px-6 py-4 text-center shadow-2xl shadow-brand-deep-navy/40 sm:px-8 sm:py-5">
           <h2 className="flex flex-wrap items-baseline justify-center gap-x-3 text-4xl font-black uppercase tracking-tight text-surface-inverse-foreground sm:text-5xl lg:text-6xl">
             <span>{titulo}</span>

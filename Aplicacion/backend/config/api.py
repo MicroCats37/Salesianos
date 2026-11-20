@@ -17,7 +17,8 @@ Reglas de registro (FREEZE-PS-1.0.0 · FR-07 §3.1.2):
   su módulo y su presenter estén implementados y versionados.
 - A0 no registra controllers de dominio INACABADOS: sólo se registran los
   controllers cuyo módulo está completado, verificado y versionado
-  (reconciliación A0 de FND-01, 2026-11-19 · DOM-01 y DOM-04, 2026-11-19).
+  (reconciliación A0 de FND-01, 2026-11-19 · DOM-01 y DOM-04, 2026-11-19 ·
+  DOM-03, 2026-11-19).
 """
 
 from ninja_extra import NinjaExtraAPI
@@ -35,7 +36,11 @@ from modules.salesianos_fest.presentation.controllers.catalogo_controller import
 from modules.salesianos_fest.presentation.controllers.inscripcion_controller import (
     InscripcionController,
 )
-from modules.usuarios.presentation.controllers import PersonaController
+from modules.salesianos_fest.presentation.controllers.pase_controller import (
+    AdminPaseController,
+    PaseController,
+)
+from modules.usuarios.presentation.controllers import AuthController, PersonaController
 
 import os
 
@@ -126,23 +131,31 @@ registrar_controladores(NinjaJWTDefaultController)
 #
 #   - `EdicionController` → FND-02 (`eventos`)   · RT-ED-01
 #   - `PersonaController` → FND-03 (`usuarios`)  · RT-ID-01…RT-ID-03
+#   - `AuthController`   → FND-03A (`usuarios`) · POST /auth/login/{username,
+#                             dni,email} + GET /auth/me (ruta CORRECTIVA: el
+#                             ledger de GOV-01 no la congeló)
 #   - `PagosController`   → FND-04 (`pagos`)     · RT-PG-01…RT-PG-03
 #   - `CatalogoController` → DOM-01 (`salesianos_fest`) · RT-IN-12, RT-IN-13
 #   - `InscripcionController` → DOM-01 (`salesianos_fest`) · RT-IN-02,
 #                             RT-IN-04, RT-IN-14 (provisional, ratificada)
 #   - `ProductoController` → DOM-04 (`marketplace`) · RT-MD-01, RT-MK-01…03
+#   - `PaseController` → DOM-03 (`salesianos_fest`) · RT-PS-01…RT-PS-05,
+#                             RT-CM-02, RT-RT-03
+#   - `AdminPaseController` → DOM-03 (`salesianos_fest`) · RT-PS-06…RT-PS-08
 #
 # `commerce` NO aporta surface HTTP (D-FND-04-06): sus compras las crean los
-# dominios in-process. Ningún dominio INACABADO (`pases`, `beneficios`,
-# `validaciones`, `patrocinadores`, `competencias`, `administracion`, …) se
-# registra aquí.
+# dominios in-process. Ningún dominio INACABADO (`beneficios`,
+# `validaciones`, `patrocinadores`, `competencias`, …) se registra aquí.
 registrar_controladores(
     EdicionController,
     PersonaController,
+    AuthController,
     PagosController,
     CatalogoController,
     InscripcionController,
     ProductoController,
+    PaseController,
+    AdminPaseController,
 )
 
 # ── Exception handlers globales ────────────────────────────────

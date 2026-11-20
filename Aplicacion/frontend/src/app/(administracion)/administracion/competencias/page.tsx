@@ -1,17 +1,14 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { CompetenciasListaView } from "@/features/competencias/views";
 
 /**
- * ADM-10 — Seleccionar y administrar competencias
- *
- * Shell de ruta (FND-06). La vista la construye UI-05.
+ * ADM-10 - Seleccionar y administrar competencias
  */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ estado?: string }>;
+}) {
+  const { estado } = await searchParams;
 
-export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="ADM-10"
-      tarea="Seleccionar y administrar competencias"
-      packet="UI-05"
-    ></RoutePlaceholder>
-  );
+  return <CompetenciasListaView filtroEstado={estado} />;
 }

@@ -1,5 +1,10 @@
 """Fixtures del módulo `usuarios`."""
 
+from modules.usuarios.tests.fixtures.auth_fixtures import (  # noqa: F401
+    cliente_con_sesion,
+    cuenta_inactiva,
+    superusuario_tecnico,
+)
 from modules.usuarios.tests.fixtures.persona_fixtures import (  # noqa: F401
     api_client,
     api_usuarios,

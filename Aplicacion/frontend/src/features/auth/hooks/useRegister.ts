@@ -9,6 +9,7 @@ import { useAuthStore } from "../store/auth.store";
 import type { RegisterFormData, RegisterResponse } from "../schemas";
 import { AUTH_COOKIES } from "@/lib/auth";
 import { consumePostAuthRedirect } from "@/lib/post-auth-redirect";
+import { RUTAS } from "@/lib/routes";
 
 const COOKIE_OPTIONS = {
   path: "/",
@@ -71,7 +72,7 @@ export function useRegister() {
       const postAuth = consumePostAuthRedirect();
       const redirectTo = nextUrl
         ? decodeURIComponent(nextUrl)
-        : (postAuth ?? "/inscripcion");
+        : (postAuth ?? RUTAS.cuenta.inscripcion);
 
       if (message) toast.success(message);
       router.push(redirectTo);

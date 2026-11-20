@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -177,5 +179,50 @@ describe("shell — SiteFooter", () => {
     expect(
       screen.getByRole("navigation", { name: "Enlaces del pie" }),
     ).toBeDefined();
+  });
+});
+
+/**
+ * The chrome of every family of routes is the same CONTRACT, not the same
+ * drawing: a landmark for the content and a link that jumps to it. The
+ * administration area has the longest navigation of the product: without the
+ * skip link a keyboard has to walk its fourteen destinations on every page
+ * (WCAG 2.4.1).
+ */
+describe("shell — el chrome de cada familia de rutas", () => {
+  const LAYOUTS = [
+    "src/app/(public)/layout.tsx",
+    "src/app/(auth)/layout.tsx",
+    "src/app/(cuenta)/layout.tsx",
+    "src/app/(administracion)/layout.tsx",
+  ];
+
+  it.each(LAYOUTS)("%s abre el contenido y ofrece el salto", (ruta) => {
+    const fuente = readFileSync(join(process.cwd(), ruta), "utf8");
+
+    expect(fuente).toContain('id="contenido"');
+    expect(fuente).toContain("Saltar al contenido");
+  });
+});
+
+/**
+ * The logout of the account bar is a plain LINK: a link is a GET. The
+ * handler used to answer POST only, so "Cerrar sesión" answered `405 Method
+ * Not Allowed` and the session stayed alive.
+ */
+describe("shell — la salida de sesión", () => {
+  it("el enlace de la cuenta apunta a un manejador que responde GET", () => {
+    const barra = readFileSync(
+      join(process.cwd(), "src/components/shell/AccountTopbar.tsx"),
+      "utf8",
+    );
+    const manejador = readFileSync(
+      join(process.cwd(), "src/app/api/auth/logout/route.ts"),
+      "utf8",
+    );
+
+    expect(barra).toContain('href="/api/auth/logout"');
+    expect(manejador).toContain("export async function GET");
+    expect(manejador).toContain("export async function POST");
   });
 });

@@ -10,6 +10,7 @@ import { useLandingPaquetes } from "@/features/portada/fixtures/useLandingPaquet
 import { ENLACES, SECCIONES } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
 import { estado } from "@/features/portada/fixtures/pricing-stage";
+import { RUTAS } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 type TabPaquetes = "packs" | "sports";
@@ -85,7 +86,12 @@ export function TicketsSection() {
       destacado={COPY.paquetes.destacado}
       copy={[...COPY.paquetes.copy]}
     >
-      <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/*
+        Las pestañas y el estado de venta van JUNTOS: separados por todo el
+        ancho, el distintivo de "inscripciones finalizadas" quedaba solo en
+        la esquina derecha y la fila se leía como medio vacía.
+      */}
+      <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5 [@media(max-height:900px)]:mt-5">
         <div
           role="tablist"
           aria-label="Tipo de inscripción"
@@ -113,7 +119,7 @@ export function TicketsSection() {
           })}
         </div>
 
-        <p className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-surface-raised/70 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+        <p className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-surface-raised/70 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
           <span
             className={cn(
               "size-2 rounded-full",
@@ -125,7 +131,7 @@ export function TicketsSection() {
         </p>
       </div>
 
-      <div className="relative mt-8">
+      <div className="relative mt-6 [@media(max-height:900px)]:mt-4">
         <PreventaBanner
           titulo="PREVENTA POR"
           palabraDestacada={tab === "packs" ? "PACKS" : "DISCIPLINA"}
@@ -168,7 +174,7 @@ export function TicketsSection() {
         </div>
       )}
 
-      <div className="mt-8 flex flex-col gap-3 border-t border-primary/15 pt-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-8 flex flex-col gap-3 border-t border-primary/15 pt-6 sm:flex-row sm:items-center sm:justify-between [@media(max-height:900px)]:mt-5">
         <p className="flex max-w-2xl items-start gap-2 text-xs leading-relaxed text-muted-foreground">
           <Info
             className="mt-0.5 size-4 shrink-0 text-primary"
@@ -177,7 +183,7 @@ export function TicketsSection() {
           {COPY.paquetes.disclaimer}
         </p>
         <a
-          href="/login"
+          href={RUTAS.auth.login}
           className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-primary/25 px-5 text-xs font-black uppercase tracking-wider text-primary transition-colors hover:bg-primary/5"
         >
           {COPY.paquetes.enlaceCuenta}
@@ -185,7 +191,7 @@ export function TicketsSection() {
         </a>
       </div>
 
-      <ol className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <ol className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 [@media(max-height:900px)]:mt-6">
         {COPY.paquetes.calendario.map((paso) => (
           <li
             key={paso.numero}

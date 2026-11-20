@@ -20,32 +20,32 @@ export default function Loading() {
         <Skeleton className="h-4 w-96 max-w-full" />
       </div>
       <div className="mt-8 grid gap-4 grid-cols-1">
-        <div className="flex flex-col gap-3 rounded-[--radius-lg] border border-border p-5">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border p-5">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3 w-full" />
         </div>
-        <div className="flex flex-col gap-3 rounded-[--radius-lg] border border-border p-5">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border p-5">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3 w-full" />
         </div>
-        <div className="flex flex-col gap-3 rounded-[--radius-lg] border border-border p-5">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border p-5">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3 w-full" />
         </div>
-        <div className="flex flex-col gap-3 rounded-[--radius-lg] border border-border p-5">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border p-5">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3 w-full" />
         </div>
-        <div className="flex flex-col gap-3 rounded-[--radius-lg] border border-border p-5">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border p-5">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3 w-full" />
         </div>
-        <div className="flex flex-col gap-3 rounded-[--radius-lg] border border-border p-5">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border p-5">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3 w-full" />

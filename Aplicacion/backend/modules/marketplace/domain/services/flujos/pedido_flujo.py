@@ -22,6 +22,7 @@ from injector import inject
 
 from modules.marketplace.domain.constants import (
     MONEDA_PEDIDO,
+    EstadoEntregaPedido,
     EstadoPagoPedido,
     EstadoPedido,
 )
@@ -41,6 +42,9 @@ from modules.marketplace.domain.schemas.pedido_schemas import (
     PedidoCreateData,
 )
 from modules.marketplace.domain.selectors.pedido_selector import PedidoSelector
+from modules.marketplace.domain.services.core.inventario_core_service import (
+    InventarioCoreService,
+)
 from modules.marketplace.domain.services.core.pedido_core_service import (
     PedidoCoreService,
 )
@@ -56,11 +60,13 @@ class PedidoFlujo:
         selector: PedidoSelector,
         alcance: IAlcanceEdicion,
         comercio: ICommerceMarketplaceService,
+        inventario: InventarioCoreService,
     ):
         self.core_service = core_service
         self.selector = selector
         self.alcance = alcance
         self.comercio = comercio
+        self.inventario = inventario
 
     # ── Alta del pedido ─────────────────────────────────────────────────────
 
@@ -166,7 +172,13 @@ class PedidoFlujo:
 
     @transaction.atomic()
     def _crear_pedido_sync(self, edicion_id, persona_id, total, huella, lineas):
-        """Alta atómica del pedido y de su detalle."""
+        """Alta atómica del pedido, de su detalle y de su RESERVA de stock.
+
+        La reserva va DENTRO de la misma transacción que el alta (`RN-M06`):
+        si las existencias no alcanzan, no queda un pedido a medias. Y si
+        el alta pierde una carrera por la misma intención, la reserva se
+        revierte con ella: sólo el pedido ganador reserva unidades.
+        """
         pedido = self.core_service.crear(
             edicion_id=edicion_id,
             comprador_id=persona_id,
@@ -176,6 +188,7 @@ class PedidoFlujo:
             huella=huella,
         )
         detalles = self.core_service.crear_detalles(pedido, lineas)
+        self.inventario.reservar_para_pedido(pedido, detalles)
         return pedido, detalles
 
     async def _recuperar_tras_carrera(self, persona_id, edicion_id, huella, exc):
@@ -297,7 +310,88 @@ class PedidoFlujo:
         else:
             return pedido
 
+        if estado == EstadoPedido.CANCELADO:
+            # Un pedido cancelado DEVOLUELVE sus existencias reservadas al
+            # catálogo (`RN-M06`): la reserva queda `LIBERADA` y el stock
+            # vuelve a estar disponible para otro comprador.
+            return await sync_to_async(self._cancelar_y_liberar_sync)(pedido)
+
         return await sync_to_async(self.core_service.marcar_estado)(pedido, estado)
+
+    @transaction.atomic()
+    def _cancelar_y_liberar_sync(self, pedido):
+        """Cancela el pedido y libera sus existencias, en una transacción."""
+        pedido = self.core_service.marcar_estado(pedido, EstadoPedido.CANCELADO)
+        self.inventario.liberar_de_pedido(pedido)
+        return pedido
+
+    # ── Entrega (DOM-06 · RN-M07 · QA-M04) ───────────────────────────────────
+
+    async def confirmar_entrega(self, pedido_id, actor):
+        """Confirma la entrega de un pedido pagado.
+
+        Es **IDEMPOTENTE y REINTENTABLE**: confirmar dos veces devuelve el
+        MISMO acta, no la duplica (la base de datos admite una entrega por
+        pedido).
+
+        Raises:
+            `PedidoNoEncontradoError`: el pedido no existe.
+            `PedidoNoPagadoError`: el pedido todavía no está pagado.
+            `PedidoNoEntregableError`: el pedido está cancelado.
+        """
+        return await self._confirmar_entrega_con_carrera(pedido_id, actor)
+
+    async def _confirmar_entrega_con_carrera(self, pedido_id, actor):
+        """La entrega, tolerando la carrera de dos confirmaciones."""
+        try:
+            return await sync_to_async(self._confirmar_entrega_sync)(pedido_id, actor)
+        except IntegrityError:
+            # Otra confirmación ganó: SU acta es la buena. El reintento del
+            # operador NO duplica la entrega.
+            return await sync_to_async(self._leer_entrega_existente)(pedido_id)
+
+    def _leer_entrega_existente(self, pedido_id):
+        """El acta que ya existe para el pedido, si la hay."""
+        from modules.marketplace.domain.exceptions import PedidoNoEncontradoError
+        from modules.marketplace.domain.models import EntregaPedido
+
+        entrega = EntregaPedido.objects.filter(pedido_id=pedido_id).first()
+        if entrega is None:
+            raise PedidoNoEncontradoError()
+        detalles = self.selector.listar_detalles(pedido_id)
+        return self.core_service.result_entrega(entrega, detalles)
+
+    @transaction.atomic()
+    def _confirmar_entrega_sync(self, pedido_id, actor):
+        """Entrega atómica: el estado de entrega y su acta, o nada."""
+        from modules.marketplace.domain.exceptions import (
+            PedidoNoEncontradoError,
+            PedidoNoEntregableError,
+            PedidoNoPagadoError,
+        )
+        from modules.marketplace.domain.models import EntregaPedido
+
+        pedido = self.selector.obtener_por_id(pedido_id)
+        if pedido is None:
+            raise PedidoNoEncontradoError()
+
+        # Reintento del operador: el acta existente es la buena.
+        entrega = EntregaPedido.objects.filter(pedido=pedido).first()
+        if entrega is not None:
+            detalles = self.selector.listar_detalles(pedido.id)
+            return self.core_service.result_entrega(entrega, detalles)
+
+        if pedido.estado == EstadoPedido.CANCELADO:
+            raise PedidoNoEntregableError()
+        if pedido.estado != EstadoPedido.PAGADO:
+            # Pagado NO es entregado, pero entregado SÍ exige pagado: la
+            # entrega es un hecho posterior y separado (RN-M07).
+            raise PedidoNoPagadoError()
+
+        detalles = self.selector.listar_detalles(pedido.id)
+        self.core_service.marcar_estado_entrega(pedido, EstadoEntregaPedido.ENTREGADO)
+        entrega = self.core_service.crear_entrega(pedido, actor, detalles)
+        return self.core_service.result_entrega(entrega, detalles)
 
     async def _hechos_de_la_compra(self, pedido):
         """Los hechos de la compra que financia el pedido, si existe."""

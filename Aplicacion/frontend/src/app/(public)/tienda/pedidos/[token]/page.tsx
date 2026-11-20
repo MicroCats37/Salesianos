@@ -1,24 +1,17 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { PedidoSeguimientoView } from "@/features/marketplace/views";
 
 /**
- * SHOP-03 — Consultar el estado y la recogida de un pedido
+ * SHOP-03 - Consultar el estado y la recogida de un pedido
  *
- * Shell de ruta (FND-06). La vista la construye UI-03.
+ * El token viaja en la URL y ES la credencial: abre un único pedido y la
+ * ruta es pública por naturaleza.
  */
-
 export default async function Page({
   params,
 }: {
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  return (
-    <RoutePlaceholder
-      pageId="SHOP-03"
-      tarea="Consultar el estado y la recogida de un pedido"
-      packet="UI-03"
-    >
-      <p className="font-mono text-xs text-muted-foreground">token: {token}</p>
-    </RoutePlaceholder>
-  );
+
+  return <PedidoSeguimientoView token={token} />;
 }

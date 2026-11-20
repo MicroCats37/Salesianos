@@ -30,11 +30,16 @@ export function SiteFooter() {
 
         <nav aria-label="Enlaces del pie" className="flex flex-col gap-3">
           <p className="text-eyebrow-brand text-accent">La edición</p>
-          <ul className="flex flex-col gap-2 text-sm">
+          {/*
+            El enlace ocupa toda la fila: su área táctil es la de 44 px que
+            SH-02 A11Y-07 exige a W1/W2. El texto no cambia de posición: la
+            fila crece, la línea se mantiene.
+          */}
+          <ul className="flex flex-col text-sm">
             <li>
               <Link
                 href={RUTAS.publico.informacion}
-                className="text-surface-inverse-muted transition-colors duration-(--motion-duration-fast) hover:text-surface-inverse-foreground"
+                className="inline-block py-3 text-surface-inverse-muted transition-colors duration-(--motion-duration-fast) hover:text-surface-inverse-foreground"
               >
                 Información y reglamentos
               </Link>
@@ -42,7 +47,7 @@ export function SiteFooter() {
             <li>
               <Link
                 href={RUTAS.publico.pases}
-                className="text-surface-inverse-muted transition-colors duration-(--motion-duration-fast) hover:text-surface-inverse-foreground"
+                className="inline-block py-3 text-surface-inverse-muted transition-colors duration-(--motion-duration-fast) hover:text-surface-inverse-foreground"
               >
                 Pases de fiesta
               </Link>
@@ -50,7 +55,7 @@ export function SiteFooter() {
             <li>
               <Link
                 href={RUTAS.publico.tienda}
-                className="text-surface-inverse-muted transition-colors duration-(--motion-duration-fast) hover:text-surface-inverse-foreground"
+                className="inline-block py-3 text-surface-inverse-muted transition-colors duration-(--motion-duration-fast) hover:text-surface-inverse-foreground"
               >
                 Tienda del evento
               </Link>
@@ -58,7 +63,7 @@ export function SiteFooter() {
             <li>
               <Link
                 href={RUTAS.publico.recuperarCompra}
-                className="text-surface-inverse-muted transition-colors duration-(--motion-duration-fast) hover:text-surface-inverse-foreground"
+                className="inline-block py-3 text-surface-inverse-muted transition-colors duration-(--motion-duration-fast) hover:text-surface-inverse-foreground"
               >
                 Recuperar mi compra
               </Link>

@@ -1,24 +1,18 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { MisInscripcionDetalleView } from "@/features/inscripciones/views";
 
 /**
- * ACCOUNT-03 — Gestionar una inscripción, su pool y sus equipos
+ * ACCOUNT-03 - Gestionar una inscripción, su pool y sus equipos
  *
- * Shell de ruta (FND-06). La vista la construye UI-02.
+ * La ruta sólo compone: el detalle vive en la feature de inscripciones,
+ * que es la dueña del dominio. Los datos los publica el servidor y la
+ * integración los entrega en API-02.
  */
-
 export default async function Page({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <RoutePlaceholder
-      pageId="ACCOUNT-03"
-      tarea="Gestionar una inscripción, su pool y sus equipos"
-      packet="UI-02"
-    >
-      <p className="font-mono text-xs text-muted-foreground">id: {id}</p>
-    </RoutePlaceholder>
-  );
+
+  return <MisInscripcionDetalleView id={id} />;
 }

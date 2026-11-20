@@ -30,6 +30,7 @@ from core.exceptions import (
     NotFoundError,
     UnprocessableEntityError,
 )
+from ninja.errors import HttpError
 
 
 class PaqueteNoVigenteError(ConflictError):
@@ -293,9 +294,273 @@ class PersonaNoEncontradaError(NotFoundError):
         super().__init__(resource="Persona", code=self.code)
 
 
+# ── DOM-03 · PASES, BENEFICIARIOS Y CORTESÍA ───────────────────────────────
+#
+# `PASE_NO_DISPONIBLE` (409) y `CANTIDAD_INVALIDA` (422) están CONGELADOS
+# por el ledger `FR-07` §3.3 para `RT-CM-02`; `PASE_NO_TRANSFERIBLE` (409) y
+# `PASE_BENEFICIARIO_NO_ENCONTRADO` (404) lo están para `RT-RT-03`. El resto
+# son códigos PROPUESTOS y A0 debe añadirlos al catálogo público con su
+# prosa.
+
+
+class PaseNoDisponibleError(ConflictError):
+    """El pase no se puede comprar (409).
+
+    CÓDIGO CONGELADO por el ledger `FR-07` §3.3 para `RT-CM-02` (409).
+    Cubre los TRES casos del mismo hecho comercial:
+
+    1. El pase no existe en la edición pedida.
+    2. El pase está `RETIRADO`.
+    3. El pase no tiene un PRECIO VIGENTE.
+
+    El tercer caso es la regla "no inventar un precio de reserva": un pase
+    sin precio vigente NO tiene precio de invención, no se ofrece y no se
+    compra.
+    """
+
+    code = "PASE_NO_DISPONIBLE"
+
+    def __init__(self):
+        super().__init__(
+            "El pase seleccionado no está disponible para esta edición.",
+            code=self.code,
+        )
+
+
+class CantidadInvalidaError(UnprocessableEntityError):
+    """La cantidad de pases solicitados no es válida (422).
+
+    CÓDIGO CONGELADO por el ledger `FR-07` §3.3 para `RT-CM-02` (422).
+    Cubre la cantidad fuera de los límites de dominio.
+    """
+
+    code = "CANTIDAD_INVALIDA"
+
+    def __init__(self):
+        super().__init__(
+            message="La cantidad de pases solicitados no es válida.",
+            code=self.code,
+        )
+
+
+class PaseNoEncontradoError(NotFoundError):
+    """El pase solicitado no existe o no pertenece a la edición (404).
+
+    Código REQUESTED a A0.
+    """
+
+    code = "PASE_NO_ENCONTRADO"
+
+    def __init__(self):
+        super().__init__(resource="Pase", code=self.code)
+
+
+class CompraPaseNoEncontradaError(NotFoundError):
+    """La compra de pases solicitada no existe (404).
+
+    Es el mismo hecho que un recurso ausente: la respuesta NO revela si
+    existe una compra de OTRO actor (`FR-03` §2.1 regla 4).
+
+    Código REQUESTED a A0.
+    """
+
+    code = "COMPRA_PASE_NO_ENCONTRADA"
+
+    def __init__(self):
+        super().__init__(resource="Compra de pases", code=self.code)
+
+
+class PaseBeneficiarioNoEncontradoError(NotFoundError):
+    """El beneficiario solicitado no existe en la compra (404).
+
+    CÓDIGO CONGELADO por el ledger `FR-07` §3.3 para `RT-RT-03` (404).
+    """
+
+    code = "PASE_BENEFICIARIO_NO_ENCONTRADO"
+
+    def __init__(self):
+        super().__init__(resource="Beneficiario de pase", code=self.code)
+
+
+class PaseNoTransferibleError(ConflictError):
+    """El derecho ya no se puede transferir (409).
+
+    CÓDIGO CONGELADO por el ledger `FR-07` §3.3 para `RT-RT-03` (409).
+
+    Cubre los casos en que la operación NO puede ejecutarse sobre el
+    derecho: el derecho ya está revocado (`RN-P08`) o la compra no está
+    pagada (`RN-P02`).
+
+    La LIBERACIÓN del cupo y el REEMPLAZO del titular tras una revocación
+    siguen ABIERTOS (`PD-02` / `GOV-01-OPEN-08`): este paquete congela la
+    INTERFAZ de la revocación, no la política comercial.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "PASE_NO_TRANSFERIBLE"
+
+    def __init__(self):
+        super().__init__(
+            "El pase no se puede transferir en su estado actual.",
+            code=self.code,
+        )
+
+
+class PaseDuplicadoError(ConflictError):
+    """La persona ya tiene un derecho activo de ese pase (409).
+
+    La garantía de NO duplicar el derecho es de la base de datos (restricción
+    única parcial `(edicion, pase, persona) WHERE estado = 'ACTIVO'`); esta
+    excepción es la traducción legible de esa restricción.
+
+    Vale para los DOS orígenes: una cortesía no puede duplicar una compra,
+    ni al revés (`RN-P02`, `RN-P07`).
+
+    Código REQUESTED a A0.
+    """
+
+    code = "PASE_DUPLICADO"
+
+    def __init__(self):
+        super().__init__(
+            "La persona ya tiene un pase activo de este tipo en la edición.",
+            code=self.code,
+        )
+
+
+class SinPasesDisponiblesError(ConflictError):
+    """La compra no tiene pases libres para asignar (409).
+
+    El saldo lo calcula el servidor: sólo se puede asignar la capacidad
+    PAGADA (`RN-P02`). No es un saldo negativo: es la ausencia de capacidad.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "SIN_PASES_DISPONIBLES"
+
+    def __init__(self):
+        super().__init__(
+            "No hay pases disponibles para asignar en esta compra.",
+            code=self.code,
+        )
+
+
+class CompraPaseNoPagadaError(ConflictError):
+    """La compra todavía no está pagada (409).
+
+    Una compra `PENDIENTE` NO habilita ningún derecho (`RN-P02`, `QA-P01`).
+    Los pases se pueden asignar sólo después de que la ACTIVACIÓN de
+    derechos los habilite.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "COMPRA_PASE_NO_PAGADA"
+
+    def __init__(self):
+        super().__init__(
+            "La compra de pases todavía no está pagada.",
+            code=self.code,
+        )
+
+
+class TokenPaseInvalidoError(HttpError):
+    """El enlace de gestión no es válido (401).
+
+    Es un fallo de AUTENTICACIÓN, no de autorización: el token ES la
+    credencial del enlace privado (`contratos/02` §5). Por eso el status es
+    **401** y no 403 — la autoridad de permisos responde 401 antes que 403.
+
+    El token ausente, expirado o revocado es el mismo caso: no se puede
+    distinguir por el mismo canal, y el mensaje público es genérico.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "TOKEN_PASE_INVALIDO"
+
+    def __init__(self):
+        super().__init__(401, "El enlace de gestión del pase no es válido.")
+
+
+class ActorRequeridoError(HttpError):
+    """La operación exige una cuenta autenticada (401).
+
+    Es la defensa en profundidad de las rutas que ya declaran
+    `IsAuthenticated`: si la petición llegara sin cuenta, el dominio la
+    rechaza con un código estable en lugar de operar sin ACTOR.
+
+    Una cortesía SIN actor no es auditable (`RN-P05`).
+
+    Código REQUESTED a A0.
+    """
+
+    code = "ACTOR_REQUERIDO"
+
+    def __init__(self):
+        super().__init__(401, "Debes iniciar sesión para realizar esta operación.")
+
+
+class CompraPaseNoAutorizadaError(ForbiddenError):
+    """El actor no es el titular de la compra (403).
+
+    La titularidad la decide el MÓDULO DUEÑO del recurso (`FR-03` §2.1):
+    ser `Administrador` NO sustituye la titularidad de una compra ajena.
+    El token es de ÁMBITO POR COMPRA: el token de otra compra no abre esta.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "COMPRA_PASE_NO_AUTORIZADA"
+
+    def __init__(self):
+        super().__init__(
+            "No tiene autorización para gestionar esta compra de pases.",
+        )
+
+
+class CortesiaMotivoInvalidoError(UnprocessableEntityError):
+    """La cortesía no tiene un motivo válido (422).
+
+    El motivo es OBLIGATORIO (`RN-P05`): una cortesía sin motivo no es
+    auditable y no se registra.
+
+    Código REQUESTED a A0.
+    """
+
+    code = "CORTESIA_MOTIVO_INVALIDO"
+
+    def __init__(self):
+        super().__init__(
+            message="El motivo de la cortesía es obligatorio.",
+            code=self.code,
+        )
+
+
+class CortesiaNoEncontradaError(NotFoundError):
+    """La cortesía solicitada no existe (404).
+
+    Código REQUESTED a A0.
+    """
+
+    code = "CORTESIA_NO_ENCONTRADA"
+
+    def __init__(self):
+        super().__init__(resource="Cortesía", code=self.code)
+
+
 __all__ = [
+    "ActorRequeridoError",
+    "CantidadInvalidaError",
     "CompraNoAutorizadaError",
+    "CompraPaseNoAutorizadaError",
+    "CompraPaseNoEncontradaError",
+    "CompraPaseNoPagadaError",
     "CompradorSinPersonaError",
+    "CortesiaMotivoInvalidoError",
+    "CortesiaNoEncontradaError",
     "CupoInvalidoError",
     "DisciplinaNoPermitidaError",
     "EquipoCompletoError",
@@ -304,9 +569,16 @@ __all__ = [
     "InscripcionNoAutorizadaError",
     "InscripcionNoEncontradaError",
     "PaqueteNoVigenteError",
+    "PaseBeneficiarioNoEncontradoError",
+    "PaseDuplicadoError",
+    "PaseNoDisponibleError",
+    "PaseNoEncontradoError",
+    "PaseNoTransferibleError",
     "ParticipanteDuplicadoError",
     "ParticipanteNoElegibleError",
     "ParticipanteNoEncontradoError",
     "PersonaNoEncontradaError",
     "SinCuposDisponiblesError",
+    "SinPasesDisponiblesError",
+    "TokenPaseInvalidoError",
 ]

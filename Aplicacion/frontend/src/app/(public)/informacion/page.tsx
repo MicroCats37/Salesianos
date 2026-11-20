@@ -1,17 +1,8 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { InformacionView } from "@/features/public/views";
 
 /**
- * PUB-02 — Conocer la edición, las disciplinas y los reglamentos
- *
- * Shell de ruta (FND-06). La vista la construye UI-01.
+ * PUB-02 - Conocer la edición, las disciplinas y los reglamentos
  */
-
 export default function Page() {
-  return (
-    <RoutePlaceholder
-      pageId="PUB-02"
-      tarea="Conocer la edición, las disciplinas y los reglamentos"
-      packet="UI-01"
-    ></RoutePlaceholder>
-  );
+  return <InformacionView />;
 }

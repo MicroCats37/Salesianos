@@ -28,8 +28,12 @@ from modules.marketplace.domain.ports.titularidad import ITitularidadActorServic
 from modules.marketplace.domain.selectors.categoria_selector import (
     CategoriaProductoSelector,
 )
+from modules.marketplace.domain.selectors.inventario_selector import InventarioSelector
 from modules.marketplace.domain.selectors.pedido_selector import PedidoSelector
 from modules.marketplace.domain.selectors.producto_selector import ProductoSelector
+from modules.marketplace.domain.services.core.inventario_core_service import (
+    InventarioCoreService,
+)
 from modules.marketplace.domain.services.core.pedido_core_service import (
     PedidoCoreService,
 )
@@ -39,8 +43,12 @@ from modules.marketplace.domain.services.core.producto_core_service import (
 from modules.marketplace.domain.services.core.producto_media_service import (
     ProductoMediaService,
 )
+from modules.marketplace.domain.services.flujos.inventario_flujo import InventarioFlujo
 from modules.marketplace.domain.services.flujos.pedido_flujo import PedidoFlujo
 from modules.marketplace.domain.services.flujos.producto_flujo import ProductoFlujo
+from modules.marketplace.domain.services.orchestrators.inventario_orchestrator import (
+    InventarioOrchestrator,
+)
 from modules.marketplace.domain.services.orchestrators.pedido_orchestrator import (
     PedidoOrchestrator,
 )
@@ -56,6 +64,30 @@ from modules.marketplace.infrastructure.services.comercio_adapter import (
 from modules.marketplace.infrastructure.services.titularidad_actor import (
     TitularidadActorAdapter,
 )
+
+
+def _adaptador_comercio_factory() -> ICommerceMarketplaceService:
+    """El adaptador de `commerce`, con su compra ya resuelta por el inyector.
+
+    `commerce` es la INFRAESTRUCTURA comercial compartida y su interfaz está
+    CONGELADA (`FREEZE-CM-1.0.0`): su `CompraFlujo` lo liga su propio módulo
+    (`modules/commerce/di.py`). Este paquete lo CONSUME desde su adaptador, en
+    `infrastructure/`, para que el DOMINIO de `marketplace` no importe
+    `commerce` (RN-C01, RN-M07).
+
+    Los imports son perezosos a propósito: el grafo de módulos queda acíclico
+    y el orden de carga de Django no importa.
+    """
+    from ninja_extra.dependency_resolver import get_injector
+
+    from modules.commerce.domain.selectors.compra_selector import CompraSelector
+    from modules.commerce.domain.services.flujos.compra_flujo import CompraFlujo
+
+    injector = get_injector()
+    return CommerceMarketplaceAdapter(
+        compra_flujo=injector.get(CompraFlujo),
+        compra_selector=injector.get(CompraSelector),
+    )
 
 
 class MarketplaceModule(Module):
@@ -74,7 +106,7 @@ class MarketplaceModule(Module):
         binder.bind(PedidoCoreService, to=PedidoCoreService, scope=singleton)
         binder.bind(
             ICommerceMarketplaceService,
-            to=CommerceMarketplaceAdapter,
+            to=_adaptador_comercio_factory,
             scope=singleton,
         )
         binder.bind(
@@ -84,6 +116,11 @@ class MarketplaceModule(Module):
         )
         binder.bind(PedidoFlujo, to=PedidoFlujo, scope=singleton)
         binder.bind(PedidoOrchestrator, to=PedidoOrchestrator, scope=singleton)
+        # ── DOM-06 · inventario, reserva y entrega ───────────────────────────
+        binder.bind(InventarioSelector, to=InventarioSelector, scope=singleton)
+        binder.bind(InventarioCoreService, to=InventarioCoreService, scope=singleton)
+        binder.bind(InventarioFlujo, to=InventarioFlujo, scope=singleton)
+        binder.bind(InventarioOrchestrator, to=InventarioOrchestrator, scope=singleton)
 
 
 __all__ = ["MarketplaceModule"]

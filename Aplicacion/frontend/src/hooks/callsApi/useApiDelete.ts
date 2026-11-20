@@ -1,7 +1,13 @@
-import { type UseMutationOptions, useMutation } from "@tanstack/react-query";
-import type { AxiosError, AxiosResponse } from "axios";
+import {
+  type QueryKey,
+  type UseMutationOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { handleApiError, notify } from "@/errors";
-import api from "@/lib/api";
+import { apiSend } from "@/lib/api";
+import { invalidateDatasets } from "@/shared/utils/cache-policy";
 
 /**
  * Classic style: caller provides id (number | string).
@@ -19,6 +25,11 @@ interface UseApiDeleteProps<TData, TPayload = never> {
   getUrl?: (variables: DeleteVariables<TPayload>) => string;
   showToast?: boolean;
   showSuccessToast?: boolean;
+  /**
+   * The keys invalidated when the mutation settles. The invalidation is
+   * EXPLICIT: a deletion declares the reads it dirties.
+   */
+  invalidateKeys?: readonly QueryKey[];
   options?: Omit<
     UseMutationOptions<TData, AxiosError, DeleteVariables<TPayload>>,
     "mutationFn"
@@ -30,8 +41,11 @@ export function useApiDelete<TData = unknown, TPayload = never>({
   getUrl,
   showToast = true,
   showSuccessToast = true,
+  invalidateKeys = [],
   options,
 }: UseApiDeleteProps<TData, TPayload>) {
+  const queryClient = useQueryClient();
+
   return useMutation<TData, AxiosError, DeleteVariables<TPayload>>({
     mutationFn: async (variables) => {
       try {
@@ -47,9 +61,13 @@ export function useApiDelete<TData = unknown, TPayload = never>({
           url = `${baseUrl}/${variables}`;
         }
 
-        const response: AxiosResponse<unknown> = await api.delete(url);
+        const { status, data } = await apiSend<unknown>("delete", url);
+
+        // 204 No Content: the body is empty and it is NEVER parsed.
+        if (status === 204) return undefined as unknown as TData;
+
         if (showSuccessToast) {
-          const envelope = response.data as { message?: string } | null;
+          const envelope = data as { message?: string } | null;
           if (
             envelope &&
             typeof envelope.message === "string" &&
@@ -58,11 +76,19 @@ export function useApiDelete<TData = unknown, TPayload = never>({
             notify.success(envelope.message);
           }
         }
-        return response.data as TData;
+        return data as TData;
       } catch (error) {
         const apiError = handleApiError(error);
         if (showToast) notify.error(apiError.message);
         throw error;
+      } finally {
+        /**
+         * The invalidation lives in the mutation itself and NOT in
+         * `onSettled`: a component that unmounts while the mutation is in
+         * flight would never invalidate, and the cache would keep the deleted
+         * item.
+         */
+        await invalidateDatasets(queryClient, invalidateKeys);
       }
     },
     ...options,

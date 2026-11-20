@@ -24,8 +24,10 @@ efectividad de la oferta (qué precio rige y si la oferta está vigente) la
 calcula el DOMINIO, nunca el cliente: `precio_efectivo` y `oferta_activa`
 viajan en el result object.
 
-Este modelo NO declara existencias (stock): el inventario es de DOM-06
-(`MovimientoInventario`), y el catálogo no inventa disponibilidad.
+Este modelo declara las EXISTENCIAS (`stock` y `reservado`) desde DOM-06: el
+catálogo no inventa disponibilidad, la declara. El inventario —la bitácora de
+movimientos, las reservas y las entregas— vive en `MovimientoInventario`,
+`ReservaInventario` y `EntregaPedido`.
 """
 
 from decimal import Decimal
@@ -96,6 +98,22 @@ class Producto(BaseModel):
         default=EstadoProducto.ACTIVO,
         verbose_name="Estado",
     )
+    stock = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Existencias",
+        help_text=(
+            "Unidades físicas que tiene el organizador. CERO significa "
+            "AGOTADO: un producto sin existencias no se puede pedir (RN-M06)."
+        ),
+    )
+    reservado = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Unidades reservadas",
+        help_text=(
+            "Unidades apartadas por pedidos pendientes. No se pueden vender "
+            "hasta que el pedido se paga o se cancela (RN-M06)."
+        ),
+    )
 
     class Meta:
         db_table = "marketplace_producto"
@@ -107,10 +125,27 @@ class Producto(BaseModel):
                 fields=["edicion", "slug"],
                 name="marketplace_producto_slug_unico_edicion",
             ),
+            # Lo reservado nunca puede superar lo que hay: la BASE DE DATOS
+            # lo garantiza, no la aplicación (RN-M06).
+            models.CheckConstraint(
+                condition=models.Q(reservado__lte=models.F("stock")),
+                name="marketplace_producto_reservado_no_excede_stock",
+            ),
         ]
 
     def __str__(self) -> str:
         return self.nombre
+
+    # ── Reglas de inventario (dominio, no presentación) ─────────────────────
+
+    @property
+    def disponible(self) -> int:
+        """Las unidades que se pueden vender AHORA.
+
+        Es `stock - reservado`: lo físico menos lo apartado por pedidos
+        pendientes. Un producto `AGOTADO` tiene `disponible == 0` (RN-M06).
+        """
+        return max(0, self.stock - self.reservado)
 
     # ── Reglas de precio (dominio, no presentación) ─────────────────────────
 

@@ -1,22 +1,22 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  Boxes,
-  CalendarClock,
-  ClipboardList,
-  CreditCard,
-  Gift,
-  LayoutDashboard,
-  QrCode,
-  ScanLine,
-  ShoppingBag,
-  Store,
-  Swords,
-  Ticket,
-  Trophy,
-  UserCog,
-  Users,
-} from "lucide-react";
+import { RUTAS } from "@/lib/routes";
 import { ADMIN_CAPACIDADES, type AdminCapacidad } from "./admin.capacidades";
+
+export type AdminIcono =
+  | "resumen"
+  | "ediciones"
+  | "inscripciones"
+  | "equipos"
+  | "participantes"
+  | "competencias"
+  | "pagos"
+  | "pases"
+  | "ingreso"
+  | "tienda"
+  | "entregas"
+  | "patrocinadores"
+  | "personas"
+  | "usuarios"
+  | "validaciones";
 
 /**
  * A destination of the administration area.
@@ -30,8 +30,8 @@ export interface AdminDestino {
   id: string;
   /** Label of the destination. */
   title: string;
-  /** Icon of the destination. */
-  icon: LucideIcon;
+  /** Serializable icon key resolved inside the client sidebar. */
+  icon: AdminIcono;
   /** Route of the destination. */
   href: string;
   /** Description of the destination (the sidebar shows it). */
@@ -68,8 +68,8 @@ export interface AdminGrupo {
 export const ADMIN_RESUMEN: AdminDestino = {
   id: "resumen",
   title: "Resumen",
-  icon: LayoutDashboard,
-  href: "/administracion",
+  icon: "resumen",
+  href: RUTAS.administracion.resumen,
   description: "Estado de la edición activa",
   capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
 };
@@ -93,40 +93,40 @@ export const ADMIN_GRUPOS: AdminGrupo[] = [
       {
         id: "ediciones",
         title: "Ediciones",
-        icon: CalendarClock,
-        href: "/administracion/ediciones",
+        icon: "ediciones",
+        href: RUTAS.administracion.ediciones,
         description: "Módulos habilitados y fechas",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "inscripciones",
         title: "Inscripciones",
-        icon: ClipboardList,
-        href: "/administracion/inscripciones",
+        icon: "inscripciones",
+        href: RUTAS.administracion.inscripciones,
         description: "Registros, pool y equipos",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "equipos",
         title: "Equipos",
-        icon: Trophy,
-        href: "/administracion/equipos",
+        icon: "equipos",
+        href: RUTAS.administracion.equipos,
         description: "Plantillas y elegibilidad",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "participantes",
         title: "Participantes",
-        icon: Users,
-        href: "/administracion/participantes",
+        icon: "participantes",
+        href: RUTAS.administracion.participantes,
         description: "Personas y participaciones",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "competencias",
         title: "Competencias",
-        icon: Swords,
-        href: "/administracion/competencias",
+        icon: "competencias",
+        href: RUTAS.administracion.competencias,
         description: "Competencias, cuadro y agenda",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
@@ -139,8 +139,8 @@ export const ADMIN_GRUPOS: AdminGrupo[] = [
       {
         id: "pagos",
         title: "Pagos",
-        icon: CreditCard,
-        href: "/administracion/pagos",
+        icon: "pagos",
+        href: RUTAS.administracion.pagos,
         description: "Compras, órdenes y veredictos",
         // El staff LEE los pagos; aprobar y anular es una acción SENSIBLE
         // (`admin.pagos.aprobar`) que solo tiene el nivel de break-glass.
@@ -149,40 +149,40 @@ export const ADMIN_GRUPOS: AdminGrupo[] = [
       {
         id: "pases",
         title: "Pases",
-        icon: Ticket,
-        href: "/administracion/pases",
+        icon: "pases",
+        href: RUTAS.administracion.pases,
         description: "Pases de fiesta y cortesías",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "ingreso",
         title: "Control de ingreso",
-        icon: ScanLine,
-        href: "/administracion/pases/validar",
+        icon: "ingreso",
+        href: RUTAS.administracion.pasesValidar,
         description: "Validación de entradas",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "tienda",
         title: "Tienda",
-        icon: Store,
-        href: "/administracion/marketplace",
+        icon: "tienda",
+        href: RUTAS.administracion.marketplace,
         description: "Productos, pedidos y existencias",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "entregas",
         title: "Entregas",
-        icon: ShoppingBag,
-        href: "/administracion/marketplace/entregas",
+        icon: "entregas",
+        href: RUTAS.administracion.marketplaceEntregas,
         description: "Recogidas por confirmar",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "patrocinadores",
         title: "Patrocinadores",
-        icon: Gift,
-        href: "/administracion/patrocinadores",
+        icon: "patrocinadores",
+        href: RUTAS.administracion.patrocinadores,
         description: "Aliados y sus piezas",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
@@ -195,24 +195,24 @@ export const ADMIN_GRUPOS: AdminGrupo[] = [
       {
         id: "personas",
         title: "Personas",
-        icon: Boxes,
-        href: "/administracion/personas",
+        icon: "personas",
+        href: RUTAS.administracion.personas,
         description: "Búsqueda por documento",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
         id: "usuarios",
         title: "Usuarios",
-        icon: UserCog,
-        href: "/administracion/usuarios",
+        icon: "usuarios",
+        href: RUTAS.administracion.usuarios,
         description: "Cuentas y habilitación",
         capacidad: ADMIN_CAPACIDADES.USUARIOS_VER,
       },
       {
         id: "validaciones",
         title: "Validaciones",
-        icon: QrCode,
-        href: "/administracion/validaciones",
+        icon: "validaciones",
+        href: RUTAS.administracion.validaciones,
         description: "Auditoría de ingresos y entregas",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },

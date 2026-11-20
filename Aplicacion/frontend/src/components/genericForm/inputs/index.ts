@@ -16,4 +16,9 @@ export { InputText } from "./InputText";
 export { InputTextarea } from "./InputTextarea";
 export { getInputComponent, inputRegistry, registerInput } from "./registry";
 
-export * from "./types";
+export type {
+  FieldConfig,
+  InputComponent,
+  InputComponentProps,
+  InputOption,
+} from "./types";

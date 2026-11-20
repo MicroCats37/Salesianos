@@ -5,6 +5,7 @@ import { Calendar, MapPin, ShieldCheck, Sparkles, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RUTAS } from "@/lib/routes";
 import { PreinscribirButton } from "./PreinscribirButton";
 
 const CYCLING_WORDS = ["cancha", "familia", "reencuentro", "promocion"];
@@ -203,7 +204,7 @@ export function Hero() {
               variant="outline"
               className="h-14 rounded-2xl border-surface-inverse-foreground/30 bg-surface-inverse-foreground/10 px-8 text-base font-black text-surface-inverse-foreground backdrop-blur hover:bg-surface-inverse-foreground/20 hover:text-surface-inverse-foreground"
             >
-              <Link href="/login">Ya tengo cuenta</Link>
+              <Link href={RUTAS.auth.login}>Ya tengo cuenta</Link>
             </Button>
           </div>
 

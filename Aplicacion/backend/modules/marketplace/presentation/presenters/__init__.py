@@ -7,12 +7,18 @@ devuelve el wrapper HTTP. No consulta la base de datos, no decide estados y
 no construye mensajes de error.
 """
 
+from modules.marketplace.presentation.presenters.inventario_presenter import (
+    EntregaPresenter,
+    InventarioPresenter,
+)
 from modules.marketplace.presentation.presenters.pedido_presenter import (
     PedidoPresenter,
     PedidoSeguimientoPresenter,
 )
 
 __all__ = [
+    "EntregaPresenter",
+    "InventarioPresenter",
     "PedidoPresenter",
     "PedidoSeguimientoPresenter",
 ]

@@ -39,6 +39,10 @@ from modules.marketplace.domain.exceptions import (
     ProductoNoDisponibleError,
     ProductoNoEncontradoError,
 )
+from modules.marketplace.domain.results.inventario_result import (
+    EntregaConfirmadaResult,
+    EntregaPendienteResult,
+)
 from modules.marketplace.domain.results.pedido_result import (
     PedidoLineaResult,
     PedidoSeguimientoResult,
@@ -271,15 +275,16 @@ class PedidoCoreService:
             return [AccionPedido.REINTENTAR_COMPRA]
         return [AccionPedido.REALIZAR_PAGO]
 
-    def result_de(
-        self,
-        pedido,
-        detalles,
-        estado_pago: str,
-        orden_pago_id: str | None,
-    ) -> PedidoSeguimientoResult:
-        """Proyecta el pedido con sus TRES estados y su acción segura."""
-        lineas = [
+    @staticmethod
+    def result_lineas(detalles) -> list[PedidoLineaResult]:
+        """Las líneas del pedido, proyectadas a sus results.
+
+        Es el bloque COMPARTIDO: el seguimiento del pedido, la lista de
+        entregas y el acta de entrega usan EXACTAMENTE la misma proyección
+        (SCHEMA_DRY_INTENTION): el detalle entregado es el detalle del
+        pedido, con su precio congelado (`RN-M03`).
+        """
+        return [
             PedidoLineaResult(
                 id=detalle.id,
                 tipo_concepto=detalle.tipo_concepto,
@@ -292,6 +297,16 @@ class PedidoCoreService:
             )
             for detalle in detalles
         ]
+
+    def result_de(
+        self,
+        pedido,
+        detalles,
+        estado_pago: str,
+        orden_pago_id: str | None,
+    ) -> PedidoSeguimientoResult:
+        """Proyecta el pedido con sus TRES estados y su acción segura."""
+        lineas = self.result_lineas(detalles)
         return PedidoSeguimientoResult(
             id=pedido.id,
             edicion_id=pedido.edicion_id,
@@ -308,6 +323,74 @@ class PedidoCoreService:
             ),
             created_at=pedido.created_at,
         )
+
+
+    # ── Entrega (DOM-06 · RN-M07 · QA-M04) ───────────────────────────────────
+
+    def marcar_estado_entrega(self, pedido, estado: str):
+        """Mueve el estado de la ENTREGA. Idempotente.
+
+        **NUNCA** toca `estado` (el pedido) ni el estado del pago: son
+        TRES hechos separados (`RN-M07` · `QA-M04`).
+        """
+        if pedido.estado_entrega == estado:
+            return pedido
+        pedido.estado_entrega = estado
+        pedido.save(update_fields=["estado_entrega", "updated_at"])
+        return pedido
+
+    def crear_entrega(self, pedido, actor, detalles):
+        """El ACTA de entrega: qué se entregó, cuánto y quién lo entregó."""
+        from modules.marketplace.domain.models import EntregaPedido
+
+        return EntregaPedido.objects.create(
+            pedido=pedido,
+            actor=actor,
+            referencia=f"PEDIDO:{pedido.id}:ENTREGA",
+            cantidad_total=sum(detalle.cantidad for detalle in detalles),
+            detalle=[
+                {
+                    "tipo_concepto": detalle.tipo_concepto,
+                    "concepto_id": detalle.concepto_id,
+                    "concepto_nombre": detalle.concepto_nombre,
+                    "cantidad": detalle.cantidad,
+                }
+                for detalle in detalles
+            ],
+        )
+
+    def result_entrega(self, entrega, detalles) -> EntregaConfirmadaResult:
+        """Proyecta el acta de entrega a su result."""
+        return EntregaConfirmadaResult(
+            pedido_id=entrega.pedido_id,
+            estado_entrega=EstadoEntregaPedido.ENTREGADO,
+            cantidad_total=entrega.cantidad_total,
+            actor_id=entrega.actor_id,
+            entregada_en=entrega.created_at,
+            lineas=self.result_lineas(detalles),
+        )
+
+    def listar_entregas_pendientes(self, edicion_id) -> list[EntregaPendienteResult]:
+        """Los pedidos PAGADOS cuya entrega sigue pendiente.
+
+        La lista se decide por el estado de la ENTREGA, no por el del pago:
+        un pedido pagado y entregado NO aparece (`RN-M07`).
+        """
+        resultados = []
+        for pedido in self.pedido_selector.listar_pendientes_de_entrega(edicion_id):
+            detalles = self.pedido_selector.listar_detalles(pedido.id)
+            resultados.append(
+                EntregaPendienteResult(
+                    pedido_id=pedido.id,
+                    estado=pedido.estado,
+                    estado_entrega=pedido.estado_entrega,
+                    total=pedido.total,
+                    moneda=pedido.moneda,
+                    lineas=self.result_lineas(detalles),
+                    created_at=pedido.created_at,
+                )
+            )
+        return resultados
 
 
 __all__ = ["PedidoCoreService"]

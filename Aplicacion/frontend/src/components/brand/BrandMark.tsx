@@ -40,7 +40,7 @@ export function BrandMark({
           alt=""
           width={size + 8}
           height={size + 8}
-          className="size-[--brand-crest] rounded-full object-contain ring-2 ring-accent/70"
+          className="size-[var(--brand-crest)] rounded-full object-contain ring-2 ring-accent/70"
           style={{ "--brand-crest": `${size + 8}px` } as React.CSSProperties}
         />
       ) : null}

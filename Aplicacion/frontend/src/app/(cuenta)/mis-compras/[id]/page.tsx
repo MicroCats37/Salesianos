@@ -1,24 +1,14 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { MisCompraDetalleView } from "@/features/cuenta/views";
 
 /**
- * ACCOUNT-05 — Consultar el estado y el destino de una compra
- *
- * Shell de ruta (FND-06). La vista la construye UI-01.
+ * ACCOUNT-05 - Consultar el estado y el destino de una compra
  */
-
 export default async function Page({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <RoutePlaceholder
-      pageId="ACCOUNT-05"
-      tarea="Consultar el estado y el destino de una compra"
-      packet="UI-01"
-    >
-      <p className="font-mono text-xs text-muted-foreground">id: {id}</p>
-    </RoutePlaceholder>
-  );
+
+  return <MisCompraDetalleView id={id} />;
 }

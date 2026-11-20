@@ -34,6 +34,9 @@ MODULOS_DE_TEST = (
     "test_persona_identidad.py",
     "test_persona_resolucion.py",
     "test_titularidad.py",
+    "test_auth_login.py",
+    "test_auth_sesion.py",
+    "test_auth_registro.py",
 )
 
 if not MODULO_REGISTRADO:
@@ -63,6 +66,11 @@ def pytest_ignore_collect(collection_path, config):
 
 
 if MODULO_REGISTRADO:
+    from modules.usuarios.tests.fixtures.auth_fixtures import (  # noqa: F401
+        cliente_con_sesion,
+        cuenta_inactiva,
+        superusuario_tecnico,
+    )
     from modules.usuarios.tests.fixtures.persona_fixtures import (  # noqa: F401
         api_client,
         api_usuarios,

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig, type Method } from "axios";
 import { getCookie } from "cookies-next";
 import { AUTH_COOKIES } from "./auth";
 import { backendInternalUrl, backendPublicUrl } from "./server/backend-url";
@@ -161,5 +161,46 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+/**
+ * The answer of the backend, with the body already separated from the status.
+ *
+ * `data` is `null` when the server answered `204 No Content`: an empty body
+ * is NEVER parsed (`FREEZE-ENV-1.0.0` §4.4). The rule lives HERE, in the
+ * transport owner, and not repeated in every hook.
+ */
+export interface ApiResult<T> {
+  /** The HTTP status of the answer. */
+  status: number;
+  /** The body of the answer. `null` for `204 No Content`. */
+  data: T | null;
+}
+
+/**
+ * The ONE way to talk to the backend.
+ *
+ * There is one transport owner (`api`) and one way to call it, so that the
+ * rules of the envelope (the `204` above all) are applied once and not once
+ * per hook.
+ */
+export async function apiSend<T>(
+  method: Method,
+  url: string,
+  payload?: unknown,
+  config?: AxiosRequestConfig,
+): Promise<ApiResult<T>> {
+  const response = await api.request<T>({
+    method,
+    url,
+    data: payload,
+    ...config,
+  });
+
+  if (response.status === 204) {
+    return { status: response.status, data: null };
+  }
+
+  return { status: response.status, data: response.data };
+}
 
 export default api;

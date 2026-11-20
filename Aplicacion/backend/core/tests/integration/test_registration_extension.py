@@ -5,11 +5,11 @@ WHEN   se consulta o se invoca el punto de extensión
 THEN   una ruta no existe hasta que su controller se registra, el registro es
        idempotente y NO hay controllers de dominio inacabados.
 
-Reconciliación A0 de FND-01 (2026-11-19) y reconciliación A0 de DOM-01 +
-DOM-04 (2026-11-19): el registro permanente de los controllers COMPLETADOS se
-aplica en este paquete. El conjunto registrado es una lista CERRADA y
-explícita: si mañana aparece un controller nuevo, este test falla y obliga a
-revisar el registro a propósito.
+Reconciliación A0 de FND-01 (2026-11-19), reconciliación A0 de DOM-01 +
+DOM-04 (2026-11-19) y reconciliación A0 de DOM-03 (2026-11-19): el registro
+permanente de los controllers COMPLETADOS se aplica en este paquete. El
+conjunto registrado es una lista CERRADA y explícita: si mañana aparece un
+controller nuevo, este test falla y obliga a revisar el registro a propósito.
 """
 
 from ninja_jwt.controller import NinjaJWTDefaultController
@@ -25,7 +25,11 @@ from modules.salesianos_fest.presentation.controllers.catalogo_controller import
 from modules.salesianos_fest.presentation.controllers.inscripcion_controller import (
     InscripcionController,
 )
-from modules.usuarios.presentation.controllers import PersonaController
+from modules.salesianos_fest.presentation.controllers.pase_controller import (
+    AdminPaseController,
+    PaseController,
+)
+from modules.usuarios.presentation.controllers import AuthController, PersonaController
 
 
 #: Controllers vivos del objetivo, en ORDEN de registro. El orden es
@@ -35,10 +39,13 @@ CONTROLLERS_COMPLETADOS = (
     NinjaJWTDefaultController,
     EdicionController,
     PersonaController,
+    AuthController,
     PagosController,
     CatalogoController,
     InscripcionController,
     ProductoController,
+    PaseController,
+    AdminPaseController,
 )
 
 #: Prefijos de ruta que el API del objetivo puede exponer. Cada uno pertenece
@@ -47,10 +54,13 @@ PREFIJOS_PERMITIDOS = (
     "/api/token",        # ninja_jwt
     "/api/ediciones",    # FND-02 · eventos
     "/api/personas",     # FND-03 · usuarios
+    "/api/auth",         # FND-03A · usuarios (rutas CORRECTIVAS)
     "/api/pagos",        # FND-04 · pagos
     "/api/catalogo",     # DOM-01 · salesianos_fest
-    "/api/inscripciones",  # DOM-01 · salesianos_fest
+    "/api/inscripciones",  # DOM-01 + DOM-02 · salesianos_fest
     "/api/marketplace",  # DOM-04 · marketplace
+    "/api/pases",        # DOM-03 · salesianos_fest
+    "/api/administracion/pases",  # DOM-03 · salesianos_fest
 )
 
 #: Superficie de dominio viva, exacta (ledger FR-07 §3.3). Las rutas de JWT
@@ -60,6 +70,12 @@ RUTAS_DE_DOMINIO_CONGELADAS = {
     "/api/personas/busqueda/{documento}",       # RT-ID-01
     "/api/personas/resolver",                   # RT-ID-02
     "/api/personas/confirmar",                  # RT-ID-03
+    # FND-03A · rutas CORRECTIVAS de autenticación: el ledger de GOV-01 no las
+    # congeló, pero el módulo `usuarios` está implementado y versionado.
+    "/api/auth/login/username",
+    "/api/auth/login/dni",
+    "/api/auth/login/email",
+    "/api/auth/me",
     "/api/pagos/ordenes/{orden_id}",            # RT-PG-03
     "/api/pagos/ordenes/{orden_id}/confirmar",  # RT-PG-01
     "/api/pagos/izipay/notificacion",           # RT-PG-02
@@ -68,9 +84,21 @@ RUTAS_DE_DOMINIO_CONGELADAS = {
     "/api/inscripciones",                       # RT-IN-14 · DOM-01 (provisional ratificada)
     "/api/inscripciones/{inscripcion_id}",      # RT-IN-02 · DOM-01
     "/api/inscripciones/{inscripcion_id}/equipos",  # RT-IN-04 · DOM-01
+    "/api/inscripciones/{inscripcion_id}/pool",  # RT-IN-03 · DOM-02
+    "/api/inscripciones/{inscripcion_id}/participantes",  # RT-IN-05 · DOM-02
+    "/api/inscripciones/{inscripcion_id}/participantes/{participacion_id}",  # RT-IN-06 · DOM-02
+    "/api/inscripciones/{inscripcion_id}/compras/cupos",  # RT-CM-01 · DOM-02
     "/api/marketplace/productos",               # RT-MD-01 (POST) / RT-MK-02 (GET) · DOM-04
     "/api/marketplace/categorias",              # RT-MK-01 · DOM-04
     "/api/marketplace/productos/{slug}",        # RT-MK-03 · DOM-04
+    "/api/pases",                               # RT-PS-01 · DOM-03
+    "/api/pases/compras",                       # RT-CM-02 · DOM-03 (CONGELADO)
+    "/api/pases/{pase_id}",                     # RT-PS-02 · DOM-03
+    "/api/pases/compras/{compra_pase_id}",      # RT-PS-03 · DOM-03
+    "/api/pases/compras/{compra_pase_id}/beneficiarios",  # RT-PS-04 · DOM-03
+    "/api/pases/compras/{compra_pase_id}/beneficiarios/{persona_id}",  # RT-RT-03 · DOM-03 (CONGELADO)
+    "/api/administracion/pases",                # RT-PS-06 · DOM-03
+    "/api/administracion/pases/cortesias",      # RT-PS-07 · DOM-03
 }
 
 
@@ -83,10 +111,13 @@ def test_los_controllers_de_dominio_completados_estan_registrados():
     for controller in (
         EdicionController,
         PersonaController,
+        AuthController,
         PagosController,
         CatalogoController,
         InscripcionController,
         ProductoController,
+        PaseController,
+        AdminPaseController,
     ):
         assert controller in controllers_registrados(), controller
 
@@ -126,11 +157,14 @@ def test_la_lista_de_registro_es_una_tupla():
 def test_el_registro_no_contiene_ningun_dominio_inacabado():
     """El API sólo expone rutas de módulos COMPLETADOS.
 
-    Los dominios pendientes (`pases`, `beneficios`, `validaciones`,
-    `patrocinadores`, `competencias`, `administracion`) no tienen módulo
-    terminado en el objetivo: sus controllers no existen y, por tanto, no
-    pueden estar registrados. Si uno apareciese, su ruta existiría sin
-    presenter, sin versión y sin pruebas.
+    Los dominios pendientes (`beneficios`, `validaciones`, `patrocinadores`,
+    `competencias`) no tienen módulo terminado en el objetivo: sus controllers
+    no existen y, por tanto, no pueden estar registrados. Si uno apareciese,
+    su ruta existiría sin presenter, sin versión y sin pruebas.
+
+    `pases` ya NO está en esa lista: DOM-03 lo implementó dentro de
+    `modules/salesianos_fest` y A0 registró `PaseController` y
+    `AdminPaseController` (reconciliación A0 de DOM-03, 2026-11-19).
 
     La prueba es sobre el SURFACE REAL (el esquema OpenAPI del API vivo), no
     sobre el nombre de la clase: el decorador `@api_controller` reescribe

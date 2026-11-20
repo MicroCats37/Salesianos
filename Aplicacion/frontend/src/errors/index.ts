@@ -3,5 +3,12 @@ export {
   getErrorMessage,
   handleApiError,
 } from "./error-handler";
+export {
+  fieldPathFromLocation,
+  type FieldErrorEntry,
+  NON_FIELD_ERRORS_KEY,
+  parseFieldErrorEntries,
+  parseFieldErrors,
+} from "./field-errors";
 export { configureToast, notify } from "./toast-adapter";
 export type { ApiError, ErrorParser } from "./types";

@@ -31,7 +31,6 @@ from uuid import UUID
 from pydantic import Field
 
 from core.types import BaseSchema
-from modules.marketplace.domain.constants import MAX_CANTIDAD_ITEM_PEDIDO
 
 
 class PedidoItemIn(BaseSchema):
@@ -48,9 +47,11 @@ class PedidoItemIn(BaseSchema):
     )
     cantidad: int = Field(
         ...,
-        ge=1,
-        le=MAX_CANTIDAD_ITEM_PEDIDO,
-        description="Cantidad pedida. La valida el servidor.",
+        description=(
+            "Cantidad pedida. El WIRE no acota el rango: la regla es del "
+            "dominio, que rechaza las cantidades inválidas con el código "
+            "estable `PEDIDO_CANTIDAD_INVALIDA`."
+        ),
     )
 
 
@@ -58,7 +59,9 @@ class CrearPedidoIn(BaseSchema):
     """Alta de un pedido de marketplace (`RT-CM-03`).
 
     El alcance (edición) NO lo declara el cliente: lo resuelve el servidor
-    (RN-E01). Tampoco declara un precio: lo congela el servidor (RN-C02).
+    (RN-E01). Tampoco declara un precio: lo congela el servidor (RN-C02). Ni
+    la cantidad: la regla del rango es del DOMINIO, que la rechaza con el
+    código estable `PEDIDO_CANTIDAD_INVALIDA`.
     """
 
     items: list[PedidoItemIn] = Field(

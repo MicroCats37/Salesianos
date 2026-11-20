@@ -41,3 +41,34 @@ export {
   RegisterFormSchema,
   type RegisterResponse,
 } from "./register.schema";
+
+/**
+ * The Zod mirrors of the identity dataset (`RT-ID-01`…`RT-ID-03`).
+ *
+ * They are the exact mirrors of the presenters of the `usuarios` module and
+ * they replace the ad-hoc interfaces the feature carried before API-01.
+ */
+export {
+  type DocumentoConsulta,
+  DocumentoConsultaSchema,
+  type Persona,
+  type PersonaConfirmarIn,
+  PersonaConfirmarInSchema,
+  PersonaDatosSchema,
+  PersonaIdentidadSchema,
+  type PersonaResuelta,
+  PersonaResueltaSchema,
+  PersonaResolverInSchema,
+  PersonaSchema,
+} from "./identidad.schema";
+
+/**
+ * The Zod mirror of the session (`GET /auth/me`).
+ */
+export {
+  SesionCuentaSchema,
+  SesionIdentidadSchema,
+  SesionRolSchema,
+  type SesionUsuario,
+  SesionUsuarioSchema,
+} from "./sesion.schema";

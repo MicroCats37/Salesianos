@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  *
  * El vidrio se compone desde tokens: el fondo sale de `--surface-raised`, el
  * borde de `--surface-raised` y la sombra de `--elevation-lg`. Antes eran
- * `rgba()` sueltos que no tenían pareja en el tema oscuro.
+ * colores sueltos que no tenían pareja en el tema oscuro.
  */
 const GLASS_STYLE: React.CSSProperties = {
   background:
@@ -33,10 +33,7 @@ export function AuthGlassCard({
 }: AuthGlassCardProps) {
   return (
     <div
-      className={cn(
-        "auth-glass-card text-foreground p-6 sm:p-8",
-        className,
-      )}
+      className={cn("text-foreground p-6 sm:p-8", className)}
       style={{ ...GLASS_STYLE, ...style }}
     >
       {children}

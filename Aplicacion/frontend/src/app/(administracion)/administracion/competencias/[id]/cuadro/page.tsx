@@ -1,24 +1,14 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { CompetenciaCuadroView } from "@/features/competencias/views";
 
 /**
- * ADM-12 — Operar el cuadro de encuentros
- *
- * Shell de ruta (FND-06). La vista la construye UI-05.
+ * ADM-12 - Operar el cuadro de encuentros
  */
-
 export default async function Page({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <RoutePlaceholder
-      pageId="ADM-12"
-      tarea="Operar el cuadro de encuentros"
-      packet="UI-05"
-    >
-      <p className="font-mono text-xs text-muted-foreground">id: {id}</p>
-    </RoutePlaceholder>
-  );
+
+  return <CompetenciaCuadroView id={id} />;
 }

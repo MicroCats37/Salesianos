@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RUTAS } from "@/lib/routes";
 import { PreinscribirButton } from "./PreinscribirButton";
 
 // Carrusel + overlay full-cover inspirado en el AuthVisualPanel del login.
@@ -324,7 +325,7 @@ export function HeroOverlaySection() {
               variant="outline"
               className="h-14 rounded-2xl border-surface-inverse-foreground/40 bg-surface-inverse-foreground/8 px-8 text-base font-bold text-surface-inverse-foreground hover:bg-surface-inverse-foreground/15"
             >
-              <Link href="/">Información del Evento</Link>
+              <Link href={RUTAS.publico.inicio}>Información del Evento</Link>
             </Button>
             <Button
               asChild
@@ -332,7 +333,7 @@ export function HeroOverlaySection() {
               variant="ghost"
               className="h-14 rounded-2xl px-8 text-base font-bold text-surface-inverse-foreground/80 hover:bg-surface-inverse-foreground/10 hover:text-surface-inverse-foreground"
             >
-              <Link href="/login">Ya tengo cuenta</Link>
+              <Link href={RUTAS.auth.login}>Ya tengo cuenta</Link>
             </Button>
           </div>
         </div>

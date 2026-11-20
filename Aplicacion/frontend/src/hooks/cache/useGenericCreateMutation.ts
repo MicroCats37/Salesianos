@@ -8,45 +8,44 @@ import {
 import type { AxiosError } from "axios";
 import type { ZodType } from "zod";
 import { handleApiError, notify } from "@/errors";
-import api from "@/lib/api";
+import { apiSend } from "@/lib/api";
+import { invalidateDatasets } from "@/shared/utils/cache-policy";
 import { buildApiPayload } from "@/utils";
 
 interface UseGenericCreateMutationOptions<TVars = unknown> {
+  /**
+   * The key of the dataset whose reads are invalidated when the creation
+   * settles.
+   */
   queryKey: QueryKey;
   /**
-   * URL del POST — construye el mutationFn internamente (buildApiPayload + api.post
-   * + manejo de errores + toast), como useApiCreate. Alternativa a `mutationFn`.
+   * URL del POST — construye el mutationFn internamente (buildApiPayload +
+   * apiSend + manejo de errores + toast), como useApiCreate. Alternativa a
+   * `mutationFn`.
    */
   url?: string;
   /** mutationFn manual (modo original). Se usa si no se provee `url`. */
   mutationFn?: MutationFunction<unknown, TVars>;
   schema?: ZodType<unknown>;
   showToast?: boolean;
-  /** Dónde insertar en la lista: 'start' prepends (más reciente primero), 'end' append (más antiguo primero). Default: 'start' */
-  insertPosition?: "start" | "end";
   /**
-   * Shape del cache de la lista en `queryKey`:
-   * - "array" (default): plain array `TItem[]`.
-   * - "paginated": `{ items: TItem[]; total: number }` — usa setQueriesData
-   *   por prefijo para cubrir las listas paginadas (page/page_size/filtros).
+   * The keys invalidated when the mutation settles.
    */
-  listShape?: "array" | "paginated";
+  invalidateKeys?: readonly QueryKey[];
   options?: Omit<UseMutationOptions<unknown, AxiosError, TVars>, "mutationFn">;
 }
 
 /**
- * Mutation de creación con sincronización de cache de lista + seed de detalle.
+ * A creation that NEVER writes into the cache.
  *
- * Dos modos de creación:
- * - `url`: POST con buildApiPayload + toast de error (como useApiCreate).
- * - `mutationFn`: transformación manual (compatibilidad con el modo original).
- *
- * La mutation devuelve el envelope crudo de la API (como useApiCreate); el
- * unwrap del item de lista se hace en onSuccess para el prepend/append y el
- * seed del detalle en `[...queryKey, newItem.id]`.
+ * The server owns the position of the new item: it decides the order, the
+ * page and the total. Writing it from the browser means guessing, and the
+ * guess lands in EVERY cached page of the list (the same item twice, the
+ * total inflated once per page). So the creation invalidates the dataset and
+ * lets the server answer.
  */
 export function useGenericCreateMutation<
-  TItem extends { id: string | number },
+  TItem extends { id: string | number } = { id: string | number },
   TVars = unknown,
 >({
   queryKey,
@@ -54,18 +53,21 @@ export function useGenericCreateMutation<
   mutationFn,
   schema,
   showToast = true,
-  insertPosition = "start",
-  listShape = "array",
+  invalidateKeys,
   options,
 }: UseGenericCreateMutationOptions<TVars>) {
   const queryClient = useQueryClient();
 
-  const internalMutationFn: MutationFunction<unknown, TVars> = url
-    ? async (variables) => {
+  const internalMutationFn: MutationFunction<TItem | undefined, TVars> = url
+    ? async (variables, _context) => {
         try {
           const payload = buildApiPayload(variables);
-          const { data } = await api.post(url, payload);
-          return schema ? schema.parse(data) : data;
+          const { status, data } = await apiSend<unknown>("post", url, payload);
+
+          // 204 No Content: the body is empty and it is NEVER parsed.
+          if (status === 204) return undefined;
+
+          return (schema ? schema.parse(data) : data) as TItem | undefined;
         } catch (error) {
           const apiError = handleApiError(error);
           if (showToast) notify.error(apiError.message);
@@ -77,41 +79,15 @@ export function useGenericCreateMutation<
           throw new Error(
             "useGenericCreateMutation: se requiere url o mutationFn",
           );
-        })) as MutationFunction<unknown, TVars>);
+        })) as MutationFunction<TItem | undefined, TVars>);
 
-  return useMutation<unknown, AxiosError, TVars>({
-    mutationFn: internalMutationFn,
-    onSuccess: (rawResult) => {
-      // Desenvuelve el envelope ApiResponse para obtener el item de la lista
-      const newItem = ((rawResult as { data?: TItem })?.data ??
-        rawResult) as TItem;
-
-      if (listShape === "paginated") {
-        // Lista paginada { items, total } — matcheo parcial por prefijo
-        queryClient.setQueriesData<{ items: TItem[]; total: number }>(
-          { queryKey },
-          (old) => {
-            if (!old || !Array.isArray(old.items)) return old;
-            return {
-              ...old,
-              items:
-                insertPosition === "start"
-                  ? [newItem, ...old.items]
-                  : [...old.items, newItem],
-              total: (old.total ?? 0) + 1,
-            };
-          },
-        );
-      } else {
-        queryClient.setQueryData<TItem[]>(queryKey, (old) => {
-          const list = old ?? [];
-          return insertPosition === "start"
-            ? [newItem, ...list]
-            : [...list, newItem];
-        });
+  return useMutation<TItem | undefined, AxiosError, TVars>({
+    mutationFn: async (variables, context) => {
+      try {
+        return await internalMutationFn(variables, context);
+      } finally {
+        await invalidateDatasets(queryClient, invalidateKeys ?? [queryKey]);
       }
-      // Seed detail cache
-      queryClient.setQueryData([...queryKey, newItem.id], newItem);
     },
     ...options,
   });

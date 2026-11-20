@@ -34,6 +34,7 @@ import {
 } from "@/features/auth/schemas";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { resolverDeDestino } from "@/features/auth/utils/resolver-destino";
+import { RUTAS } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 // =============================================================================
@@ -77,13 +78,13 @@ function PasswordInputField({
     <div className="space-y-1.5">
       <Label
         htmlFor={id}
-        className="text-xs font-bold uppercase tracking-wider text-slate-700"
+        className="text-xs font-bold uppercase tracking-wider text-foreground"
       >
         Contrasena
       </Label>
       <div className="relative">
         <KeyRound
-          className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400 pointer-events-none"
+          className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
           aria-hidden="true"
         />
         <Input
@@ -92,7 +93,7 @@ function PasswordInputField({
           placeholder="••••••••"
           autoComplete="current-password"
           className={cn(
-            "input-brand pl-9 pr-10",
+            "pl-9 pr-10",
             error && "border-destructive ring-1 ring-destructive",
           )}
           {...registration}
@@ -100,7 +101,7 @@ function PasswordInputField({
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
           aria-label={
             showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
           }
@@ -154,13 +155,13 @@ function DniTabForm({ isLoading }: { isLoading: boolean }) {
       <div className="space-y-4">
         <Label
           htmlFor="tab-dni"
-          className="text-xs font-bold uppercase tracking-wider text-slate-700"
+          className="text-xs font-bold uppercase tracking-wider text-foreground"
         >
           DNI
         </Label>
         <div className="relative">
           <IdCard
-            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400 pointer-events-none"
+            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
             aria-hidden="true"
           />
           <Input
@@ -171,7 +172,7 @@ function DniTabForm({ isLoading }: { isLoading: boolean }) {
             autoComplete="off"
             maxLength={8}
             className={cn(
-              "input-brand pl-9",
+              "pl-9",
               errors.dni?.message &&
                 "border-destructive ring-1 ring-destructive",
             )}
@@ -194,13 +195,12 @@ function DniTabForm({ isLoading }: { isLoading: boolean }) {
       <Button
         type="submit"
         disabled={isSubmitting || isLoading || loginMutation.isPending}
-        className="btn-login w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
+        className="btn-brand-gradient btn-shine w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
       >
         {isSubmitting || isLoading || loginMutation.isPending ? (
           <>
             <Loader2
               className="w-5 h-5 animate-spin"
-              style={{ color: "var(--color-gold)" }}
               aria-hidden="true"
             />
             <span>Verificando...</span>
@@ -249,13 +249,13 @@ function EmailTabForm({ isLoading }: { isLoading: boolean }) {
       <div className="space-y-4">
         <Label
           htmlFor="tab-email"
-          className="text-xs font-bold uppercase tracking-wider text-slate-700"
+          className="text-xs font-bold uppercase tracking-wider text-foreground"
         >
           Email
         </Label>
         <div className="relative">
           <Mail
-            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400 pointer-events-none"
+            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
             aria-hidden="true"
           />
           <Input
@@ -264,7 +264,7 @@ function EmailTabForm({ isLoading }: { isLoading: boolean }) {
             placeholder="ejemplo@correo.com"
             autoComplete="email"
             className={cn(
-              "input-brand pl-9",
+              "pl-9",
               errors.email?.message &&
                 "border-destructive ring-1 ring-destructive",
             )}
@@ -287,13 +287,12 @@ function EmailTabForm({ isLoading }: { isLoading: boolean }) {
       <Button
         type="submit"
         disabled={isSubmitting || isLoading || loginMutation.isPending}
-        className="btn-login w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
+        className="btn-brand-gradient btn-shine w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
       >
         {isSubmitting || isLoading || loginMutation.isPending ? (
           <>
             <Loader2
               className="w-5 h-5 animate-spin"
-              style={{ color: "var(--color-gold)" }}
               aria-hidden="true"
             />
             <span>Verificando...</span>
@@ -342,13 +341,13 @@ function UsernameTabForm({ isLoading }: { isLoading: boolean }) {
       <div className="space-y-4">
         <Label
           htmlFor="tab-username"
-          className="text-xs font-bold uppercase tracking-wider text-slate-700"
+          className="text-xs font-bold uppercase tracking-wider text-foreground"
         >
           Usuario
         </Label>
         <div className="relative">
           <User
-            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400 pointer-events-none"
+            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
             aria-hidden="true"
           />
           <Input
@@ -357,7 +356,7 @@ function UsernameTabForm({ isLoading }: { isLoading: boolean }) {
             placeholder="juan.perez"
             autoComplete="username"
             className={cn(
-              "input-brand pl-9",
+              "pl-9",
               errors.username?.message &&
                 "border-destructive ring-1 ring-destructive",
             )}
@@ -380,13 +379,12 @@ function UsernameTabForm({ isLoading }: { isLoading: boolean }) {
       <Button
         type="submit"
         disabled={isSubmitting || isLoading || loginMutation.isPending}
-        className="btn-login w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
+        className="btn-brand-gradient btn-shine w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
       >
         {isSubmitting || isLoading || loginMutation.isPending ? (
           <>
             <Loader2
               className="w-5 h-5 animate-spin"
-              style={{ color: "var(--color-gold)" }}
               aria-hidden="true"
             />
             <span>Verificando...</span>
@@ -430,12 +428,12 @@ function LoginBody({
           size="md"
           subtitle="Acceso a Salesianos FEST"
         />
-        <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500 sm:text-sm">
+        <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground sm:text-sm">
           Inicia sesion para gestionar tu inscripcion, tus pagos y tu equipo.
         </p>
       </div>
 
-      <div className="relative flex items-center w-full bg-slate-100 p-1 rounded-full mb-8">
+      <div className="relative flex items-center w-full bg-muted p-1 rounded-full mb-8">
         <div
           className="absolute top-1 bottom-1 bg-primary rounded-full transition-all duration-300 ease-out shadow-md"
           style={{
@@ -457,8 +455,8 @@ function LoginBody({
             className={cn(
               "relative z-10 flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full transition-all duration-300",
               activeTab === tab
-                ? "text-white font-bold"
-                : "text-slate-600 hover:text-slate-900",
+                ? "text-primary-foreground font-bold"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {TAB_ICONS[tab]}
@@ -476,11 +474,11 @@ function LoginBody({
       </div>
 
       <div className="mt-8 text-center">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           ¿No tienes cuenta?{" "}
           <Link
-            href="/register"
-            className="font-bold text-indigo-700 hover:underline"
+            href={RUTAS.auth.registro}
+            className="font-bold text-primary hover:underline"
           >
             Inscribe tu equipo
           </Link>
@@ -488,7 +486,7 @@ function LoginBody({
       </div>
 
       <div className="mt-6 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Salesianos FEST — Asociacion Okinawense del Peru
         </p>
       </div>

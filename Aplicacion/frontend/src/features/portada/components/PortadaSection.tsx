@@ -128,7 +128,13 @@ export function PortadaSection({
       id={id}
       ref={sectionRef}
       className={cn(
-        "scroll-mt-[var(--portada-chrome-height)] py-16 sm:py-20 lg:py-24",
+        /*
+         * El ritmo vertical responde a la ALTURA de la ventana, no sólo a su
+         * anchura: en una pantalla baja una sección "de una pantalla" tiene
+         * que apretar el aire para que el contenido quepa y el visitante no
+         * tenga que desplazarse dentro de ella.
+         */
+        "scroll-mt-[var(--portada-chrome-height)] py-12 sm:py-16 lg:py-20 [@media(max-height:900px)]:py-8 [@media(max-height:760px)]:py-6",
         altura === "viewport" &&
           "flex snap-start flex-col justify-center lg:portada-altura-disponible",
         fondoClases[fondo],
@@ -158,7 +164,7 @@ export function PortadaSection({
               <h2
                 data-portada-stagger
                 className={cn(
-                  "mt-3 text-3xl font-black uppercase leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl",
+                  "mt-3 text-3xl font-black uppercase leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl [@media(max-height:900px)]:lg:text-4xl",
                   color.titulo,
                 )}
               >
@@ -180,13 +186,13 @@ export function PortadaSection({
               </h2>
             )}
             {parrafos.length > 0 && (
-              <div
-                data-portada-stagger
-                className={cn(
-                  "mt-5 space-y-3 text-sm leading-relaxed sm:text-base",
-                  color.copy,
-                )}
-              >
+                <div
+                  data-portada-stagger
+                  className={cn(
+                    "mt-4 space-y-2 text-sm leading-relaxed sm:mt-5 sm:space-y-3 sm:text-base [@media(max-height:900px)]:mt-3",
+                    color.copy,
+                  )}
+                >
                 {parrafos.map((parrafo) => (
                   <p key={parrafo}>{parrafo}</p>
                 ))}

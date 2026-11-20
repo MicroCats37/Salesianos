@@ -74,6 +74,21 @@ class PedidoOrchestrator:
         persona_id = await sync_to_async(self._persona_id)(usuario)
         return await self.flujo.obtener_pedido_por_token(token, persona_id)
 
+    async def confirmar_entrega(self, usuario, pedido_id):
+        """Confirma la entrega de un pedido pagado (DOM-06 · RN-M07).
+
+        Es **IDEMPOTENTE**: un reintento del operador devuelve el MISMO
+        acta, no la duplica.
+
+        Args:
+            usuario: la cuenta que opera (el actor del acta).
+            pedido_id: el pedido a entregar.
+
+        Returns:
+            El acta de la entrega.
+        """
+        return await self.flujo.confirmar_entrega(pedido_id, usuario)
+
     # ── Internos ────────────────────────────────────────────────────────────
 
     def _persona_id(self, usuario) -> str | None:

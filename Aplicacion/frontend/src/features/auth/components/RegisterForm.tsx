@@ -34,6 +34,7 @@ import {
   type RegisterFormData,
   RegisterFormSchema,
 } from "@/features/auth/schemas";
+import { RUTAS } from "@/lib/routes";
 import { cn, stripNonDigits } from "@/lib/utils";
 
 // ── FieldWrapper ───────────────────────────────────────────────────────────────
@@ -56,9 +57,16 @@ function FieldWrapper({
   return (
     <div className={cn("space-y-1.5", className)}>
       {label && (
-        <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+        <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
           {label}
-          {required && <span className="text-amber-500">*</span>}
+          {required && (
+            <>
+              <span className="text-destructive" aria-hidden="true">
+                *
+              </span>
+              <span className="sr-only">obligatorio</span>
+            </>
+          )}
         </Label>
       )}
       {children}
@@ -99,7 +107,7 @@ function SmartTextField({
     <FieldWrapper label={label} error={error} required={required}>
       <div className="relative">
         {Icon && (
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
             <Icon className="size-4" />
           </span>
         )}
@@ -110,11 +118,10 @@ function SmartTextField({
           autoComplete={
             name === "nombres" || name === "apellidos" ? "name" : "off"
           }
-          className={cn(
-            Icon && "pl-9",
-            "input-brand",
-            error && "border-destructive ring-1 ring-destructive",
-          )}
+              className={cn(
+                "w-full",
+                error && "border-destructive ring-1 ring-destructive",
+              )}
         />
       </div>
     </FieldWrapper>
@@ -131,7 +138,7 @@ function SmartEmailField() {
   return (
     <FieldWrapper label="Email" error={error} required>
       <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
           <Mail className="size-4" />
         </span>
         <Input
@@ -140,7 +147,7 @@ function SmartEmailField() {
           placeholder="tu@email.com"
           autoComplete="email"
           className={cn(
-            "pl-9 input-brand",
+            "pl-9",
             error && "border-destructive ring-1 ring-destructive",
           )}
         />
@@ -160,7 +167,7 @@ function SmartPasswordField() {
   return (
     <FieldWrapper label="Contraseña" error={error} required>
       <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
           <Lock className="size-4" />
         </span>
         <Input
@@ -169,14 +176,14 @@ function SmartPasswordField() {
           placeholder="Mín. 8 caracteres"
           autoComplete="new-password"
           className={cn(
-            "pl-9 pr-10 input-brand",
+            "pl-9 pr-10",
             error && "border-destructive ring-1 ring-destructive",
           )}
         />
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
           aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
         >
           {showPassword ? (
@@ -201,7 +208,7 @@ function SmartConfirmPasswordField() {
   return (
     <FieldWrapper label="Confirmar" error={error} required>
       <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
           <CheckCircle2 className="size-4" />
         </span>
         <Input
@@ -210,14 +217,14 @@ function SmartConfirmPasswordField() {
           placeholder="Repite la contraseña"
           autoComplete="new-password"
           className={cn(
-            "pl-9 pr-10 input-brand",
+            "pl-9 pr-10",
             error && "border-destructive ring-1 ring-destructive",
           )}
         />
         <button
           type="button"
           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
           aria-label={showConfirmPassword ? "Ocultar confirmación" : "Mostrar confirmación"}
         >
           {showConfirmPassword ? (
@@ -253,7 +260,7 @@ function SmartTipoDocumentoField() {
           <Select onValueChange={field.onChange} value={field.value}>
             <SelectTrigger
               className={cn(
-                "input-brand w-full",
+                "w-full",
                 error && "border-destructive ring-1 ring-destructive",
               )}
             >
@@ -356,7 +363,6 @@ function SmartNumeroDocumentoField() {
                 placeholder={placeholder}
                 maxLength={maxLen}
                 className={cn(
-                  "input-brand",
                   error && "border-destructive ring-1 ring-destructive",
                 )}
                 onChange={(e) => {
@@ -381,7 +387,7 @@ function SmartNumeroDocumentoField() {
             disabled={!canLookup || documentoLookup.isPending}
             onClick={handleLookup}
             aria-label="Buscar nombres por DNI"
-            className="h-11 w-11 rounded-xl bg-[var(--gold)] text-brand-deep-navy hover:bg-[var(--gold)]/90 shadow"
+            className="h-11 w-11 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 shadow"
           >
             {documentoLookup.isPending ? (
               <Loader2 className="size-4 animate-spin" />
@@ -427,7 +433,7 @@ function SmartSelectField({
           <Select onValueChange={field.onChange} value={field.value}>
             <SelectTrigger
               className={cn(
-                "input-brand w-full",
+                "w-full",
                 error && "border-destructive ring-1 ring-destructive",
               )}
             >
@@ -459,7 +465,7 @@ function SmartAcceptedBasesCheckboxField() {
   const error = errors.acceptedBases?.message as string | undefined;
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border-2 border-[var(--gold)]/40 surface-form-amber p-4">
+    <div className="flex items-start gap-3 rounded-xl border-2 border-accent/40 bg-accent/10 p-4">
       <Controller
         name="acceptedBases"
         control={control}
@@ -477,7 +483,7 @@ function SmartAcceptedBasesCheckboxField() {
       <div className="flex-1">
         <Label
           htmlFor="acceptedBases"
-          className="cursor-pointer font-bold leading-tight text-brand-deep-navy"
+            className="cursor-pointer font-bold leading-tight text-foreground"
         >
           He leído y acepto las bases oficiales del evento.
         </Label>
@@ -602,11 +608,11 @@ export function RegisterForm() {
                   "Crear cuenta"
                 )}
               </Button>
-              <p className="text-center text-sm text-slate-600">
+              <p className="text-center text-sm text-muted-foreground">
                 ¿Ya tienes cuenta?{" "}
                 <Link
-                  href="/login"
-                  className="font-bold text-indigo-700 underline-offset-4 hover:underline"
+                  href={RUTAS.auth.login}
+                  className="font-bold text-primary underline-offset-4 hover:underline"
                 >
                   Inicia sesión
                 </Link>

@@ -1,17 +1,30 @@
-import { RoutePlaceholder } from "@/components/shell/RoutePlaceholder";
+import { MisInscripcionesView } from "@/features/cuenta/views";
 
 /**
- * ACCOUNT-02 — Listar tus inscripciones y su estado
+ * ACCOUNT-02 - Listar tus inscripciones y su estado
  *
- * Shell de ruta (FND-06). La vista la construye UI-01.
+ * The filters live in the URL, so the page reads them from the query
+ * string and hands them to the view. The page stays thin: it composes the
+ * feature, it never filters by itself.
  */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
 
-export default function Page() {
+  const valor = (clave: string) => {
+    const bruto = params[clave];
+    return Array.isArray(bruto) ? bruto[0] : bruto;
+  };
+
   return (
-    <RoutePlaceholder
-      pageId="ACCOUNT-02"
-      tarea="Listar tus inscripciones y su estado"
-      packet="UI-01"
-    ></RoutePlaceholder>
+    <MisInscripcionesView
+      filtros={{
+        edicion: valor("edicion"),
+        estado: valor("estado"),
+      }}
+    />
   );
 }

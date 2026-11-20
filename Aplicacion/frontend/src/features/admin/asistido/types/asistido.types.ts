@@ -32,7 +32,13 @@ export interface CompraAsistidaOut {
   compra_id: string;
   recurso_id: string;
   orden_pago_id: string;
-  tipo: "PASE" | "PEDIDO";
+  /**
+   * `PASE` or `PEDIDO`.
+   *
+   * It is a `string` and NOT an enum: the backend owns the vocabulary and a
+   * new value must NOT break the whole read.
+   */
+  tipo: string;
   concepto: string;
   total: string;
   moneda: string;

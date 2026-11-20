@@ -1,9 +1,13 @@
 "use client";
 
-import { ExternalLink, Package, Plus, Store } from "lucide-react";
+import { ExternalLink, Package, Plus, ShoppingCart, Store } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  ModalCompraParaCliente,
+  useComprarPedidoCliente,
+} from "@/features/admin/asistido";
 import {
   AdminDataTable,
   AdminEmptyState,
@@ -33,11 +37,17 @@ import { AdminEntregasView } from "./AdminEntregasView";
  */
 export function AdminMarketplaceView() {
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [productoParaCliente, setProductoParaCliente] = useState<{
+    id: string;
+    nombre: string;
+    precio: number;
+  } | null>(null);
   const catalogo = useCatalogoTienda({ page: 1, page_size: 100 });
   const categorias = useCategoriasTienda();
   const crearProducto = useCrearProducto();
   const inventario = useInventarioMarketplace();
   const registrarMovimiento = useRegistrarMovimientoInventario();
+  const comprarParaCliente = useComprarPedidoCliente();
   const stockPorProducto = new Map(
     (inventario.data ?? []).map((item) => [item.producto_id, item.stock]),
   );
@@ -143,21 +153,38 @@ export function AdminMarketplaceView() {
                 stock: stockPorProducto.get(producto.id) ?? 0,
                 estado: producto.estado === "ACTIVO" ? "Activo" : "Inactivo",
                 acciones: (
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="min-h-9 whitespace-nowrap"
-                  >
-                    <Link
-                      href={RUTAS.administracion.marketplaceProducto(
-                        producto.slug,
-                      )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-h-9 whitespace-nowrap"
+                      onClick={() =>
+                        setProductoParaCliente({
+                          id: producto.id,
+                          nombre: producto.nombre,
+                          precio: producto.precio_efectivo,
+                        })
+                      }
                     >
-                      Ver detalle
-                      <ExternalLink className="size-3.5" aria-hidden="true" />
-                    </Link>
-                  </Button>
+                      <ShoppingCart className="size-3.5" aria-hidden="true" />
+                      Comprar para cliente
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="min-h-9 whitespace-nowrap"
+                    >
+                      <Link
+                        href={RUTAS.administracion.marketplaceProducto(
+                          producto.slug,
+                        )}
+                      >
+                        Ver detalle
+                        <ExternalLink className="size-3.5" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  </div>
                 ),
               },
             }))}
@@ -193,6 +220,48 @@ export function AdminMarketplaceView() {
               });
             }
             await catalogo.refetch();
+          }}
+        />
+      ) : null}
+
+      {productoParaCliente ? (
+        <ModalCompraParaCliente
+          open
+          onOpenChange={(abierto) => {
+            if (!abierto) setProductoParaCliente(null);
+          }}
+          modo="PRODUCTO"
+          concepto={productoParaCliente.nombre}
+          itemId={productoParaCliente.id}
+          precioUnitario={new Intl.NumberFormat("es-ES", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(productoParaCliente.precio)}
+          moneda="PEN"
+          comprando={comprarParaCliente.isPending}
+          onComprar={async (datos) => {
+            await comprarParaCliente.mutateAsync({
+              items: [
+                {
+                  tipo: "PRODUCTO",
+                  producto_id: productoParaCliente.id,
+                  cantidad: datos.cantidad,
+                },
+              ],
+              cliente: {
+                tipo_documento: datos.tipo_documento,
+                numero_documento: datos.numero_documento,
+                nombres: datos.nombres,
+                apellidos: datos.apellidos,
+                contacto_email: datos.contacto_email,
+              },
+              evidencia: {
+                canal: datos.canal,
+                referencia: datos.referencia,
+                motivo: datos.motivo,
+              },
+            });
+            setProductoParaCliente(null);
           }}
         />
       ) : null}

@@ -1,15 +1,15 @@
 "use client";
 
 import {
+  type UseMutationResult,
   useMutation,
   useQueryClient,
-  type UseMutationResult,
 } from "@tanstack/react-query";
 import { notify } from "@/errors";
 import { adminClaves } from "@/features/admin/operaciones/utils/admin.claves.utils";
-import { invalidateDatasets } from "@/shared/utils/cache-policy";
 import { marketplaceClaves } from "@/features/marketplace/utils/marketplace.claves.utils";
 import { paseClaves } from "@/features/pases/utils/pase.claves.utils";
+import { invalidateDatasets } from "@/shared/utils/cache-policy";
 import {
   agregarParticipanteEquipo,
   comprarPaseCliente,
@@ -17,9 +17,9 @@ import {
 } from "../services/asistido.service";
 import type {
   AgregarParticipanteEquipoIn,
+  CompraAsistidaOut,
   ComprarPaseClienteIn,
   ComprarPedidoClienteIn,
-  CompraAsistidaOut,
   ParticipanteAsistidoOut,
 } from "../types/asistido.types";
 
@@ -60,7 +60,9 @@ export function useAgregarParticipanteEquipo(): UseMutationResult<
         return resultado;
       } catch (error) {
         notify.error(
-          error instanceof Error ? error.message : "No se pudo agregar al participante.",
+          error instanceof Error
+            ? error.message
+            : "No se pudo agregar al participante.",
         );
         throw error;
       } finally {
@@ -119,9 +121,7 @@ export function useComprarPedidoCliente(): UseMutationResult<
     mutationFn: async (payload) => {
       try {
         const resultado = await comprarPedidoCliente(payload);
-        notify.success(
-          "El pedido para el cliente se registró correctamente.",
-        );
+        notify.success("El pedido para el cliente se registró correctamente.");
         return resultado;
       } catch (error) {
         notify.error(

@@ -98,8 +98,9 @@ export const compraAsistidaSchema = z.object({
 // ── Envelopes ───────────────────────────────────────────────────────────────
 
 /** The envelope of the assisted add of a participant. */
-export const participanteAsistidoEnvelope =
-  envelopeAdmin(participanteAsistidoSchema);
+export const participanteAsistidoEnvelope = envelopeAdmin(
+  participanteAsistidoSchema,
+);
 
 /** The envelope of the assisted purchases. */
 export const compraAsistidaEnvelope = envelopeAdmin(compraAsistidaSchema);
@@ -113,3 +114,50 @@ export type AgregarParticipanteEquipo = z.infer<
 >;
 export type ComprarPaseCliente = z.infer<typeof comprarPaseClienteSchema>;
 export type ComprarPedidoCliente = z.infer<typeof comprarPedidoClienteSchema>;
+
+// ── Los esquemas de FORMULARIO ──────────────────────────────────────────────
+//
+// Son la capa que el formulario valida. El COMANDO viaja al backend en el
+// espejo de arriba: el formulario no es el contrato.
+
+/** The form of the administrative add of a participant. */
+export const agregarParticipanteFormSchema = z.object({
+  tipo_documento: z.string().min(1, "Elige el tipo de documento."),
+  numero_documento: z.string().min(1, "Escribe el número de documento."),
+  rol: z.string().min(1, "Elige el rol."),
+  motivo: z.string().min(1, "Escribe el motivo: queda en la auditoría."),
+});
+
+/**
+ * The form of an assisted purchase.
+ *
+ * The quantity is COERCED because the input is a number and the form reads
+ * a string. The price NEVER travels: the server freezes it against the
+ * catalogue (`RN-C02`).
+ */
+export const compraParaClienteFormSchema = z.object({
+  tipo_documento: z.string().min(1, "Elige el tipo de documento."),
+  numero_documento: z.string().min(1, "Escribe el número de documento."),
+  nombres: z.string().min(1, "Escribe los nombres del cliente."),
+  apellidos: z.string(),
+  contacto_email: z
+    .string()
+    .refine(
+      (correo) => correo === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo),
+      "Escribe un correo válido.",
+    ),
+  cantidad: z.coerce
+    .number({ message: "Escribe la cantidad." })
+    .int("La cantidad es un número entero.")
+    .min(1, "La cantidad es al menos una unidad."),
+  canal: z.string().min(1, "Elige el canal del pago."),
+  referencia: z.string().min(1, "Escribe la referencia del pago."),
+  motivo: z.string().min(1, "Escribe el motivo: queda en la auditoría."),
+});
+
+export type AgregarParticipanteFormData = z.infer<
+  typeof agregarParticipanteFormSchema
+>;
+export type CompraParaClienteFormData = z.infer<
+  typeof compraParaClienteFormSchema
+>;

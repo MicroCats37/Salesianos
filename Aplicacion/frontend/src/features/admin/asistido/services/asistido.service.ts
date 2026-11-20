@@ -8,9 +8,9 @@ import {
 } from "../schemas/asistido.schema";
 import type {
   AgregarParticipanteEquipoIn,
+  CompraAsistidaOut,
   ComprarPaseClienteIn,
   ComprarPedidoClienteIn,
-  CompraAsistidaOut,
   ParticipanteAsistidoOut,
 } from "../types/asistido.types";
 

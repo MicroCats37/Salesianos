@@ -1,6 +1,13 @@
-import { ShieldCheck, UserRoundCheck } from "lucide-react";
+"use client";
+
+import { ShieldCheck, UserPlus, UserRoundCheck } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  ModalAgregarParticipante,
+  useAgregarParticipanteEquipo,
+} from "@/features/admin/asistido";
 import {
   AdminEmptyState,
   AdminNotice,
@@ -111,8 +118,23 @@ export function EquipoAdminDetalleView({
  * The composition of the detail of a team.
  */
 function DetalleEquipo({ datos }: { datos: AdminEquipoDetalleOut }) {
+  const [modalAgregar, setModalAgregar] = useState(false);
+  const agregar = useAgregarParticipanteEquipo();
+
   const accionesVisibles = ACCIONES.filter((accion) =>
     datos.acciones_disponibles.includes(accion.codigo),
+  );
+
+  const agregarParticipante = (
+    <Button
+      type="button"
+      variant="outline"
+      className="min-h-11"
+      onClick={() => setModalAgregar(true)}
+    >
+      <UserPlus className="size-4" aria-hidden="true" />
+      Agregar participante
+    </Button>
   );
 
   return (
@@ -120,6 +142,7 @@ function DetalleEquipo({ datos }: { datos: AdminEquipoDetalleOut }) {
       <AdminPanel
         title="Identidad y estado"
         description="Quién responde, en qué disciplina compite y por qué puede o no competir."
+        actions={agregarParticipante}
       >
         <div className="flex flex-col gap-5">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -169,8 +192,12 @@ function DetalleEquipo({ datos }: { datos: AdminEquipoDetalleOut }) {
       <AdminPanel
         title="Plantilla"
         description="Las personas que ya integran el equipo, con su documento y su estado."
+        actions={agregarParticipante}
       >
-        <PanelPlantillaEquipo participantes={datos.participantes} />
+        <PanelPlantillaEquipo
+          participantes={datos.participantes}
+          inscripcionId={datos.inscripcion_detalle.id}
+        />
       </AdminPanel>
 
       <AdminPanel
@@ -208,6 +235,25 @@ function DetalleEquipo({ datos }: { datos: AdminEquipoDetalleOut }) {
           }
         />
       </AdminPanel>
+
+      <ModalAgregarParticipante
+        open={modalAgregar}
+        onOpenChange={setModalAgregar}
+        equipoNombre={datos.nombre}
+        agregando={agregar.isPending}
+        onAgregar={async (datosFormulario) => {
+          await agregar.mutateAsync({
+            equipoId: datos.id,
+            payload: {
+              tipo_documento: datosFormulario.tipo_documento,
+              numero_documento: datosFormulario.numero_documento,
+              rol: datosFormulario.rol,
+              motivo: datosFormulario.motivo,
+            },
+          });
+          setModalAgregar(false);
+        }}
+      />
     </div>
   );
 }

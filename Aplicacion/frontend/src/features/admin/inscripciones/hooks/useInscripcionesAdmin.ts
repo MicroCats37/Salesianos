@@ -1,27 +1,25 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { notify } from "@/errors";
 import { useAdminQuery } from "@/features/admin/operaciones/hooks/useAdminQuery";
-import { envelopeAdmin } from "@/features/admin/operaciones/schemas/operaciones.schema";
-import {
-  RUTAS_ADMIN,
-  urlDeRutaAdmin,
-} from "@/features/admin/operaciones/services/admin.service";
+import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
 import { adminClaves } from "@/features/admin/operaciones/utils/admin.claves.utils";
 import { estadoDesdeConsulta } from "@/features/admin/operaciones/utils/admin.estado.utils";
 import { parametrosListaAdminDesdeUrl } from "@/features/admin/operaciones/utils/admin.filtros.utils";
 import type { PayloadRetirarParticipanteAdmin } from "@/features/admin/operaciones/utils/admin.payload.utils";
-import { useApiDelete } from "@/hooks";
-import { datosDelEnvelope } from "@/shared/utils/api-envelope";
+import { invalidateDatasets } from "@/shared/utils/cache-policy";
 import {
   inscripcionAdminDetalleDesdeWire,
   inscripcionAdminDetalleEnvelope,
   inscripcionAdminListaDesdeWire,
   listaInscripcionesAdminEnvelope,
-  poolDeInscripcionSchema,
 } from "../schemas/inscripcion-admin.schema";
+import { retirarParticipanteAdmin } from "../services/inscripcion-admin.service";
 import type {
   EstadoDetalleInscripcionAdmin,
   EstadoListaInscripcionesAdmin,
+  PoolDeInscripcionOut,
 } from "../types/inscripciones-admin.types";
 
 /**
@@ -90,15 +88,43 @@ export function useDetalleInscripcionAdmin(
  * INSIDE the mutation (`FND-08` §3 regla 5): a component that unmounts
  * while the command is in flight would never invalidate and the cache would
  * keep an answer the server never gave.
+ *
+ * ## Why this mutation is NOT `useApiDelete`
+ *
+ * The command is a `DELETE` that carries an AUDITED BODY (`motivo` and,
+ * optionally, `version`). The generic `useApiDelete` sends NO body, so a
+ * command built with it would arrive without the reason and the backend
+ * would reject it with a 422 before touching anything. The area's OWN client
+ * (`pedirAdmin`) speaks every method of the ledger and carries the payload,
+ * so the withdrawal goes through the service that uses it.
  */
 export function useRetirarParticipanteAdmin() {
-  return useApiDelete({
-    getUrl: (variables: PayloadRetirarParticipanteAdmin) =>
-      urlDeRutaAdmin(RUTAS_ADMIN.retirarParticipante, {
-        inscripcion_id: variables.inscripcion_id,
-        participacion_id: variables.participacion_id,
-      }),
-    schema: datosDelEnvelope(envelopeAdmin(poolDeInscripcionSchema)),
-    invalidateKeys: [adminClaves.inscripciones.all],
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    PoolDeInscripcionOut,
+    Error,
+    PayloadRetirarParticipanteAdmin
+  >({
+    mutationFn: async (payload) => {
+      try {
+        const pool = await retirarParticipanteAdmin(payload);
+        notify.success("La participación se retiró correctamente.");
+        return pool;
+      } catch (error) {
+        notify.error(
+          error instanceof Error
+            ? error.message
+            : "No se pudo retirar la participación.",
+        );
+        throw error;
+      } finally {
+        await invalidateDatasets(queryClient, [
+          adminClaves.inscripciones.all,
+          adminClaves.equipos.all,
+          adminClaves.participantes.all,
+        ]);
+      }
+    },
   });
 }

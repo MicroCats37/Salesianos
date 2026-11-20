@@ -97,6 +97,15 @@ export const paqueteSchema = z.object({
   estado: z.string(),
   /** The cupos the package grants. Declared by the catalogue. */
   cupos_incluidos: z.number().int().positive(),
+  /**
+   * The commercial minimum of the package: the number of cupos that a
+   * purchase of this package starts from.
+   *
+   * It is the floor of the stepper of the wizard and the value the quantity
+   * is INITIALIZED at. It is DECLARED by the catalogue, so the browser reads
+   * it and never invents it (and never widens it).
+   */
+  minimo_compra_inicial: z.number().int().positive(),
   precio: precioSchema,
   beneficios: z.array(beneficioSchema),
   disciplinas: z.array(disciplinaSchema),
@@ -121,3 +130,72 @@ export const catalogoDisciplinasSchema = z.object({
 });
 
 export type CatalogoDisciplinas = z.infer<typeof catalogoDisciplinasSchema>;
+
+/**
+ * A cohort (mirrors `PromocionOut`).
+ *
+ * The cohort is the YEAR of a person, not a band: it is what the visitor
+ * EXPLICITLY selects when the registration is created, and it is the only
+ * input from which the server derives the competitive band.
+ *
+ * The cohort is a GLOBAL fact (it belongs to a person, not to an edition),
+ * so it carries NO edition: the edition that scopes it is the one of the
+ * wrapper of the catalogue.
+ */
+export const promocionSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  /** The year of the cohort. */
+  anio: z.number().int(),
+  /** The name the organisation gives to the cohort. */
+  nombre: z.string(),
+  /** `ACTIVA` or `INACTIVA`. */
+  estado: z.string(),
+});
+
+export type Promocion = z.infer<typeof promocionSchema>;
+
+/**
+ * A competitive age band of ONE edition (mirrors `CategoriaOut`).
+ *
+ * The band is DECLARED by the catalogue with the range of cohorts it covers
+ * (`promocion_desde` / `promocion_hasta`). The browser NEVER derives which
+ * band a cohort belongs to: the server resolves it and publishes the band on
+ * the team it creates (`RN-C02`, `QA-K01`).
+ */
+export const categoriaSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  edicion_id: z.string(),
+  edicion_nombre: z.string(),
+  /** The name of the band: `Junior`, `Senior`, `Máster`… */
+  nombre: z.string(),
+  /** The first year of the cohort range that the band covers. */
+  promocion_desde: z.number().int(),
+  /** The last year of the cohort range that the band covers. */
+  promocion_hasta: z.number().int(),
+  /** `ACTIVA` or `INACTIVA`. */
+  estado: z.string(),
+});
+
+export type Categoria = z.infer<typeof categoriaSchema>;
+
+/** The catalogue of cohorts of ONE edition (mirrors `CatalogoPromocionesOut`). */
+export const catalogoPromocionesSchema = z.object({
+  edicion_id: z.string(),
+  edicion_nombre: z.string(),
+  promociones: z.array(promocionSchema),
+});
+
+export type CatalogoPromociones = z.infer<typeof catalogoPromocionesSchema>;
+
+/** The catalogue of bands of ONE edition (mirrors `CatalogoCategoriasOut`). */
+export const catalogoCategoriasSchema = z.object({
+  edicion_id: z.string(),
+  edicion_nombre: z.string(),
+  categorias: z.array(categoriaSchema),
+});
+
+export type CatalogoCategorias = z.infer<typeof catalogoCategoriasSchema>;

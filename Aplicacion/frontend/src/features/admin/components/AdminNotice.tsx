@@ -1,10 +1,6 @@
 import { Info } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
 export interface AdminNoticeProps {
@@ -22,11 +18,7 @@ export interface AdminNoticeProps {
  * that appears and disappears with the data is a toast; a notice that stays
  * is information.
  */
-export function AdminNotice({
-  title,
-  children,
-  className,
-}: AdminNoticeProps) {
+export function AdminNotice({ title, children, className }: AdminNoticeProps) {
   return (
     <Alert className={cn("px-4 py-3", className)}>
       <Info className="size-4" aria-hidden="true" />

@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, resolveImageUrl } from "@/lib/utils";
 import type { ImagenPatrocinador } from "../types/patrocinador.types";
 
 export interface GaleriaPatrocinadorProps {
@@ -62,7 +62,7 @@ export function GaleriaPatrocinador({
       <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-lg)] bg-surface-recessed">
         {archivo ? (
           <img
-            src={archivo}
+            src={resolveImageUrl(archivo)}
             alt={actual.texto_alternativo}
             className="size-full object-cover"
           />
@@ -70,9 +70,11 @@ export function GaleriaPatrocinador({
           <span className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
             <ImageOff className="size-5" aria-hidden="true" />
             <span className="text-caption">
-              {actual.texto_alternativo ||
-                "La imagen no está disponible en el servidor"}
+              La imagen no está disponible en el servidor
             </span>
+            {actual.texto_alternativo ? (
+              <span className="sr-only">{actual.texto_alternativo}</span>
+            ) : null}
           </span>
         )}
       </div>

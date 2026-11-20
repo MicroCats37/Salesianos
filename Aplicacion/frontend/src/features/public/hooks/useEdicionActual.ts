@@ -1,8 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { datasetQueryOptions } from "@/shared/utils/query-options";
-import { obtenerEdicionActual } from "../services/edicion.service";
+import { apiQueryOptions, useApiQuery } from "@/hooks";
+import { datosDelEnvelope } from "@/shared/utils/api-envelope";
+import { gcTimeFor, STALE_TIME } from "@/shared/utils/query-options";
+import {
+  EDICION_ACTUAL_PATH,
+  edicionActualResponseSchema,
+} from "../services/edicion.service";
 import { edicionClaves } from "../utils/edicion.claves.utils";
 
 /**
@@ -16,9 +20,10 @@ import { edicionClaves } from "../utils/edicion.claves.utils";
  * season, so the read is fresh for ten minutes and its cache entry lives for
  * at least as long.
  */
-export const edicionActualQueryOptions = datasetQueryOptions({
+export const edicionActualQueryOptions = apiQueryOptions({
   queryKey: edicionClaves.actual(),
-  queryFn: obtenerEdicionActual,
+  url: EDICION_ACTUAL_PATH,
+  schema: datosDelEnvelope(edicionActualResponseSchema),
   kind: "catalogo",
 });
 
@@ -31,5 +36,13 @@ export const edicionActualQueryOptions = datasetQueryOptions({
  * draws them.
  */
 export function useEdicionActual() {
-  return useQuery(edicionActualQueryOptions);
+  return useApiQuery({
+    queryKey: edicionClaves.actual(),
+    url: EDICION_ACTUAL_PATH,
+    schema: datosDelEnvelope(edicionActualResponseSchema),
+    queryOptions: {
+      staleTime: STALE_TIME.catalogo,
+      gcTime: gcTimeFor(STALE_TIME.catalogo),
+    },
+  });
 }

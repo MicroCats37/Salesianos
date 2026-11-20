@@ -121,7 +121,6 @@ export type EstadoVistaPases =
   | "sin-permiso"
   | "error";
 
-
 /**
  * The delivery state of a pass batch.
  *
@@ -146,13 +145,10 @@ export type EnviarCompraPase = (
 ) => Promise<CompraPaseCreada | void>;
 
 /** The transport of the assignment of a pass to a person. */
-export type EnviarAsignacionPase = (
-  datos: AsignacionPaseData,
-) => Promise<void>;
+export type EnviarAsignacionPase = (datos: AsignacionPaseData) => Promise<void>;
 
 /** The transport of the revocation of an entry right. */
 export type RevocarBeneficiario = (
   beneficiario: BeneficiarioPase,
   motivo: string,
 ) => Promise<void>;
-

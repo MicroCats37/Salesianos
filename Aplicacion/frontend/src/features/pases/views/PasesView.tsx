@@ -1,6 +1,6 @@
 import { CreditCard, Ticket, UserRound } from "lucide-react";
+import { FestivalPublicPage } from "@/components/shell/FestivalPublicPage";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
-import { RouteHero } from "@/components/shell/RouteHero";
 import {
   ShellErrorState,
   ShellPendingState,
@@ -9,8 +9,8 @@ import {
 import { CatalogoPases } from "../components/CatalogoPases";
 import type {
   CatalogoPases as CatalogoPasesModelo,
-  EstadoVistaPases,
   EnviarCompraPase,
+  EstadoVistaPases,
   VeredictoPago,
 } from "../types/pase.types";
 
@@ -23,7 +23,8 @@ const PASOS = [
   },
   {
     titulo: "Completa el pago",
-    detalle: "El precio y la moneda los fija el servidor en el momento del pago.",
+    detalle:
+      "El precio y la moneda los fija el servidor en el momento del pago.",
     Icono: CreditCard,
   },
   {
@@ -75,14 +76,12 @@ export function PasesView({
   const sinPases = estado === "listo" && (catalogo?.pases.length ?? 0) === 0;
 
   return (
-    <div className="flex flex-col gap-8">
-      <RouteHero
-        pageId="PASS-01"
-        title="Comprar un pase de fiesta"
-        description="El pase da acceso nominativo a la fiesta, sin inscripción deportiva. Elige el pase, confirma la cantidad y completa el pago: el precio lo fija el servidor."
-        tone="band"
-      />
-
+    <FestivalPublicPage
+      eyebrow="PASES / LA GRAN FIESTA"
+      title={["LA NOCHE", "TAMBIÉN", "ES TUYA."]}
+      highlighted="ES TUYA."
+      description="Elige tu pase de fiesta, confirma la cantidad y completa el pago para ser parte del cierre del festival."
+    >
       <section className="flex flex-col gap-4">
         <h2 className="text-section-title text-foreground">
           Cómo funciona la compra
@@ -94,14 +93,14 @@ export function PasesView({
             return (
               <li
                 key={paso.titulo}
-                className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4"
+                className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-border bg-surface-raised p-5"
               >
-                <span className="flex items-center gap-2">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <Icono className="size-4" aria-hidden="true" />
+                <span className="flex items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-primary/10 text-primary">
+                    <Icono className="size-5" aria-hidden="true" />
                     <span className="sr-only">Paso {indice + 1}</span>
                   </span>
-                  <span className="text-sm font-bold text-foreground">
+                  <span className="text-base font-bold text-foreground">
                     {paso.titulo}
                   </span>
                 </span>
@@ -135,7 +134,12 @@ export function PasesView({
             mensajeError ??
             "No pudimos leer los pases de esta edición en este momento. Vuelve a intentarlo en unos segundos."
           }
-          accion={reintentar ? { label: "Reintentar", onClick: reintentar } : undefined}
+          accion={
+            reintentar
+              ? { label: "Reintentar", onClick: reintentar }
+              : undefined
+          }
+          className="min-h-11"
         />
       ) : null}
 
@@ -158,6 +162,6 @@ export function PasesView({
       {estado === "listo" && !sinPases && catalogo ? (
         <CatalogoPases pases={catalogo.pases} pago={pago} enviar={enviar} />
       ) : null}
-    </div>
+    </FestivalPublicPage>
   );
 }

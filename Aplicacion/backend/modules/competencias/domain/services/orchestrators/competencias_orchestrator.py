@@ -211,6 +211,10 @@ class CompetenciasOrchestrator:
             actor=actor,
         )
 
+    async def generar_cuadro(self, competencia_id, *, actor=None) -> CompetenciaDetalleResult:
+        """Genera la llave inicial de eliminación simple de la competencia."""
+        return await self.cuadro_flujo.generar_cuadro(competencia_id, actor=actor)
+
     async def actualizar_encuentro(
         self,
         competencia_id,

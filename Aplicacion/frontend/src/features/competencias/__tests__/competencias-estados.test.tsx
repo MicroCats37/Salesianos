@@ -3,6 +3,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { AgendaCompetenciasView } from "../views/AgendaCompetenciasView";
+import { CompetenciaCuadroView } from "../views/CompetenciaCuadroView";
+import { CompetenciaDetalleView } from "../views/CompetenciaDetalleView";
+import { CompetenciasListaView } from "../views/CompetenciasListaView";
 import {
   COMPETENCIA,
   DETALLE,
@@ -11,10 +15,6 @@ import {
   VISTA_PREVIA_AVANCE,
   VISTA_PREVIA_CORRECCION,
 } from "./datos.contract";
-import { AgendaCompetenciasView } from "../views/AgendaCompetenciasView";
-import { CompetenciaCuadroView } from "../views/CompetenciaCuadroView";
-import { CompetenciaDetalleView } from "../views/CompetenciaDetalleView";
-import { CompetenciasListaView } from "../views/CompetenciasListaView";
 
 /**
  * The link and the router are shimmed: the suites verify the PRESENTATION of
@@ -44,19 +44,30 @@ vi.mock("next/navigation", () => ({
  * of the project). Nothing here may be read as a green result.
  */
 describe("competencias - estados de las rutas", () => {
-  it("ADM-10 muestra el estado honesto mientras el servicio no existe", () => {
+  it("ADM-10 esqueleto mientras la ruta lee", () => {
     render(<CompetenciasListaView />);
 
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByText(/Cargando las competencias/i)).toBeInTheDocument();
+  });
+
+  it("ADM-10 dice la verdad cuando el servidor no devuelve competencias", () => {
+    render(<CompetenciasListaView estado="listo" competencias={[]} />);
+
     expect(
-      screen.getByText("Todavía no hay competencias que mostrar"),
+      screen.getByText("Todavía no hay competencias en esta edición"),
     ).toBeInTheDocument();
+    // La ruta EXISTE: el estado vacío no culpa a un servicio que no está.
     expect(
-      screen.getByText(/todavía no está disponible en el backend/i),
+      screen.queryByText(/todavía no está disponible en el backend/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/El servidor no devolvió ninguna competencia/i),
     ).toBeInTheDocument();
   });
 
   it("ADM-10 no dibuja ninguna competencia inventada", () => {
-    render(<CompetenciasListaView />);
+    render(<CompetenciasListaView estado="listo" />);
 
     expect(screen.queryByText("Copa Salesianos")).not.toBeInTheDocument();
   });
@@ -70,12 +81,15 @@ describe("competencias - estados de las rutas", () => {
     expect(screen.getAllByText("Planificada").length).toBeGreaterThan(0);
 
     // Los tres puntos de entrada son enlaces DISTINTOS y con nombre propio.
-    expect(screen.getAllByRole("link", { name: /ver el detalle/i }).length)
-      .toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /operar el cuadro/i }).length)
-      .toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /ver la agenda/i }).length)
-      .toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("link", { name: /ver el detalle/i }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("link", { name: /operar el cuadro/i }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("link", { name: /ver la agenda/i }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("ADM-10 explica el filtro vacío sin borrar los filtros", () => {
@@ -101,21 +115,15 @@ describe("competencias - estados de las rutas", () => {
     expect(
       screen.getByText("Todavía no hay equipos en esta competencia"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Añade un equipo elegible/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Añade un equipo elegible/i)).toBeInTheDocument();
   });
 
   it("ADM-11 nombra a los equipos y a los encuentros de la competencia", () => {
     render(
-      <CompetenciaDetalleView
-        id="7c1f0a52"
-        estado="listo"
-        detalle={DETALLE}
-      />,
+      <CompetenciaDetalleView id="7c1f0a52" estado="listo" detalle={DETALLE} />,
     );
 
-    expect(screen.getByText("Colegio Norte")).toBeInTheDocument();
+    expect(screen.getAllByText("Colegio Norte")[0]).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Colegio Norte 2, Colegio Sur 1/ }),
     ).toBeInTheDocument();
@@ -123,11 +131,7 @@ describe("competencias - estados de las rutas", () => {
 
   it("ADM-12 pinta una columna por ronda y un botón por encuentro", () => {
     render(
-      <CompetenciaCuadroView
-        id="7c1f0a52"
-        estado="listo"
-        rondas={[RONDA]}
-      />,
+      <CompetenciaCuadroView id="7c1f0a52" estado="listo" rondas={[RONDA]} />,
     );
 
     expect(
@@ -142,11 +146,7 @@ describe("competencias - estados de las rutas", () => {
 
   it("el cuadro se desplaza en horizontal dentro de su propio contenedor", () => {
     render(
-      <CompetenciaCuadroView
-        id="7c1f0a52"
-        estado="listo"
-        rondas={[RONDA]}
-      />,
+      <CompetenciaCuadroView id="7c1f0a52" estado="listo" rondas={[RONDA]} />,
     );
 
     const region = screen.getByRole("region", {
@@ -158,11 +158,7 @@ describe("competencias - estados de las rutas", () => {
 
   it("la tarjeta y la agenda abren EL MISMO detalle del encuentro", () => {
     const { unmount } = render(
-      <CompetenciaCuadroView
-        id="7c1f0a52"
-        estado="listo"
-        rondas={[RONDA]}
-      />,
+      <CompetenciaCuadroView id="7c1f0a52" estado="listo" rondas={[RONDA]} />,
     );
 
     fireEvent.click(
@@ -224,7 +220,7 @@ describe("competencias - estados de las rutas", () => {
     expect(
       screen.getByText(/Esta vista previa no escribe nada/),
     ).toBeInTheDocument();
-    expect(screen.getByText("Colegio Norte")).toBeInTheDocument();
+    expect(screen.getAllByText("Colegio Norte")[0]).toBeInTheDocument();
   });
 
   it("la vista previa de la corrección nombra a los descendientes afectados", () => {
@@ -256,11 +252,7 @@ describe("competencias - estados de las rutas", () => {
 
   it("el panel nombra las acciones que el servidor admite", () => {
     render(
-      <CompetenciaCuadroView
-        id="7c1f0a52"
-        estado="listo"
-        rondas={[RONDA]}
-      />,
+      <CompetenciaCuadroView id="7c1f0a52" estado="listo" rondas={[RONDA]} />,
     );
 
     fireEvent.click(
@@ -279,15 +271,11 @@ describe("competencias - estados de las rutas", () => {
     expect(
       screen.getByText("Todavía no hay rondas en esta competencia"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Añade la primera ronda/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Añade la primera ronda/i)).toBeInTheDocument();
   });
 
   it("el estado de permiso y el error recuperable son estados distintos", () => {
-    const { unmount } = render(
-      <CompetenciasListaView estado="sin-permiso" />,
-    );
+    const { unmount } = render(<CompetenciasListaView estado="sin-permiso" />);
     expect(
       screen.getByText(/No tienes permiso para ver esta sección/),
     ).toBeInTheDocument();
@@ -299,6 +287,45 @@ describe("competencias - estados de las rutas", () => {
     ).toBeInTheDocument();
   });
 
+  it("el error ofrece la acción que lo resuelve", () => {
+    const reintentar = vi.fn();
+
+    render(<CompetenciasListaView estado="error" reintentar={reintentar} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /reintentar/i }));
+
+    expect(reintentar).toHaveBeenCalledTimes(1);
+  });
+
+  it("el error imprime la prosa del servidor, sin traducirla", () => {
+    render(
+      <CompetenciasListaView
+        estado="error"
+        mensajeError="La edición activa no tiene competencias publicadas."
+      />,
+    );
+
+    expect(
+      screen.getByText("La edición activa no tiene competencias publicadas."),
+    ).toBeInTheDocument();
+  });
+
+  it("el aviso del catálogo dice que el filtro de categoría no está disponible", () => {
+    render(
+      <CompetenciasListaView
+        estado="listo"
+        categorias={[]}
+        avisoCatalogos="No se pudo cargar el catálogo de categorías, así que el filtro de categoría no está disponible."
+      />,
+    );
+
+    expect(
+      screen.getByText(/el filtro de categoría no está disponible/i),
+    ).toBeInTheDocument();
+    // Sin bandas, la barra NO ofrece opciones que no existen.
+    expect(screen.queryByLabelText("Categoría")).not.toBeInTheDocument();
+  });
+
   it("ninguna presentación usa un color literal ni un tono de paleta", () => {
     const { container } = render(
       <CompetenciasListaView estado="listo" competencias={[COMPETENCIA]} />,
@@ -306,6 +333,8 @@ describe("competencias - estados de las rutas", () => {
 
     const html = container.innerHTML;
     expect(html).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
-    expect(html).not.toMatch(/\b(bg|text|border)-(red|blue|green|yellow|slate|gray|zinc|neutral|stone)-\d{2,3}\b/);
+    expect(html).not.toMatch(
+      /\b(bg|text|border)-(red|blue|green|yellow|slate|gray|zinc|neutral|stone)-\d{2,3}\b/,
+    );
   });
 });

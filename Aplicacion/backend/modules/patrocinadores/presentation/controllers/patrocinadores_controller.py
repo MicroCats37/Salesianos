@@ -30,6 +30,8 @@ en `config/api.py` (FR-07 §3.1 regla 2). Ese registro es de A0 y este paquete
 NO edita `config/api.py`: lo pide como evidencia (petición A0-02).
 """
 
+from uuid import UUID
+
 from injector import inject
 from ninja_extra import api_controller, route
 
@@ -45,8 +47,16 @@ from modules.patrocinadores.presentation.presenters.patrocinadores_presenter imp
     PatrocinadorPresenter,
 )
 from modules.patrocinadores.presentation.schemas.patrocinadores_schemas import (
+    ActualizarPatrocinadorIn,
     CrearPatrocinadorIn,  # noqa: F401  (schema de entrada del ledger, documentado)
     PatrocinadorOut,
+    ReemplazarArchivoPatrocinadorIn,
+    ReordenarImagenesPatrocinadorIn,
+    ReordenarPatrocinadoresIn,
+)
+from modules.patrocinadores.domain.schemas.patrocinadores_schemas import (
+    PatrocinadorOrdenImagenData,
+    PatrocinadorUpdateData,
 )
 
 
@@ -87,5 +97,84 @@ class PatrocinadorController:
         result = await self.orchestrator.crear_patrocinador(data)
         return success_response(PatrocinadorPresenter.present(result))
 
+    @route.get("", response={200: ApiResponse[list[PatrocinadorOut]]}, auth=None)
+    async def listar_publicos(self, request):
+        results = await self.orchestrator.listar_por_edicion(visible=True)
+        return success_response([PatrocinadorPresenter.present(result) for result in results])
 
-__all__ = ["PatrocinadorController"]
+    @route.get("/{slug}", response={200: ApiResponse[PatrocinadorOut]}, auth=None)
+    async def obtener_publico(self, request, slug: str):
+        result = await self.orchestrator.obtener_por_slug(slug)
+        return success_response(PatrocinadorPresenter.present(result))
+
+
+@api_controller("/administracion/patrocinadores", tags=["Administración"])
+class AdminPatrocinadoresController:
+    """CRUD administrativo y gestión de piezas de patrocinadores."""
+
+    @inject
+    def __init__(self, orchestrator: PatrocinadorOrchestrator):
+        self.orchestrator = orchestrator
+
+    @route.get("", response={200: ApiResponse[list[PatrocinadorOut]]}, permissions=[RequireAdmin])
+    async def listar(self, request):
+        results = await self.orchestrator.listar_por_edicion()
+        return success_response([PatrocinadorPresenter.present(result) for result in results])
+
+    @route.get("/{patrocinador_id}", response={200: ApiResponse[PatrocinadorOut]}, permissions=[RequireAdmin])
+    async def obtener(self, request, patrocinador_id: UUID):
+        result = await self.orchestrator.obtener_por_id(patrocinador_id)
+        return success_response(PatrocinadorPresenter.present(result))
+
+    @route.post("", response={201: ApiResponse[PatrocinadorOut]}, permissions=[RequireAdmin])
+    async def crear(self, request):
+        result = await self.orchestrator.crear_patrocinador(PatrocinadorHydrator.hydrate(request))
+        return success_response(PatrocinadorPresenter.present(result), message="El patrocinador se registró correctamente.")
+
+    @route.patch("/orden", response={200: ApiResponse[list[PatrocinadorOut]]}, permissions=[RequireAdmin])
+    async def reordenar_patrocinadores(self, request):
+        payload = ReordenarPatrocinadoresIn.model_validate(PatrocinadorHydrator.payload_crudo(request))
+        results = await self.orchestrator.reordenar_patrocinadores(payload.patrocinador_ids)
+        return success_response([PatrocinadorPresenter.present(result) for result in results], message="El orden de los banners se actualizó correctamente.")
+
+    @route.patch("/{patrocinador_id}", response={200: ApiResponse[PatrocinadorOut]}, permissions=[RequireAdmin])
+    async def actualizar(self, request, patrocinador_id: UUID):
+        payload = ActualizarPatrocinadorIn.model_validate(PatrocinadorHydrator.payload_crudo(request))
+        result = await self.orchestrator.actualizar_patrocinador(
+            patrocinador_id, PatrocinadorUpdateData(**payload.model_dump(exclude_unset=True))
+        )
+        return success_response(PatrocinadorPresenter.present(result), message="El patrocinador se actualizó correctamente.")
+
+    @route.delete("/{patrocinador_id}", response={204: None}, permissions=[RequireAdmin])
+    async def eliminar(self, request, patrocinador_id: UUID):
+        await self.orchestrator.eliminar_patrocinador(patrocinador_id)
+        return 204, None
+
+    @route.patch("/{patrocinador_id}/imagenes/orden", response={200: ApiResponse[PatrocinadorOut]}, permissions=[RequireAdmin])
+    async def reordenar(self, request, patrocinador_id: UUID):
+        payload = ReordenarImagenesPatrocinadorIn.model_validate(PatrocinadorHydrator.payload_crudo(request))
+        result = await self.orchestrator.reordenar_galeria(
+            patrocinador_id,
+            [PatrocinadorOrdenImagenData(imagen_id=item, orden=index) for index, item in enumerate(payload.imagen_ids)],
+        )
+        return success_response(PatrocinadorPresenter.present(result), message="El orden de las piezas se actualizó correctamente.")
+
+    @route.patch("/{patrocinador_id}/logo", response={200: ApiResponse[PatrocinadorOut]}, permissions=[RequireAdmin])
+    async def reemplazar_logo(self, request, patrocinador_id: UUID):
+        payload = ReemplazarArchivoPatrocinadorIn.model_validate(PatrocinadorHydrator.payload_crudo(request))
+        result = await self.orchestrator.reemplazar_logo(patrocinador_id, PatrocinadorHydrator.hydrate_archivo(request, payload.archivo))
+        return success_response(PatrocinadorPresenter.present(result), message="El logo se actualizó correctamente.")
+
+    @route.patch("/{patrocinador_id}/imagenes/{imagen_id}", response={200: ApiResponse[PatrocinadorOut]}, permissions=[RequireAdmin])
+    async def reemplazar_imagen(self, request, patrocinador_id: UUID, imagen_id: UUID):
+        payload = ReemplazarArchivoPatrocinadorIn.model_validate(PatrocinadorHydrator.payload_crudo(request))
+        result = await self.orchestrator.reemplazar_imagen(patrocinador_id, imagen_id, PatrocinadorHydrator.hydrate_archivo(request, payload.archivo))
+        return success_response(PatrocinadorPresenter.present(result), message="La pieza se actualizó correctamente.")
+
+    @route.delete("/{patrocinador_id}/imagenes/{imagen_id}", response={200: ApiResponse[PatrocinadorOut]}, permissions=[RequireAdmin])
+    async def eliminar_imagen(self, request, patrocinador_id: UUID, imagen_id: UUID):
+        result = await self.orchestrator.eliminar_imagen(patrocinador_id, imagen_id)
+        return success_response(PatrocinadorPresenter.present(result), message="La pieza se eliminó correctamente.")
+
+
+__all__ = ["AdminPatrocinadoresController", "PatrocinadorController"]

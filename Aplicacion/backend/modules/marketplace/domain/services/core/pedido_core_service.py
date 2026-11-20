@@ -40,8 +40,10 @@ from modules.marketplace.domain.exceptions import (
     ProductoNoEncontradoError,
 )
 from modules.marketplace.domain.results.inventario_result import (
+    EntregaEntregadaResult,
     EntregaConfirmadaResult,
     EntregaPendienteResult,
+    EntregasResult,
 )
 from modules.marketplace.domain.results.pedido_result import (
     PedidoLineaResult,
@@ -191,6 +193,7 @@ class PedidoCoreService:
         moneda: str,
         token: str,
         huella: str,
+        contacto_email: str = "",
     ):
         """Crea el pedido en estado `PENDIENTE` con entrega `PENDIENTE`.
 
@@ -215,6 +218,7 @@ class PedidoCoreService:
             estado_entrega=EstadoEntregaPedido.PENDIENTE,
             total=total,
             moneda=moneda,
+            contacto_email=contacto_email,
             token=token,
             huella=huella,
             referencia=self.referencia_compra(pedido_id),
@@ -317,6 +321,7 @@ class PedidoCoreService:
             moneda=pedido.moneda,
             lineas=lineas,
             orden_pago_id=orden_pago_id,
+            compra_id=str(pedido.compra_id) if pedido.compra_id else None,
             siguientes_acciones=self.acciones_sugeridas(
                 estado_pago,
                 pedido.estado_entrega,
@@ -370,18 +375,17 @@ class PedidoCoreService:
             lineas=self.result_lineas(detalles),
         )
 
-    def listar_entregas_pendientes(self, edicion_id) -> list[EntregaPendienteResult]:
-        """Los pedidos PAGADOS cuya entrega sigue pendiente.
-
-        La lista se decide por el estado de la ENTREGA, no por el del pago:
-        un pedido pagado y entregado NO aparece (`RN-M07`).
-        """
-        resultados = []
+    def listar_entregas(self, edicion_id) -> EntregasResult:
+        """Las recogidas pendientes y las actas ya registradas de una edición."""
+        pendientes = []
         for pedido in self.pedido_selector.listar_pendientes_de_entrega(edicion_id):
             detalles = self.pedido_selector.listar_detalles(pedido.id)
-            resultados.append(
+            pendientes.append(
                 EntregaPendienteResult(
                     pedido_id=pedido.id,
+                    comprador_nombres=pedido.comprador.nombres,
+                    comprador_apellidos=pedido.comprador.apellidos,
+                    comprador_documento=pedido.comprador.numero_documento,
                     estado=pedido.estado,
                     estado_entrega=pedido.estado_entrega,
                     total=pedido.total,
@@ -390,7 +394,25 @@ class PedidoCoreService:
                     created_at=pedido.created_at,
                 )
             )
-        return resultados
+
+        entregadas = []
+        for entrega in self.pedido_selector.listar_entregadas(edicion_id):
+            pedido = entrega.pedido
+            detalles = self.pedido_selector.listar_detalles(pedido.id)
+            entregadas.append(
+                EntregaEntregadaResult(
+                    pedido_id=pedido.id,
+                    comprador_nombres=pedido.comprador.nombres,
+                    comprador_apellidos=pedido.comprador.apellidos,
+                    comprador_documento=pedido.comprador.numero_documento,
+                    total=pedido.total,
+                    moneda=pedido.moneda,
+                    lineas=self.result_lineas(detalles),
+                    entregada_en=entrega.created_at,
+                )
+            )
+
+        return EntregasResult(pendientes=pendientes, entregadas=entregadas)
 
 
 __all__ = ["PedidoCoreService"]

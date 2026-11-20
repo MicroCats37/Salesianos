@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { handleApiError, notify } from "@/errors";
 import { consultarDocumento } from "../services/identidad.service";
 
 export interface DocumentoLookupData {
@@ -60,15 +60,13 @@ export function useDocumentoLookup() {
   return useMutation<DocumentoLookupData, Error, string>({
     mutationFn: async (documento: string) => {
       const res = await consultarDocumento(documento);
-      const { nombres, apellidos } = splitNombreCompleto(res.nombre_completo ?? "");
+      const { nombres, apellidos } = splitNombreCompleto(
+        res.nombre_completo ?? "",
+      );
       return { ...res, nombres, apellidos };
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Error al consultar el documento",
-      );
+      notify.error(handleApiError(error).message);
     },
   });
 }

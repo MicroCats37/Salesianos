@@ -172,7 +172,10 @@ describe("buildUpdatePayload — the strict update mapping", () => {
 
   it("sends every defined value when the mapping is not strict", () => {
     const payload = buildUpdatePayload(
-      { titulo: "Inscripción", descripcion: "La inscripción de prueba" } as unknown as SchemaShape,
+      {
+        titulo: "Inscripción",
+        descripcion: "La inscripción de prueba",
+      } as unknown as SchemaShape,
       initialData as unknown as Partial<SchemaShape>,
       schema,
       { strict: false },

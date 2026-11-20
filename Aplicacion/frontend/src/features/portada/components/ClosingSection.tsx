@@ -1,10 +1,10 @@
 "use client";
 
 import { ArrowUpRight, Share2 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/errors";
 import { PortadaSection } from "@/features/portada/components/PortadaSection";
-import { ENLACES, FESTIVAL } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { ENLACES, FESTIVAL } from "@/features/portada/fixtures/festival";
 
 /**
  * Cierre de la portada: la llamada final a la acción.
@@ -32,19 +32,19 @@ export function ClosingSection() {
 
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("Enlace del festival copiado.");
+      notify.success("Enlace del festival copiado.");
     } catch {
-      toast.error("No se pudo copiar el enlace.");
+      notify.error("No se pudo copiar el enlace.");
     }
   }
 
   return (
     <PortadaSection fondo="marca">
       <div className="flex flex-col items-center text-center">
-        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-brand-cyan">
+        <p className="text-eyebrow-brand text-brand-cyan">
           {COPY.cierre.fecha}
         </p>
-        <h2 className="mt-4 max-w-4xl text-3xl font-black uppercase leading-[1.05] tracking-tight text-primary-foreground sm:text-5xl lg:text-6xl">
+        <h2 className="mt-4 max-w-4xl text-3xl font-black uppercase leading-[1.05] tracking-tight text-brand-on-gradient sm:text-5xl lg:text-6xl">
           {COPY.cierre.titulo.map((linea, index) => (
             <span key={linea}>
               {index > 0 && <br />}
@@ -60,7 +60,7 @@ export function ClosingSection() {
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
           <a
             href={ENLACES.registro}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-info via-primary to-brand-deep-navy px-8 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-2xl shadow-brand-deep-night/30 transition-transform hover:scale-105"
+            className="btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-8 text-xs font-black uppercase tracking-widest text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
           >
             {COPY.cierre.cta}
             <ArrowUpRight className="size-4" aria-hidden="true" />
@@ -68,7 +68,7 @@ export function ClosingSection() {
           <button
             type="button"
             onClick={compartir}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-primary-foreground/30 px-6 text-xs font-black uppercase tracking-widest text-primary-foreground transition-colors hover:bg-primary-foreground/10"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-brand-on-gradient-border px-6 text-xs font-black uppercase tracking-widest text-brand-on-gradient transition-colors hover:bg-brand-on-gradient-soft"
           >
             <Share2 className="size-4" aria-hidden="true" />
             {COPY.cierre.compartir}

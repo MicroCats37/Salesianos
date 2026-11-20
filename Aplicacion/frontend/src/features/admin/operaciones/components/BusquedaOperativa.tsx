@@ -1,8 +1,8 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -69,7 +69,7 @@ export function BusquedaOperativa({
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <label
           htmlFor="busqueda-operativa"
-          className="text-xs font-semibold tracking-[0.04em] text-foreground-muted uppercase"
+          className="text-xs font-semibold text-muted-foreground"
         >
           {etiqueta}
         </label>

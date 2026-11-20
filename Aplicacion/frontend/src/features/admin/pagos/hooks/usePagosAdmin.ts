@@ -1,18 +1,23 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { datasetQueryOptions } from "@/shared/utils/query-options";
-import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
-import { invalidarAdmin } from "@/features/admin/operaciones/utils/admin.cache.utils";
+import { useAdminQuery } from "@/features/admin/operaciones/hooks/useAdminQuery";
+import {
+  RUTAS_ADMIN,
+  urlDeRutaAdmin,
+} from "@/features/admin/operaciones/services/admin.service";
 import { adminClaves } from "@/features/admin/operaciones/utils/admin.claves.utils";
 import { estadoDesdeConsulta } from "@/features/admin/operaciones/utils/admin.estado.utils";
 import { parametrosListaAdminDesdeUrl } from "@/features/admin/operaciones/utils/admin.filtros.utils";
 import type { PayloadAprobarPagoManualAdmin } from "@/features/admin/operaciones/utils/admin.payload.utils";
+import { useApiCreate } from "@/hooks";
+import { datosDelEnvelope } from "@/shared/utils/api-envelope";
 import {
-  aprobarPagoManualAdmin,
-  listarPagosAdmin,
-  obtenerPagoAdmin,
-} from "../services/pago-admin.service";
+  adminPagoDetalleEnvelope,
+  listaPagosAdminEnvelope,
+  pagoAdminDetalleDesdeWire,
+  pagoAdminItemEnvelope,
+  pagoAdminListaDesdeWire,
+} from "../schemas/pago-admin.schema";
 import type {
   EstadoDetallePagoAdmin,
   EstadoPagosAdmin,
@@ -45,35 +50,28 @@ import type {
 export function useListaPagosAdmin(
   parametros: Record<string, string> | undefined,
 ): EstadoPagosAdmin {
-  const consulta = useQuery({
-    ...datasetQueryOptions({
-      queryKey: adminClaves.pagos.listPage(
-        parametrosListaAdminDesdeUrl(parametros),
-      ),
-      queryFn: () => listarPagosAdmin(parametrosListaAdminDesdeUrl(parametros)),
-      kind: "listadoAdministrativo",
-    }),
-    enabled: RUTAS_ADMIN.pagosLista.registrado,
+  const consulta = useAdminQuery({
+    queryKey: adminClaves.pagos.list,
+    ruta: RUTAS_ADMIN.pagosLista,
+    envelope: listaPagosAdminEnvelope,
+    filtros: parametrosListaAdminDesdeUrl(parametros),
+    select: (pagina) => pagina.items.map(pagoAdminListaDesdeWire),
   });
 
-  return estadoDesdeConsulta(
-    consulta,
-    RUTAS_ADMIN.pagosLista.registrado,
-    (pagina) => pagina.items,
-  );
+  return estadoDesdeConsulta(consulta, RUTAS_ADMIN.pagosLista.registrado);
 }
 
 /** The commercial detail of a payment (`RT-PG-07`). */
 export function useDetallePagoAdmin(
   compraId: string | undefined,
 ): EstadoDetallePagoAdmin {
-  const consulta = useQuery({
-    ...datasetQueryOptions({
-      queryKey: adminClaves.pagos.detail(compraId ?? ""),
-      queryFn: () => obtenerPagoAdmin(compraId ?? ""),
-      kind: "listadoAdministrativo",
-    }),
-    enabled: Boolean(compraId) && RUTAS_ADMIN.pagoDetalle.registrado,
+  const consulta = useAdminQuery({
+    queryKey: adminClaves.pagos.detail(compraId ?? ""),
+    ruta: RUTAS_ADMIN.pagoDetalle,
+    envelope: adminPagoDetalleEnvelope,
+    parametros: compraId ? { compra_id: compraId } : undefined,
+    enabled: Boolean(compraId),
+    select: (detalle) => pagoAdminDetalleDesdeWire(detalle),
   });
 
   return estadoDesdeConsulta(consulta, RUTAS_ADMIN.pagoDetalle.registrado);
@@ -83,22 +81,35 @@ export function useDetallePagoAdmin(
  * The manual approval of a payment (the S-10 of `ADM-14`).
  *
  * The command is audited: it carries the reason and the amount that the
- * server published. The invalidation lives INSIDE the `mutationFn`
+ * server published. The invalidation lives INSIDE the mutation
  * (`FND-08` §3 regla 5).
- *
- * The route does NOT exist: the command is rejected by the guard of the
- * service before the transport and the action stays DISABLED in the interface.
  */
 export function useAprobarPagoManualAdmin() {
-  const cliente = useQueryClient();
+  const mutacion = useApiCreate({
+    getUrl: ({ id }) =>
+      urlDeRutaAdmin(RUTAS_ADMIN.aprobarPagoManual, {
+        orden_pago_id: String(id),
+      }),
+    schema: datosDelEnvelope(pagoAdminItemEnvelope),
+    invalidateKeys: [adminClaves.pagos.all],
+  });
 
-  return useMutation({
-    mutationFn: async (payload: PayloadAprobarPagoManualAdmin) => {
-      const resultado = await aprobarPagoManualAdmin(payload);
-
-      await invalidarAdmin(cliente, "pagos");
-
-      return resultado;
+  const separar = (args: PayloadAprobarPagoManualAdmin) => ({
+    id: args.orden_pago_id,
+    data: {
+      canal: args.canal,
+      referencia: args.referencia,
+      motivo: args.motivo,
     },
   });
+
+  return {
+    ...mutacion,
+    mutate: (
+      args: PayloadAprobarPagoManualAdmin,
+      options?: Parameters<typeof mutacion.mutate>[1],
+    ) => mutacion.mutate(separar(args), options),
+    mutateAsync: (args: PayloadAprobarPagoManualAdmin) =>
+      mutacion.mutateAsync(separar(args)),
+  };
 }

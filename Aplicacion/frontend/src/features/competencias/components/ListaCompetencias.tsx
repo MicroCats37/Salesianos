@@ -1,15 +1,12 @@
-import Link from "next/link";
 import { CalendarClock, GitBranch, Swords } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  AdminDataTable,
-  AdminEmptyState,
-} from "@/features/admin/components";
+import { AdminDataTable, AdminEmptyState } from "@/features/admin/components";
 import { RUTAS } from "@/lib/routes";
-import { ChipEstadoCompetencia } from "./ChipEstadoCompetencia";
+import type { CompetenciaListado } from "../types/competencia.types";
 import { estadoCompetencia } from "../utils/competencias.estados.utils";
 import { formatearDia } from "../utils/competencias.fecha.utils";
-import type { CompetenciaListado } from "../types/competencia.types";
+import { ChipEstadoCompetencia } from "./ChipEstadoCompetencia";
 
 /**
  * ListaCompetencias - the competitions of the edition (`ADM-10`).
@@ -33,7 +30,7 @@ export function ListaCompetencias({
       <AdminEmptyState
         icon={Swords}
         title="Todavía no hay competencias en esta edición"
-        description="Las competencias se crean a mano, con su disciplina, su nombre y su día. Cuando la integración esté disponible, aquí se listarán con sus contadores de equipos y de encuentros."
+        description="El servidor no devolvió ninguna competencia. Cuando se creen competencias con su disciplina, su categoría y su día, aparecerán aquí con sus contadores de equipos y de encuentros."
       />
     );
   }
@@ -56,6 +53,9 @@ export function ListaCompetencias({
                   ? ` · ${formatearDia(competencia.fecha)}`
                   : ""}
               </p>
+              <p className="text-caption text-muted-foreground">
+                Categoría: {competencia.categoria_nombre}
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -74,7 +74,9 @@ export function ListaCompetencias({
                 asChild
                 className="min-h-11 w-full justify-start"
               >
-                <Link href={RUTAS.administracion.competenciaDetalle(competencia.id)}>
+                <Link
+                  href={RUTAS.administracion.competenciaDetalle(competencia.id)}
+                >
                   <Swords className="size-4" aria-hidden="true" />
                   Ver el detalle
                 </Link>
@@ -112,6 +114,7 @@ export function ListaCompetencias({
           columns={[
             { key: "competencia", label: "Competencia" },
             { key: "disciplina", label: "Disciplina" },
+            { key: "categoria", label: "Categoría" },
             { key: "fecha", label: "Fecha" },
             { key: "estado", label: "Estado" },
             { key: "equipos", label: "Equipos", numerico: true },
@@ -129,6 +132,11 @@ export function ListaCompetencias({
               disciplina: (
                 <span className="text-muted-foreground">
                   {competencia.disciplina_nombre}
+                </span>
+              ),
+              categoria: (
+                <span className="text-muted-foreground">
+                  {competencia.categoria_nombre}
                 </span>
               ),
               fecha: (

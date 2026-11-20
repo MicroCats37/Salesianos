@@ -3,6 +3,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { AuditoriaValidacionesView } from "../views/AuditoriaValidacionesView";
+import { ValidarEntregaView } from "../views/ValidarEntregaView";
+import { ValidarPaseView } from "../views/ValidarPaseView";
 import {
   ENTREGA_PENDIENTE,
   REGISTRO_ENTRADA,
@@ -10,9 +13,6 @@ import {
   RESULTADO_CONFIRMACION,
   VISTA_PREVIA_PERMITIDA,
 } from "./datos.contract";
-import { AuditoriaValidacionesView } from "../views/AuditoriaValidacionesView";
-import { ValidarEntregaView } from "../views/ValidarEntregaView";
-import { ValidarPaseView } from "../views/ValidarPaseView";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -42,13 +42,9 @@ describe("validaciones - entrada, recogida y auditoría", () => {
     render(<ValidarPaseView />);
 
     expect(
-      screen.getByText(
-        /El servicio de validación todavía no está conectado/i,
-      ),
+      screen.getByText(/El servicio de validación todavía no está conectado/i),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Comprobar no consume/i),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(/Comprobar no consume/i)[0]).toBeInTheDocument();
   });
 
   it("ADM-16 ofrece el camino de teclado con una etiqueta real", () => {
@@ -71,7 +67,9 @@ describe("validaciones - entrada, recogida y auditoría", () => {
   });
 
   it("ADM-16 ofrece la confirmación solo cuando la vista previa la admite", () => {
-    render(<ValidarPaseView estado="listo" vistaPrevia={VISTA_PREVIA_PERMITIDA} />);
+    render(
+      <ValidarPaseView estado="listo" vistaPrevia={VISTA_PREVIA_PERMITIDA} />,
+    );
 
     expect(
       screen.getByRole("button", { name: /confirmar el ingreso/i }),
@@ -186,7 +184,7 @@ describe("validaciones - entrada, recogida y auditoría", () => {
       />,
     );
 
-    expect(screen.getByText("Validación permitida")).toBeInTheDocument();
+    expect(screen.getAllByText("Validación permitida")[0]).toBeInTheDocument();
     expect(screen.getByText("Puerta principal")).toBeInTheDocument();
     expect(screen.getByText("Operador de turno")).toBeInTheDocument();
   });
@@ -204,7 +202,7 @@ describe("validaciones - entrada, recogida y auditoría", () => {
       screen.getByText(/No hay validaciones con ese resultado/),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /quitar el filtro/i }),
+      screen.getAllByRole("link", { name: /quitar el filtro/i })[0],
     ).toBeInTheDocument();
   });
 
@@ -243,7 +241,9 @@ describe("validaciones - entrada, recogida y auditoría", () => {
 
     const html = container.innerHTML;
     expect(html).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
-    expect(html).not.toMatch(/\b(bg|text|border)-(red|blue|green|yellow|slate|gray|zinc|neutral|stone)-\d{2,3}\b/);
+    expect(html).not.toMatch(
+      /\b(bg|text|border)-(red|blue|green|yellow|slate|gray|zinc|neutral|stone)-\d{2,3}\b/,
+    );
   });
 
   it("el botón de comprobar dispara la comprobación con el código escrito", () => {

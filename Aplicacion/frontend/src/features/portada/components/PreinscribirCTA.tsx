@@ -17,7 +17,7 @@ export function PreinscribirCTA() {
     <div className="mt-auto">
       <Button
         asChild
-        className="btn-brand-gradient btn-shine w-full justify-center rounded-2xl h-12 text-sm font-black"
+        className="btn-shine w-full justify-center rounded-2xl h-12 bg-accent text-sm font-black text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
       >
         <Link href={user ? RUTAS.cuenta.inscripcion : RUTAS.auth.registro}>
           Preinscribir equipo

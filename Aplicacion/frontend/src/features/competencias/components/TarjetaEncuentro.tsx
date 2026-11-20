@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { ChipEstadoCompetencia } from "./ChipEstadoCompetencia";
-import { PanelDetalleEncuentro } from "./PanelDetalleEncuentro";
-import { estadoEncuentro } from "../utils/competencias.estados.utils";
 import type {
   Encuentro,
   VistaPreviaAvance,
   VistaPreviaCorreccion,
 } from "../types/competencia.types";
+import { estadoEncuentro } from "../utils/competencias.estados.utils";
+import { ChipEstadoCompetencia } from "./ChipEstadoCompetencia";
+import { PanelDetalleEncuentro } from "./PanelDetalleEncuentro";
 
 /**
  * TarjetaEncuentro - the card of an encounter in the bracket.
@@ -56,11 +56,13 @@ export function TarjetaEncuentro({
   const esGanador1 =
     encuentro.ganador_equipo_id !== null &&
     encuentro.ganador_equipo_id ===
-      encuentro.participantes.find((p) => p.slot === "PARTICIPANTE_1")?.equipo_id;
+      encuentro.participantes.find((p) => p.slot === "PARTICIPANTE_1")
+        ?.equipo_id;
   const esGanador2 =
     encuentro.ganador_equipo_id !== null &&
     encuentro.ganador_equipo_id ===
-      encuentro.participantes.find((p) => p.slot === "PARTICIPANTE_2")?.equipo_id;
+      encuentro.participantes.find((p) => p.slot === "PARTICIPANTE_2")
+        ?.equipo_id;
 
   return (
     <>

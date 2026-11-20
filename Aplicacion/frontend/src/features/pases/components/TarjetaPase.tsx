@@ -1,4 +1,5 @@
 import { Ticket } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { PaseCatalogo } from "../types/pase.types";
 import { formatearMonto } from "../utils/monto";
@@ -27,6 +28,11 @@ export interface TarjetaPaseProps {
  * `aria-pressed` says which one is chosen. The price is the one the backend
  * published for the current edition; the browser never computes it.
  *
+ * The card reads like a TICKET and not like a generic card: the medallion
+ * gives it an identity, the NAME says what it is, the EDITION is the badge
+ * that qualifies it and the PRICE is the dominant figure — it is the number
+ * the buyer came for.
+ *
  * The pass is NOT a branch of the sports registration: it says so in its own
  * copy, because a visitor who arrives here has to understand in one sentence
  * what they are buying.
@@ -47,36 +53,45 @@ export function TarjetaPase({
       disabled={bloqueado || !onSelect}
       onClick={() => onSelect?.(pase)}
       className={cn(
-        "flex w-full flex-col items-start gap-3 rounded-[var(--radius-lg)] border bg-surface-raised p-4 text-left transition-colors duration-(--motion-duration-base)",
+        "group flex min-h-11 w-full flex-col items-start gap-4 rounded-[var(--radius-xl)] border p-5 text-left transition-colors duration-(--motion-duration-fast)",
         seleccionado
-          ? "border-primary ring-2 ring-primary/25"
-          : "border-border",
-        bloqueado
-          ? "cursor-not-allowed opacity-70"
-          : "hover:border-border-strong",
+          ? "cursor-pointer border-primary bg-primary/5 shadow-[var(--elevation-md)] ring-2 ring-primary/20"
+          : bloqueado
+            ? "cursor-not-allowed border-destructive/40 bg-destructive/5 opacity-80"
+            : "cursor-pointer border-border bg-surface-raised hover:border-border-strong",
         className,
       )}
     >
       <span className="flex w-full items-start justify-between gap-3">
-        <span className="flex flex-col gap-1">
-          <span className="text-base font-semibold text-foreground">
-            {pase.nombre}
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-primary/10 text-primary">
+            <Ticket className="size-5" aria-hidden="true" />
           </span>
-          <span className="text-caption text-muted-foreground">
-            {pase.edicion_nombre}
+
+          <span className="text-base font-bold text-foreground">
+            {pase.nombre}
           </span>
         </span>
 
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface-recessed px-2.5 py-1">
-          <Ticket className="size-3.5 text-muted-foreground" aria-hidden="true" />
-          <span className="text-xs font-semibold text-foreground">
-            {formatearMonto(pase.precio.monto, pase.precio.moneda)}
-          </span>
+        <Badge
+          variant="outline"
+          className="max-w-[50%] border-border bg-surface-recessed text-foreground-muted"
+        >
+          {pase.edicion_nombre}
+        </Badge>
+      </span>
+
+      <span className="flex flex-col gap-0.5">
+        <span className="text-2xl font-bold tabular-nums text-foreground">
+          {formatearMonto(pase.precio.monto, pase.precio.moneda)}
         </span>
+        <span className="text-caption text-muted-foreground">por pase</span>
       </span>
 
       {pase.descripcion ? (
-        <span className="text-sm text-muted-foreground">{pase.descripcion}</span>
+        <span className="text-sm leading-relaxed text-muted-foreground">
+          {pase.descripcion}
+        </span>
       ) : null}
 
       {bloqueado ? (

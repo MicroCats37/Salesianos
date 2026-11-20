@@ -16,8 +16,8 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
+  TableHeader as Thead,
 } from "@/components/ui/table";
 import type { InscripcionResumen } from "../types/cuenta.types";
 import { VeredictoEstado } from "./VeredictoEstado";
@@ -66,6 +66,7 @@ export function ListaInscripciones({
       {/* Cards below 1024: every value carries its own label. */}
       <ItemGroup className="gap-3 lg:hidden">
         {inscripciones.map((inscripcion) => (
+          // biome-ignore lint/a11y/useSemanticElements: el `Item` del proyecto renderiza un `div`, así que la lista se construye con el rol ARIA y no con `<li>`; cambiar el elemento del componente compartido está fuera de esta zona.
           <Item
             key={inscripcion.id}
             variant="outline"
@@ -106,7 +107,7 @@ export function ListaInscripciones({
       {/* Table from 1024: the columns are prioritised, nothing is clipped. */}
       <div className="hidden lg:block">
         <Table>
-          <TableHeader>
+          <Thead>
             <TableRow>
               <TableHead scope="col">Registro</TableHead>
               <TableHead scope="col">Estado</TableHead>
@@ -114,7 +115,7 @@ export function ListaInscripciones({
               <TableHead scope="col">Cupos</TableHead>
               <TableHead scope="col">Siguiente paso</TableHead>
             </TableRow>
-          </TableHeader>
+          </Thead>
           <TableBody>
             {inscripciones.map((inscripcion) => (
               <TableRow key={inscripcion.id}>
@@ -145,7 +146,12 @@ export function ListaInscripciones({
                 </TableCell>
                 <TableCell>
                   {inscripcion.siguiente_accion ? (
-                    <Button asChild variant="outline" size="sm" className="min-h-11">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="min-h-11"
+                    >
                       <Link href={inscripcion.siguiente_accion.href}>
                         {inscripcion.siguiente_accion.etiqueta}
                         <ArrowRight className="size-4" aria-hidden="true" />

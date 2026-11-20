@@ -61,11 +61,11 @@ export function PanelSesion({ activo }: { activo: boolean }) {
           Tu sesión ya no está activa
         </AlertTitle>
         <AlertDescription className="text-muted-foreground">
-          Vuelve a entrar para seguir viendo tus inscripciones y tus compras.
-          No hemos perdido nada: solo hay que volver a identificarte.
+          Vuelve a entrar para seguir viendo tus inscripciones y tus compras. No
+          hemos perdido nada: solo hay que volver a identificarte.
         </AlertDescription>
         <AlertAction className="mt-3">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild className="min-h-11">
             <Link href={RUTAS.auth.login}>
               <LogIn className="size-4" aria-hidden="true" />
               Entrar de nuevo

@@ -33,6 +33,7 @@ from modules.pagos.domain.selectors.pago_selector import (
     OrdenPagoSelector,
     TransaccionPagoSelector,
 )
+from modules.pagos.infrastructure.izipay_session_service import IzipaySessionService
 from modules.pagos.domain.services.core.estado_operativo_pago_service import (
     EstadoOperativoPagoService,
 )
@@ -54,6 +55,7 @@ class PagosOrchestrator:
         transaccion_selector: TransaccionPagoSelector,
         estado_operativo_service: EstadoOperativoPagoService,
         propietario_service: IPropietarioOrdenPagoService,
+        izipay_session: IzipaySessionService,
     ):
         self.confirmacion_flujo = confirmacion_flujo
         self.intento_flujo = intento_flujo
@@ -61,6 +63,7 @@ class PagosOrchestrator:
         self.transaccion_selector = transaccion_selector
         self.estado_operativo_service = estado_operativo_service
         self.propietario_service = propietario_service
+        self.izipay_session = izipay_session
 
     # ── RT-PG-01 · Confirmación desde el navegador ───────────────────────────
 
@@ -152,6 +155,91 @@ class PagosOrchestrator:
         (FR-04 I-4, RN-C04).
         """
         return await self.intento_flujo.abrir_intento(orden_pago_id)
+
+    async def preparar_marketplace(self, token: str) -> dict:
+        """Abre un intento Izipay para el único pedido que autoriza ``token``."""
+        pedido = await sync_to_async(self._pedido_por_token)(token)
+        if pedido is None or not pedido.compra_id or not pedido.compra.orden_pago_id:
+            raise PagoNoAutorizadoError()
+
+        orden = await sync_to_async(self.orden_selector.obtener_por_id)(
+            pedido.compra.orden_pago_id
+        )
+        if orden is None:
+            raise OrdenPagoNoEncontradaError()
+
+        intento = await self.abrir_intento(str(orden.id))
+        order_number = intento.referencia_proveedor[:10]
+        comprador = pedido.comprador
+        token_sesion = await self.izipay_session.abrir(
+            transaction_id=intento.referencia_proveedor,
+            order_number=order_number,
+            amount=orden.monto,
+            currency=orden.moneda,
+            buyer_email=pedido.contacto_email or "cliente@marketplace.local",
+            buyer_name=getattr(comprador, "nombres", "") or "CLIENTE",
+            buyer_surname=getattr(comprador, "apellidos", "") or "VENTA",
+        )
+        return {
+            "transaction_id": intento.referencia_proveedor,
+            "order_number": order_number,
+            "token": token_sesion,
+            "merchant_code": self.izipay_session.shop_id,
+            "amount": orden.monto,
+            "currency": orden.moneda,
+            "buyer_email": pedido.contacto_email or "cliente@marketplace.local",
+            "buyer_name": getattr(comprador, "nombres", "") or "CLIENTE",
+            "buyer_surname": getattr(comprador, "apellidos", "") or "VENTA",
+        }
+
+    async def confirmar_marketplace(
+        self, token: str, payload: dict, clave_idempotencia: str | None = None
+    ):
+        """Confirma mediante el mismo coordinador una transacción del pedido privado."""
+        pedido = await sync_to_async(self._pedido_por_token)(token)
+        transaction_id = payload.get("transactionId")
+        intento = await sync_to_async(
+            self.transaccion_selector.obtener_por_referencia_proveedor
+        )(transaction_id)
+        if (
+            pedido is None
+            or intento is None
+            or not pedido.compra_id
+            or str(pedido.compra.orden_pago_id) != str(intento.orden_pago_id)
+        ):
+            raise PagoNoAutorizadoError()
+        return await self.confirmar_pago(
+            orden_pago_id=str(intento.orden_pago_id),
+            payload=payload,
+            persona_id=str(pedido.comprador_id),
+            ambito_idempotencia=f"pagos:marketplace:{pedido.id}",
+            clave_idempotencia=clave_idempotencia,
+        )
+
+    async def estado_transaccion_marketplace(self, token: str, transaction_id: str):
+        """Lee sólo el intento que pertenece al pedido autorizado por el token."""
+        pedido = await sync_to_async(self._pedido_por_token)(token)
+        intento = await sync_to_async(
+            self.transaccion_selector.obtener_por_referencia_proveedor
+        )(transaction_id)
+        if (
+            pedido is None
+            or intento is None
+            or not pedido.compra_id
+            or str(pedido.compra.orden_pago_id) != str(intento.orden_pago_id)
+        ):
+            raise PagoNoAutorizadoError()
+        return intento
+
+    @staticmethod
+    def _pedido_por_token(token: str):
+        from modules.marketplace.domain.models import Pedido
+
+        if not token:
+            return None
+        return Pedido.objects.filter(token=token).select_related(
+            "compra", "comprador"
+        ).first()
 
     # ── Internos ────────────────────────────────────────────────────────────
 

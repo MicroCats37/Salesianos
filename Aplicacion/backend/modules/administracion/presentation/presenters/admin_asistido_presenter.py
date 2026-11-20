@@ -1,0 +1,61 @@
+"""El presenter de los comandos ADMINISTRATIVOS asistidos.
+
+Change: `admin-client-purchases-and-participants`
+
+Contract: `contract/api-wrapper-presenter-contract.md` §3 — el presenter
+TRANSFORMA y nada más: no consulta la base de datos, no llama selectores y no
+traduce errores.
+
+Los importes viajan como texto: el total es el que congeló el dueño de la
+compra y el presenter sólo lo representa, sin recalcularlo.
+"""
+
+from modules.administracion.domain.results.admin_asistido_results import (
+    CompraAsistidaResultado,
+    ParticipanteAsistidoResultado,
+)
+from modules.administracion.presentation.schemas.admin_asistido_schemas import (
+    CompraAsistidaOut,
+    ParticipanteAsistidoOut,
+)
+
+
+class AdminAsistidoPresenter:
+    """Traduce los results de los comandos asistidos a sus schemas HTTP."""
+
+    @staticmethod
+    def present_participante(
+        resultado: ParticipanteAsistidoResultado,
+    ) -> ParticipanteAsistidoOut:
+        """La participación dada de alta."""
+        return ParticipanteAsistidoOut(
+            participacion_id=resultado.participacion_id,
+            persona_id=resultado.persona_id,
+            nombre=resultado.nombre,
+            documento=resultado.documento,
+            equipo_id=resultado.equipo_id,
+            inscripcion_id=resultado.inscripcion_id,
+            rol=resultado.rol,
+            estado=resultado.estado,
+        )
+
+    @staticmethod
+    def present_compra(resultado: CompraAsistidaResultado) -> CompraAsistidaOut:
+        """La compra asistida y su veredicto de pago."""
+        return CompraAsistidaOut(
+            compra_id=resultado.compra_id,
+            recurso_id=resultado.recurso_id,
+            orden_pago_id=resultado.orden_pago_id,
+            tipo=resultado.tipo,
+            concepto=resultado.concepto,
+            total=str(resultado.total),
+            moneda=resultado.moneda,
+            estado=resultado.estado,
+            estado_pago=resultado.estado_pago,
+            comprador_persona_id=resultado.comprador_persona_id,
+            comprador_nombre=resultado.comprador_nombre,
+            cantidad=resultado.cantidad,
+        )
+
+
+__all__ = ["AdminAsistidoPresenter"]

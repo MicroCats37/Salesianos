@@ -2,10 +2,10 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { MiCuentaView } from "../views/MiCuentaView";
 import { MisCompraDetalleView } from "../views/MisCompraDetalleView";
 import { MisComprasView } from "../views/MisComprasView";
 import { MisInscripcionesView } from "../views/MisInscripcionesView";
-import { MiCuentaView } from "../views/MiCuentaView";
 import {
   compraDetalleEjemplo,
   compraEjemplo,
@@ -41,12 +41,18 @@ describe("ACCOUNT-01 - el hub de la cuenta", () => {
     expect(
       screen.getByText("Todavía no hay un resumen de la cuenta"),
     ).toBeDefined();
-    expect(screen.getByRole("link", { name: "Crear una inscripción" })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Crear una inscripción" }),
+    ).toBeDefined();
   });
 
   it("con datos muestra los contadores con su etiqueta", () => {
     render(
-      <MiCuentaView nombre="Ana Perez" estado="listo" resumen={resumenCuentaEjemplo} />,
+      <MiCuentaView
+        nombre="Ana Perez"
+        estado="listo"
+        resumen={resumenCuentaEjemplo}
+      />,
     );
 
     // El contador nunca va solo: la etiqueta lo acompaña.
@@ -70,7 +76,9 @@ describe("ACCOUNT-02 - las inscripciones", () => {
     expect(
       screen.getByText("Todavía no tienes inscripciones registradas"),
     ).toBeDefined();
-    expect(screen.getByRole("link", { name: "Crear la primera" })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Crear la primera" }),
+    ).toBeDefined();
   });
 
   it("con datos lista el registro y su siguiente paso", () => {
@@ -81,10 +89,10 @@ describe("ACCOUNT-02 - las inscripciones", () => {
       />,
     );
 
-    expect(screen.getByText("EDICIÓN 2026")).toBeDefined();
+    expect(screen.getAllByText("EDICIÓN 2026").length).toBeGreaterThan(0);
     expect(
-      screen.getByRole("link", { name: /Completar el pago/ }),
-    ).toBeDefined();
+      screen.getAllByRole("link", { name: /Completar el pago/ }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("el estado del pago lo dice el backend, no el código", () => {
@@ -95,7 +103,7 @@ describe("ACCOUNT-02 - las inscripciones", () => {
       />,
     );
 
-    expect(screen.getByText("Pago pendiente")).toBeDefined();
+    expect(screen.getAllByText("Pago pendiente").length).toBeGreaterThan(0);
     expect(screen.queryByText("PENDIENTE")).toBeNull();
   });
 
@@ -128,9 +136,7 @@ describe("ACCOUNT-02 - las inscripciones", () => {
   it("el permiso explica que la cuenta no alcanza", () => {
     render(<MisInscripcionesView estado="sin-permiso" />);
 
-    expect(
-      screen.getByText("No podemos leer tus inscripciones"),
-    ).toBeDefined();
+    expect(screen.getByText("No podemos leer tus inscripciones")).toBeDefined();
   });
 });
 
@@ -147,7 +153,7 @@ describe("ACCOUNT-04 - las compras", () => {
     render(<MisComprasView estado="listo" compras={[compraEjemplo]} />);
 
     expect(screen.getByRole("heading", { name: "Inscripción" })).toBeDefined();
-    expect(screen.getByText("Pago confirmado")).toBeDefined();
+    expect(screen.getAllByText("Pago confirmado").length).toBeGreaterThan(0);
   });
 
   it("el importe usa cifras tabulares", () => {
@@ -161,7 +167,9 @@ describe("ACCOUNT-05 - el detalle de una compra", () => {
   it("sin datos no afirma un pago", () => {
     render(<MisCompraDetalleView id="ABC" />);
 
-    expect(screen.getByText("Todavía no hay una compra que mostrar")).toBeDefined();
+    expect(
+      screen.getByText("Todavía no hay una compra que mostrar"),
+    ).toBeDefined();
   });
 
   it("un pago confirmado con el derecho pendiente dice exactamente eso", () => {
@@ -175,11 +183,11 @@ describe("ACCOUNT-05 - el detalle de una compra", () => {
 
     // El estado PARCIAL no se presenta como un éxito.
     expect(
-      screen.getByText("Pago confirmado, pendiente de activación"),
-    ).toBeDefined();
+      screen.getAllByText("Pago confirmado, pendiente de activación").length,
+    ).toBeGreaterThan(0);
     expect(
-      screen.getByText(/el derecho todavía no se ha habilitado/i),
-    ).toBeDefined();
+      screen.getAllByText(/el derecho todavía no se ha habilitado/i).length,
+    ).toBeGreaterThan(0);
   });
 
   it("el permiso de otra compra se explica y no se oculta", () => {

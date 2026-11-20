@@ -44,10 +44,7 @@ export const CompradorPaseSchema = z.object({
     .trim()
     .min(1, "Escribe los nombres del comprador.")
     .max(255, "Los nombres son demasiado largos."),
-  apellidos: z
-    .string()
-    .trim()
-    .max(255, "Los apellidos son demasiado largos."),
+  apellidos: z.string().trim().max(255, "Los apellidos son demasiado largos."),
   contactoEmail: z
     .string()
     .trim()
@@ -80,10 +77,7 @@ export const AsignacionPaseSchema = z.object({
     .trim()
     .min(1, "Escribe los nombres de la persona.")
     .max(255, "Los nombres son demasiado largos."),
-  apellidos: z
-    .string()
-    .trim()
-    .max(255, "Los apellidos son demasiado largos."),
+  apellidos: z.string().trim().max(255, "Los apellidos son demasiado largos."),
   motivo: z.string().trim().max(500, "El motivo es demasiado largo."),
 });
 

@@ -106,6 +106,9 @@ class EntregaPendienteOut(BaseSchema):
     """Un pedido pagado que todavía espera su entrega."""
 
     pedido_id: UUID = Field(..., description="Identificador del pedido.")
+    comprador_nombres: str = Field(..., description="Nombres del comprador del pedido.")
+    comprador_apellidos: str = Field(..., description="Apellidos del comprador del pedido.")
+    comprador_documento: str = Field(..., description="Documento del comprador.")
     estado: str = Field(..., description="Estado del pedido.")
     estado_entrega: str = Field(..., description="Estado de la entrega.")
     total: Decimal = Field(..., ge=0, description="Total congelado del pedido.")
@@ -115,6 +118,26 @@ class EntregaPendienteOut(BaseSchema):
         description="Detalle congelado del pedido.",
     )
     created_at: datetime = Field(..., description="Momento de creación del pedido.")
+
+
+class EntregaEntregadaOut(BaseSchema):
+    """Un pedido cuya entrega física ya fue registrada."""
+
+    pedido_id: UUID = Field(..., description="Identificador del pedido.")
+    comprador_nombres: str = Field(..., description="Nombres del comprador del pedido.")
+    comprador_apellidos: str = Field(..., description="Apellidos del comprador del pedido.")
+    comprador_documento: str = Field(..., description="Documento del comprador.")
+    total: Decimal = Field(..., ge=0, description="Total congelado del pedido.")
+    moneda: str = Field(..., description="Moneda del pedido.")
+    lineas: list[PedidoLineaOut] = Field(default_factory=list)
+    entregada_en: datetime = Field(..., description="Momento del acta de entrega.")
+
+
+class EntregasOut(BaseSchema):
+    """Las dos colas operativas de recogidas de una edición."""
+
+    pendientes: list[EntregaPendienteOut] = Field(default_factory=list)
+    entregadas: list[EntregaEntregadaOut] = Field(default_factory=list)
 
 
 class EntregaConfirmadaOut(BaseSchema):
@@ -132,8 +155,10 @@ class EntregaConfirmadaOut(BaseSchema):
 
 
 __all__ = [
+    "EntregaEntregadaOut",
     "EntregaConfirmadaOut",
     "EntregaPendienteOut",
+    "EntregasOut",
     "InventarioProductoOut",
     "MovimientoInventarioOut",
     "RegistrarMovimientoInventarioIn",

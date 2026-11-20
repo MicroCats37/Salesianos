@@ -1,9 +1,4 @@
-import {
-  CreditCard,
-  GraduationCap,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { CreditCard, GraduationCap, ShieldCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -59,12 +54,7 @@ export function PasosInscripcion({
   className,
 }: PasosInscripcionProps) {
   return (
-    <ol
-      className={cn(
-        "grid gap-3 sm:grid-cols-2 xl:grid-cols-4",
-        className,
-      )}
-    >
+    <ol className={cn("grid gap-3 sm:grid-cols-2 xl:grid-cols-4", className)}>
       {PASOS.map((paso, indice) => {
         const numero = indice + 1;
         const completado = pasoActual !== null && numero < pasoActual;
@@ -76,16 +66,16 @@ export function PasosInscripcion({
             key={paso.titulo}
             aria-current={actual ? "step" : undefined}
             className={cn(
-              "relative flex flex-col gap-2 rounded-[var(--radius-lg)] border p-4 transition-all duration-(--motion-duration-base)",
+              "relative flex flex-col gap-2 rounded-[var(--radius-xl)] border bg-background p-4 shadow-[var(--elevation-sm)] transition-colors duration-(--motion-duration-fast)",
               actual
                 ? "border-accent bg-card shadow-[var(--elevation-md)]"
-                : "border-border bg-card hover:-translate-y-0.5 hover:border-border-strong hover:shadow-[var(--elevation-sm)]",
+                : "border-border bg-card hover:border-border-strong",
             )}
           >
             <span className="flex items-center gap-2">
               <span
                 className={cn(
-                  "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                  "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
                   actual
                     ? "bg-accent text-accent-foreground"
                     : "bg-muted text-muted-foreground",
@@ -97,12 +87,7 @@ export function PasosInscripcion({
                   numero
                 )}
               </span>
-              <span
-                className={cn(
-                  "text-sm font-bold",
-                  actual ? "text-foreground" : "text-foreground",
-                )}
-              >
+              <span className="text-sm font-semibold text-foreground">
                 {paso.titulo}
               </span>
             </span>

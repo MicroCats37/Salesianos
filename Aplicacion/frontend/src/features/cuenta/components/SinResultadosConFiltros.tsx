@@ -3,7 +3,13 @@
 import { SearchX } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export interface SinResultadosConFiltrosProps {
   /** The keys of the filters that are active in the URL. */
@@ -57,7 +63,9 @@ export function SinResultadosConFiltros({
           {activos.length === 1
             ? "Hay 1 filtro activo y está ocultando "
             : `Hay ${activos.length} filtros activos y están ocultando `}
-          {totalSinFiltrar === 1 ? "1 registro." : `${totalSinFiltrar} registros.`}{" "}
+          {totalSinFiltrar === 1
+            ? "1 registro."
+            : `${totalSinFiltrar} registros.`}{" "}
           Tus registros siguen aquí: cambia el filtro o quítalo.
         </EmptyDescription>
       </EmptyHeader>

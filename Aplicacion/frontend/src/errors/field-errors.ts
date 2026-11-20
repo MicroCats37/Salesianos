@@ -140,9 +140,7 @@ function entriesFromDetailList(list: unknown): FieldErrorEntry[] {
  * Reads a flat `{ field: message }` mapping (DRF style and the legacy
  * `format_errors()` shape).
  */
-function entriesFromFlatMap(
-  map: unknown,
-): FieldErrorEntry[] {
+function entriesFromFlatMap(map: unknown): FieldErrorEntry[] {
   if (!isRecord(map)) return [];
 
   const entries: FieldErrorEntry[] = [];

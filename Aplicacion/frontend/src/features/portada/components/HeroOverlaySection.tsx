@@ -317,7 +317,7 @@ export function HeroOverlaySection() {
           <div className="hero-stagger mt-6 flex flex-wrap gap-3">
             <PreinscribirButton
               size="lg"
-              className="btn-brand-gradient btn-shine h-14 rounded-2xl px-8 text-base font-black"
+              className="btn-shine h-14 rounded-2xl bg-accent px-8 text-base font-black text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
             />
             <Button
               asChild

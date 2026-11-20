@@ -333,11 +333,7 @@ function HeroVisual() {
               transition: "opacity 1.1s ease-in-out",
             }}
           >
-            <img
-              src={src}
-              alt=""
-              className="size-full object-cover"
-            />
+            <img src={src} alt="" className="size-full object-cover" />
           </div>
         ))}
 
@@ -353,10 +349,7 @@ function HeroVisual() {
 
         {/* Centered logo */}
         <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-          <div
-            className="relative size-44 xl:size-56"
-            aria-hidden="true"
-          >
+          <div className="relative size-44 xl:size-56" aria-hidden="true">
             <div
               className="absolute -inset-3 rounded-full"
               style={{

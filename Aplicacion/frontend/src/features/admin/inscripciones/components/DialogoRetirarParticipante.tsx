@@ -1,7 +1,7 @@
 "use client";
 
-import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
 import { ConfirmacionIrreversible } from "@/features/admin/operaciones";
+import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
 import {
   erroresDeCampoDeError,
   mensajeDeError,

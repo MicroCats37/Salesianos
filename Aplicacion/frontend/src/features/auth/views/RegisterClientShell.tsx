@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { useEffect, useRef } from "react";
 import { RegisterForm } from "@/features/auth/components";
-import { AuthShell } from "@/features/auth/components/AuthShell";
 import { AuthGlassCard } from "@/features/auth/components/AuthGlassCard";
+import { AuthShell } from "@/features/auth/components/AuthShell";
 
 // ── SubtleFormSparks (mirror of login) ─────────────────────────────────────────
 

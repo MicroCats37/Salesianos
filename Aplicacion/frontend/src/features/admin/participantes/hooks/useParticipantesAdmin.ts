@@ -1,12 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { datasetQueryOptions } from "@/shared/utils/query-options";
+import { useAdminQuery } from "@/features/admin/operaciones/hooks/useAdminQuery";
 import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
 import { adminClaves } from "@/features/admin/operaciones/utils/admin.claves.utils";
 import { estadoDesdeConsulta } from "@/features/admin/operaciones/utils/admin.estado.utils";
 import { parametrosListaAdminDesdeUrl } from "@/features/admin/operaciones/utils/admin.filtros.utils";
-import { listarParticipantesAdmin } from "../services/participante-admin.service";
+import {
+  listaParticipantesAdminEnvelope,
+  participanteAdminDesdeWire,
+} from "../schemas/participante-admin.schema";
 import type { EstadoParticipantesAdmin } from "../types/participantes-admin.types";
 
 /**
@@ -29,21 +31,16 @@ import type { EstadoParticipantesAdmin } from "../types/participantes-admin.type
 export function useListaParticipantesAdmin(
   parametros: Record<string, string> | undefined,
 ): EstadoParticipantesAdmin {
-  const consulta = useQuery({
-    ...datasetQueryOptions({
-      queryKey: adminClaves.participantes.listPage(
-        parametrosListaAdminDesdeUrl(parametros),
-      ),
-      queryFn: () =>
-        listarParticipantesAdmin(parametrosListaAdminDesdeUrl(parametros)),
-      kind: "listadoAdministrativo",
-    }),
-    enabled: RUTAS_ADMIN.participantesLista.registrado,
+  const consulta = useAdminQuery({
+    queryKey: adminClaves.participantes.list,
+    ruta: RUTAS_ADMIN.participantesLista,
+    envelope: listaParticipantesAdminEnvelope,
+    filtros: parametrosListaAdminDesdeUrl(parametros),
+    select: (pagina) => pagina.items.map(participanteAdminDesdeWire),
   });
 
   return estadoDesdeConsulta(
     consulta,
     RUTAS_ADMIN.participantesLista.registrado,
-    (pagina) => pagina.items,
   );
 }

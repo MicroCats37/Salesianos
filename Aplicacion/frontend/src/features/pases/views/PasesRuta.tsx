@@ -1,11 +1,8 @@
 "use client";
 
 import { handleApiError } from "@/errors";
-import { useCompraPase, useCatalogoPases } from "../hooks";
-import type {
-  EstadoVistaPases,
-  EnviarCompraPase,
-} from "../types/pase.types";
+import { useCatalogoPases, useCompraPase } from "../hooks";
+import type { EnviarCompraPase, EstadoVistaPases } from "../types/pase.types";
 import { PasesView } from "./PasesView";
 
 /**

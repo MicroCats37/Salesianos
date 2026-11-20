@@ -24,6 +24,9 @@ afterEach(() => {
  *    released outside of a layer.
  * 3. `scrollIntoView`, that jsdom does not implement and that the dialogs
  *    call when they open.
+ * 4. `IntersectionObserver`, that jsdom does not implement either and that
+ *    the anchor index of the information page uses to mark the section that
+ *    is on screen.
  *
  * The shims are MINIMAL: they only satisfy the contract of the API, they
  * never simulate a behaviour.
@@ -37,6 +40,35 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   }
 
   globalThis.ResizeObserver = ResizeObserverShim;
+}
+
+if (typeof globalThis.IntersectionObserver === "undefined") {
+  class IntersectionObserverShim implements IntersectionObserver {
+    readonly root: Element | Document | null = null;
+    readonly rootMargin: string = "0px";
+    readonly thresholds: ReadonlyArray<number> = [];
+
+    constructor(
+      _callback: IntersectionObserverCallback,
+      options?: IntersectionObserverInit,
+    ) {
+      this.root = (options?.root as Element | Document | null) ?? null;
+      this.rootMargin = options?.rootMargin ?? "0px";
+      this.thresholds = Array.isArray(options?.threshold)
+        ? options.threshold
+        : [options?.threshold ?? 0];
+    }
+
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+
+  globalThis.IntersectionObserver =
+    IntersectionObserverShim as unknown as typeof IntersectionObserver;
 }
 
 if (typeof Element !== "undefined") {

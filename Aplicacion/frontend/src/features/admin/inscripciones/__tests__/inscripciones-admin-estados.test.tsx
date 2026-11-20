@@ -2,18 +2,18 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { PanelPoolInscripcion } from "../components/PanelPoolInscripcion";
+import { InscripcionAdminDetalleView } from "../views/InscripcionAdminDetalleView";
+import { InscripcionesAdminView } from "../views/InscripcionesAdminView";
 import {
   inscripcionAdminDetalle,
   listaInscripcionesAdmin,
   poolDeInscripcion,
 } from "./inscripcion-admin.datos";
-import { InscripcionAdminDetalleView } from "../views/InscripcionAdminDetalleView";
-import { InscripcionesAdminView } from "../views/InscripcionesAdminView";
 
 /**
  * The renders of this suite happen inside a `QueryClientProvider`: the S-10
@@ -62,9 +62,9 @@ describe("ADM-05 — el listado de las inscripciones", () => {
     );
 
     expect(screen.getByRole("table")).toBeDefined();
-    expect(screen.getByText("RESPONSABLE DE EJEMPLO")).toBeDefined();
+    expect(screen.getAllByText("RESPONSABLE DE EJEMPLO")[0]).toBeDefined();
     // La etiqueta del backend y su descripción; NUNCA el código.
-    expect(screen.getByText("Inscripción creada")).toBeDefined();
+    expect(screen.getAllByText("Inscripción creada")[0]).toBeDefined();
     expect(screen.queryByText("CREADA")).toBeNull();
   });
 
@@ -77,7 +77,7 @@ describe("ADM-05 — el listado de las inscripciones", () => {
 
     expect(screen.getByText("Cupos adquiridos")).toBeDefined();
     expect(screen.getByText("Cupos asignados")).toBeDefined();
-    expect(screen.getByText("Cupos disponibles")).toBeDefined();
+    expect(screen.getAllByText("Cupos disponibles")[0]).toBeDefined();
   });
 });
 

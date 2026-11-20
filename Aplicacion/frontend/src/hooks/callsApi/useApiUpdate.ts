@@ -1,17 +1,17 @@
 import {
   type QueryKey,
-  type UseMutateFunction,
   type UseMutationOptions,
   type UseMutationResult,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosRequestConfig } from "axios";
 import type { ZodType } from "zod";
 import { handleApiError, notify } from "@/errors";
 import { apiSend } from "@/lib/api";
 import { invalidateDatasets } from "@/shared/utils/cache-policy";
 import { buildApiPayload } from "@/utils";
+import { relanzarSiCancelacion } from "./cancelacion";
 
 // ---------------------------------------------------------------------------
 // Variable types
@@ -51,10 +51,17 @@ function maybeToastSuccess(payload: unknown, showSuccessToast: boolean): void {
 
 /** Direct-mode props (url provided): behaves like useApiCreate. */
 interface UseApiUpdateDirectProps<TData, TVariables> {
-  /** Direct URL for the endpoint. Variables are sent as-is as payload. */
-  url: string;
+  /**
+   * Direct URL for the endpoint. Variables are sent as-is as payload.
+   *
+   * A function receives the variables of the mutation: a route scoped to an
+   * identifier is built from the data of the write, not spelled by hand.
+   */
+  url: string | ((variables: DirectVariables<TVariables>) => string);
   schema?: ZodType<TData>;
   method?: "PUT" | "PATCH";
+  /** The configuration of the request: its headers and its timeout. */
+  config?: AxiosRequestConfig;
   showToast?: boolean;
   showSuccessToast?: boolean;
   /**
@@ -71,9 +78,18 @@ interface UseApiUpdateDirectProps<TData, TVariables> {
 /** Classic-mode props (baseUrl provided): expects { id, data } variables. */
 interface UseApiUpdateClassicProps<TData, TPayload> {
   /** Base URL; id is appended automatically. */
-  baseUrl: string;
+  baseUrl?: string;
+  /**
+   * The URL of the endpoint, built from the variables.
+   *
+   * It is the escape hatch for the routes that are NOT `baseUrl + /id`: a
+   * sub-route of a record (`{id}/logo`) declares its own shape.
+   */
+  getUrl?: (variables: ClassicVariables<TPayload>) => string;
   schema?: ZodType<TData>;
   method?: "PUT" | "PATCH";
+  /** The configuration of the request: its headers and its timeout. */
+  config?: AxiosRequestConfig;
   showToast?: boolean;
   showSuccessToast?: boolean;
   /** The keys invalidated when the mutation settles. */
@@ -111,7 +127,7 @@ export function useApiUpdate<TData, TPayload>(
 ): UseMutationResult<TData, AxiosError, ClassicVariables<TPayload>>;
 
 // Implementation
-export function useApiUpdate<TData, TVariables>(
+export function useApiUpdate<TData = unknown, TVariables = unknown>(
   props:
     | UseApiUpdateDirectProps<TData, TVariables>
     | UseApiUpdateClassicProps<TData, unknown>,
@@ -121,77 +137,54 @@ export function useApiUpdate<TData, TVariables>(
   // ------------------------------------------------------------------
   // Detect mode: 'url' key present means direct mode
   // ------------------------------------------------------------------
-  const isDirectMode =
+  const esDirecto =
     "url" in props &&
     (props as UseApiUpdateDirectProps<TData, TVariables>).url !== undefined;
 
-  if (isDirectMode) {
-    const {
-      url,
-      schema,
-      method = "PUT",
-      showToast = true,
-      showSuccessToast = true,
-      invalidateKeys = [],
-      options,
-    } = props as UseApiUpdateDirectProps<TData, TVariables>;
+  const directo = props as UseApiUpdateDirectProps<TData, TVariables>;
+  const clasico = props as UseApiUpdateClassicProps<TData, unknown>;
 
-    return useMutation<TData, AxiosError, DirectVariables<TVariables>>({
-      mutationFn: async (variables) => {
-        try {
-          const payload = buildApiPayload(variables);
-          const { status, data } = await apiSend<unknown>(
-            method,
-            url,
-            payload,
-          );
-
-          // 204 No Content: the body is empty and it is NEVER parsed.
-          if (status === 204) return undefined as unknown as TData;
-
-          maybeToastSuccess(data, showSuccessToast);
-          return schema ? schema.parse(data) : (data as TData);
-        } catch (error) {
-          const apiError = handleApiError(error);
-          if (showToast) notify.error(apiError.message);
-          throw error;
-        } finally {
-          await invalidateDatasets(queryClient, invalidateKeys);
-        }
-      },
-      ...options,
-    }) as unknown as UseMutationResult<TData, AxiosError, TVariables>;
-  }
-
-  // ------------------------------------------------------------------
-  // Classic mode: baseUrl + { id, data }
-  // ------------------------------------------------------------------
   const {
-    baseUrl,
     schema,
     method = "PUT",
+    config,
     showToast = true,
     showSuccessToast = true,
     invalidateKeys = [],
     options,
-  } = props as UseApiUpdateClassicProps<TData, unknown>;
+  } = directo;
 
-  return useMutation<TData, AxiosError, ClassicVariables<unknown>>({
-    mutationFn: async ({ id, data }) => {
+  return useMutation<TData, AxiosError, TVariables>({
+    mutationFn: async (variables) => {
       try {
-        const payload = buildApiPayload(data);
-        const { status, data: body } = await apiSend<unknown>(
+        const esClasico = !esDirecto;
+        const cuerpo = esClasico
+          ? (variables as unknown as ClassicVariables<unknown>).data
+          : variables;
+        const payload = buildApiPayload(cuerpo);
+
+        const destino = esDirecto
+          ? typeof directo.url === "function"
+            ? directo.url(variables)
+            : directo.url
+          : clasico.getUrl
+            ? clasico.getUrl(variables as unknown as ClassicVariables<unknown>)
+            : `${clasico.baseUrl}/${(variables as unknown as ClassicVariables<unknown>).id}`;
+
+        const { status, data } = await apiSend<unknown>(
           method,
-          `${baseUrl}/${id}`,
+          destino,
           payload,
+          config,
         );
 
         // 204 No Content: the body is empty and it is NEVER parsed.
         if (status === 204) return undefined as unknown as TData;
 
-        maybeToastSuccess(body, showSuccessToast);
-        return schema ? schema.parse(body) : (body as TData);
+        maybeToastSuccess(data, showSuccessToast);
+        return schema ? schema.parse(data) : (data as TData);
       } catch (error) {
+        relanzarSiCancelacion(error);
         const apiError = handleApiError(error);
         if (showToast) notify.error(apiError.message);
         throw error;

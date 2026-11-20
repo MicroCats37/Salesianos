@@ -39,10 +39,7 @@ export type LoginDniFormData = z.infer<typeof LoginDniFormSchema>;
  * Routes to: POST /api/auth/login/email
  */
 export const LoginEmailFormSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email requerido")
-    .email("Email inválido"),
+  email: z.string().min(1, "Email requerido").email("Email inválido"),
   password: z
     .string()
     .min(1, "Contraseña requerida")

@@ -34,9 +34,9 @@ export function AdminPasesValidarView() {
       />
 
       <AdminNotice title="El código es una credencial">
-        El código que se escanea es una credencial en sí mismo: no se publica
-        en la lista, no se copia en un registro y no se enseña en pantalla
-        para que alguien más lo use.
+        El código que se escanea es una credencial en sí mismo: no se publica en
+        la lista, no se copia en un registro y no se enseña en pantalla para que
+        alguien más lo use.
       </AdminNotice>
 
       <AdminPanel

@@ -1,9 +1,14 @@
+"use client";
+
+import { isAxiosError } from "axios";
 import { Lock, PackageSearch } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useState } from "react";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
 import { RouteHero } from "@/components/shell/RouteHero";
 import { ShellErrorState } from "@/components/shell/ShellState";
-import { EstadoPagoTienda } from "../components/EstadoPagoTienda";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { EstadoPagoTienda, IzipayPedidoModal } from "../components";
+import { usePedidoSeguimiento } from "../hooks";
 import type {
   EstadoDeclarado,
   EstadoVistaTienda,
@@ -11,6 +16,54 @@ import type {
   VeredictoPago,
 } from "../types/marketplace.types";
 import { formatearMonto } from "../utils/monto";
+
+function adaptarPago(codigo: string): VeredictoPago {
+  if (["CONFIRMADO", "PAGADO", "PAGADA", "EXITO"].includes(codigo)) {
+    return {
+      estado: {
+        codigo,
+        etiqueta: "Pago confirmado",
+        descripcion: "Tu pago fue confirmado por el proveedor.",
+      },
+      rol: "confirmado",
+    };
+  }
+  if (["FALLIDO", "CANCELADO", "NO_COMPLETADO"].includes(codigo)) {
+    return {
+      estado: {
+        codigo,
+        etiqueta: "Pago no completado",
+        descripcion:
+          "Puedes intentar el pago nuevamente si el pedido sigue vigente.",
+      },
+      rol: "sin-confirmar",
+    };
+  }
+  if (["EN_VERIFICACION", "VERIFICANDO"].includes(codigo)) {
+    return {
+      estado: {
+        codigo,
+        etiqueta: "Pago en verificación",
+        descripcion: "Estamos esperando la confirmación del proveedor.",
+      },
+      rol: "verificando",
+    };
+  }
+  return {
+    estado: {
+      codigo,
+      etiqueta: "Pago pendiente",
+      descripcion: "Puedes continuar con el pago seguro cuando estés listo.",
+    },
+    rol: "pendiente",
+  };
+}
+
+function adaptarEntrega(codigo: string): EstadoDeclarado {
+  if (codigo === "ENTREGADO") return { codigo, etiqueta: "Entregado" };
+  if (codigo === "LISTO") return { codigo, etiqueta: "Listo para recoger" };
+  return { codigo, etiqueta: "Pendiente de recogida" };
+}
 
 export interface PedidoSeguimientoViewProps {
   /** The private token of the link. It IS the credential. */
@@ -38,11 +91,34 @@ export interface PedidoSeguimientoViewProps {
  */
 export function PedidoSeguimientoView({
   token,
-  estado = "sin-datos",
+  estado,
   pedido,
   pago,
   entrega,
 }: PedidoSeguimientoViewProps) {
+  const [pagoAbierto, setPagoAbierto] = useState(false);
+  const consulta = usePedidoSeguimiento(token);
+  const pedidoActual = pedido ?? consulta.data;
+  const estadoVista: EstadoVistaTienda =
+    estado ??
+    (consulta.isPending
+      ? "cargando"
+      : consulta.isError
+        ? isAxiosError(consulta.error) &&
+          consulta.error.response?.status === 403
+          ? "sin-permiso"
+          : "error"
+        : pedidoActual
+          ? "listo"
+          : "sin-datos");
+  const pagoActual =
+    pago ?? (pedidoActual ? adaptarPago(pedidoActual.estado_pago) : undefined);
+  const entregaActual =
+    entrega ??
+    (pedidoActual ? adaptarEntrega(pedidoActual.estado_entrega) : undefined);
+  const puedePagar =
+    pagoActual?.rol === "pendiente" || pagoActual?.rol === "sin-confirmar";
+
   return (
     <div className="flex flex-col gap-6">
       <RouteHero
@@ -52,25 +128,34 @@ export function PedidoSeguimientoView({
         facts={[{ label: "Acceso", value: `${token.slice(0, 8)}...` }]}
       />
 
-      {estado === "sin-permiso" ? (
+      {estadoVista === "sin-permiso" ? (
         <Alert>
           <Lock className="size-4" aria-hidden="true" />
           <AlertTitle>No pudimos abrir este pedido</AlertTitle>
           <AlertDescription>
-            El enlace puede haber caducado o no corresponde a este pedido. Si
-            lo has perdido, puedes pedir un enlace nuevo para recuperarlo.
+            El enlace puede haber caducado o no corresponde a este pedido. Si lo
+            has perdido, puedes pedir un enlace nuevo para recuperarlo.
           </AlertDescription>
         </Alert>
       ) : null}
 
-      {estado === "error" ? (
+      {estadoVista === "error" ? (
         <ShellErrorState
           title="No pudimos comprobar tu enlace"
           description="No pudimos comprobar el enlace en este momento. Vuelve a intentarlo en unos segundos."
+          className="min-h-11"
         />
       ) : null}
 
-      {estado === "sin-datos" ? (
+      {estadoVista === "cargando" ? (
+        <RouteEmptyState
+          icon={PackageSearch}
+          title="Abriendo tu pedido"
+          description="Estamos comprobando el enlace privado y el estado más reciente de tu pedido."
+        />
+      ) : null}
+
+      {estadoVista === "sin-datos" ? (
         <RouteEmptyState
           icon={PackageSearch}
           title="Este pedido todavía no se puede mostrar"
@@ -78,7 +163,7 @@ export function PedidoSeguimientoView({
         />
       ) : null}
 
-      {estado === "listo" && pedido ? (
+      {estadoVista === "listo" && pedidoActual ? (
         <>
           <section
             aria-labelledby="estados-pedido-titulo"
@@ -95,8 +180,19 @@ export function PedidoSeguimientoView({
               <div className="flex flex-col gap-1">
                 <dt className="text-caption text-muted-foreground">Pago</dt>
                 <dd>
-                  {pago ? (
-                    <EstadoPagoTienda veredicto={pago} />
+                  {pagoActual ? (
+                    <EstadoPagoTienda
+                      veredicto={pagoActual}
+                      conDescripcion
+                      accion={
+                        puedePagar
+                          ? {
+                              etiqueta: "Pagar con Izipay",
+                              onClick: () => setPagoAbierto(true),
+                            }
+                          : undefined
+                      }
+                    />
                   ) : (
                     <span className="text-sm text-muted-foreground">
                       Todavía no hay un veredicto de pago.
@@ -108,14 +204,16 @@ export function PedidoSeguimientoView({
               <div className="flex flex-col gap-1">
                 <dt className="text-caption text-muted-foreground">Entrega</dt>
                 <dd className="text-sm font-semibold text-foreground">
-                  {entrega ? entrega.etiqueta : "Sin estado de entrega"}
+                  {entregaActual
+                    ? entregaActual.etiqueta
+                    : "Sin estado de entrega"}
                 </dd>
               </div>
             </dl>
 
             <p className="text-caption text-muted-foreground">
-              Pagar el pedido no lo entrega: la recogida se confirma en el
-              punto de control del evento.
+              Pagar el pedido no lo entrega: la recogida se confirma en el punto
+              de control del evento.
             </p>
           </section>
 
@@ -131,7 +229,7 @@ export function PedidoSeguimientoView({
             </h2>
 
             <ul className="flex flex-col gap-2">
-              {pedido.lineas.map((linea) => (
+              {pedidoActual.lineas.map((linea) => (
                 <li
                   key={`${linea.concepto_id}-${linea.tipo_concepto}`}
                   className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border bg-surface-raised px-3 py-2"
@@ -140,18 +238,25 @@ export function PedidoSeguimientoView({
                     {`${linea.cantidad} x ${linea.concepto_nombre}`}
                   </span>
                   <span className="text-sm font-semibold tabular-nums text-foreground">
-                    {formatearMonto(linea.subtotal, pedido.moneda)}
+                    {formatearMonto(linea.subtotal, pedidoActual.moneda)}
                   </span>
                 </li>
               ))}
             </ul>
 
             <p className="text-sm font-semibold tabular-nums text-foreground">
-              {`Total: ${formatearMonto(pedido.total, pedido.moneda)}`}
+              {`Total: ${formatearMonto(pedidoActual.total, pedidoActual.moneda)}`}
             </p>
           </section>
         </>
       ) : null}
+
+      <IzipayPedidoModal
+        abierto={pagoAbierto}
+        token={token}
+        onCerrar={() => setPagoAbierto(false)}
+        onEstadoActualizado={() => consulta.refetch()}
+      />
     </div>
   );
 }

@@ -6,7 +6,12 @@
 // The same builder is used for the first hydration (`useForm`) and for every
 // reset, so the two can never disagree.
 
-import type { DefaultValues, FieldValues, Path, PathValue } from "react-hook-form";
+import type {
+  DefaultValues,
+  FieldValues,
+  Path,
+  PathValue,
+} from "react-hook-form";
 import type { FormField } from "./GenericInput";
 
 /**
@@ -23,7 +28,7 @@ export function buildFormDefaults<T extends FieldValues>(
 
   for (const field of fields) {
     const name = field.name as Path<T>;
-    if (Object.prototype.hasOwnProperty.call(defaults, name)) continue;
+    if (Object.hasOwn(defaults, name)) continue;
     if (field.defaultValue === undefined) continue;
 
     defaults[name] = (

@@ -3,10 +3,10 @@
 import { ArrowUpRight, Ticket } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { PortadaSection } from "@/features/portada/components/PortadaSection";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { ENLACES } from "@/features/portada/fixtures/festival";
+import { PortadaSection } from "@/features/portada/components/PortadaSection";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { ENLACES } from "@/features/portada/fixtures/festival";
 import { estado } from "@/features/portada/fixtures/pricing-stage";
 
 /**
@@ -35,7 +35,7 @@ export function PartyPassSection() {
   return (
     <PortadaSection id={COPY.paseFiesta.id} fondo="marca">
       <div className="mt-12 grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-12">
-        <div className="relative overflow-hidden rounded-2xl border border-primary-foreground/15">
+        <div className="relative overflow-hidden rounded-2xl border border-brand-on-gradient-border">
           <div className="relative aspect-[4/5] w-full sm:aspect-[16/10] lg:aspect-[4/5]">
             <Image
               src="/images/portada/pase-fiesta.webp"
@@ -49,10 +49,10 @@ export function PartyPassSection() {
         </div>
 
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-cyan">
+          <p className="text-eyebrow-brand text-brand-cyan">
             {COPY.paseFiesta.miniLabel}
           </p>
-          <h2 className="mt-3 text-3xl font-black uppercase leading-[1.05] tracking-tight text-primary-foreground sm:text-4xl">
+          <h2 className="mt-3 text-3xl font-black uppercase leading-[1.05] tracking-tight text-brand-on-gradient sm:text-4xl">
             {COPY.paseFiesta.titulo.map((linea, index) => (
               <span key={linea}>
                 {index > 0 && <br />}
@@ -60,12 +60,12 @@ export function PartyPassSection() {
               </span>
             ))}
           </h2>
-          <p className="mt-4 text-sm leading-relaxed text-primary-foreground/75 sm:text-base">
+          <p className="mt-4 text-sm leading-relaxed text-brand-on-gradient-muted sm:text-base">
             {COPY.paseFiesta.copy}
           </p>
 
           <div className="mt-8 flex flex-wrap items-end gap-x-4 gap-y-2">
-            <span className="text-4xl font-black leading-none text-primary-foreground sm:text-5xl">
+            <span className="text-4xl font-black leading-none text-brand-on-gradient sm:text-5xl">
               S/ {precio}
             </span>
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-cyan">
@@ -75,7 +75,7 @@ export function PartyPassSection() {
             </span>
           </div>
           {enPreventa && (
-            <p className="mt-2 text-xs text-primary-foreground/60">
+            <p className="mt-2 text-xs text-brand-on-gradient-muted">
               Precio anunciado en puerta: S/ {COPY.paseFiesta.precioPuerta} por
               persona.
             </p>
@@ -85,7 +85,7 @@ export function PartyPassSection() {
             <button
               type="button"
               onClick={() => setAbierto(true)}
-              className="btn-brand-gradient btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full px-6 text-xs font-black uppercase tracking-wider"
+              className="btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-xs font-black uppercase tracking-wider text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
             >
               <Ticket className="size-4" aria-hidden="true" />
               {COPY.paseFiesta.cta}
@@ -94,7 +94,7 @@ export function PartyPassSection() {
               href={ENLACES.facebook}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-primary-foreground/30 px-5 text-xs font-black uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-foreground/10"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-brand-on-gradient-border px-5 text-xs font-black uppercase tracking-wider text-brand-on-gradient transition-colors hover:bg-brand-on-gradient-soft"
             >
               {COPY.paseFiesta.enlaceAnuncio}
               <ArrowUpRight className="size-4" aria-hidden="true" />
@@ -127,7 +127,7 @@ export function PartyPassSection() {
             href={ENLACES.contacto}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-brand-gradient btn-shine mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full px-6 text-xs font-black uppercase tracking-wider"
+            className="btn-shine mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 text-xs font-black uppercase tracking-wider text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
           >
             CONSULTAR POR WHATSAPP
             <ArrowUpRight className="size-4" aria-hidden="true" />

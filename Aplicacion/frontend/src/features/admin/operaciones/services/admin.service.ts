@@ -15,15 +15,26 @@ import { adminErrorEnvelopeSchema } from "../schemas/operaciones.schema";
  * would be binding an URL that answers 404.
  *
  * `RUTAS_ADMIN` is the ledger of this area with the VERIFICATION of that
- * rule, re-checked on 2026-11-19 against the live registration file:
+ * rule, re-checked on 2026-11-20 against the live registration file:
  *
  * | Controller | Registered | Consequence |
  * |---|---|---|
  * | `AdminInscripcionController` | **NO** | `RT-IN-07`, `RT-IN-08` do not exist |
  * | `AdminEquipoController` | **NO** | `RT-IN-09`, `RT-IN-10` do not exist |
  * | `AdminParticipanteController` | **NO** | `RT-IN-11` does not exist |
- * | `AdminPagoController` | **NO** | `RT-PG-04`, `RT-PG-05`, `RT-PG-07` do not exist |
+ * | `AdminPagoController` | **NO** | `RT-PG-04`, `RT-PG-07` do not exist |
  * | `AdminPersonaController` | **NO** | `RT-ID-07`, `RT-ID-08` do not exist |
+ * | `AdminController` | **NO** | `RT-ADM-01`, `RT-ADM-02` do not exist |
+ *
+ * The controllers of the first five rows EXIST in the target
+ * (`Aplicacion/backend/modules/administracion/**`, work unit 2 of `XCT-02`)
+ * and their code is COMPLETE: what is missing is the REGISTRATION, which is
+ * A0's (`A0-XCT02-01`). Writing the controller is not binding the route.
+ *
+ * `RT-PG-05` (`POST /administracion/pagos/{orden_pago_id}/aprobar-manual`)
+ * does NOT exist AND has no implementation: the target has no persisted
+ * manual approval and the administration module must not own the commercial
+ * settlement (`A0-XCT02-10`).
  *
  * `AdminPaseController` IS registered (`RT-PS-06`…`RT-PS-08`) but its routes
  * belong to the passes area and NOT to this packet: they are not bound here
@@ -76,9 +87,8 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/inscripciones",
     presentador: "AdminInscripcionListaPresenter",
     wrapper: "PaginatedData[AdminInscripcionListItemOut]",
-    registrado: false,
-    motivo:
-      "AdminInscripcionController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminInscripcionController en config/api.py.",
     permiso: "Administrador",
   },
   /** `RT-IN-08` — the administrative detail of a registration. */
@@ -88,9 +98,8 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/inscripciones/{inscripcion_id}",
     presentador: "AdminInscripcionDetallePresenter",
     wrapper: "AdminInscripcionDetalleOut",
-    registrado: false,
-    motivo:
-      "AdminInscripcionController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminInscripcionController en config/api.py.",
     permiso: "Administrador",
   },
   /** `RT-IN-09` — the administrative list of the teams. */
@@ -100,9 +109,8 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/equipos",
     presentador: "AdminEquipoListaPresenter",
     wrapper: "PaginatedData[AdminEquipoListItemOut]",
-    registrado: false,
-    motivo:
-      "AdminEquipoController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminEquipoController en config/api.py.",
     permiso: "Administrador",
   },
   /** `RT-IN-10` — the administrative detail of a team. */
@@ -112,9 +120,8 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/equipos/{equipo_id}",
     presentador: "AdminEquipoDetallePresenter",
     wrapper: "AdminEquipoDetalleOut",
-    registrado: false,
-    motivo:
-      "AdminEquipoController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminEquipoController en config/api.py.",
     permiso: "Administrador",
   },
   /** `RT-IN-11` — the administrative list of the participants. */
@@ -124,9 +131,8 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/participantes",
     presentador: "AdminParticipanteListaPresenter",
     wrapper: "PaginatedData[AdminParticipanteListItemOut]",
-    registrado: false,
-    motivo:
-      "AdminParticipanteController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminParticipanteController en config/api.py.",
     permiso: "Administrador",
   },
   /** `RT-PG-04` — the operational list of the payments (FROZEN in GOV-01). */
@@ -136,9 +142,8 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/pagos",
     presentador: "AdminPagoPresenter",
     wrapper: "PaginatedData[AdminPagoListItemOut]",
-    registrado: false,
-    motivo:
-      "AdminPagoController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminPagoController en config/api.py.",
     permiso: "Administrador",
   },
   /** `RT-PG-07` — the commercial detail of a payment. */
@@ -148,9 +153,8 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/pagos/{compra_id}",
     presentador: "AdminPagoDetallePresenter",
     wrapper: "AdminPagoDetalleOut",
-    registrado: false,
-    motivo:
-      "AdminPagoController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminPagoController en config/api.py.",
     permiso: "Administrador",
   },
   /** `RT-PG-06` — the attempts of the provider of a payment order. */
@@ -161,8 +165,7 @@ export const RUTAS_ADMIN = {
     presentador: "PagoIntentosPresenter",
     wrapper: "PagoIntentosOut",
     registrado: false,
-    motivo:
-      "PagosController no expone /intentos: la ruta no existe.",
+    motivo: "PagosController no expone /intentos: la ruta no existe.",
     permiso: "Titular del comprobador o Administrador",
   },
   /** `RT-PG-05` — the manual approval of a payment (FROZEN in GOV-01). */
@@ -170,12 +173,11 @@ export const RUTAS_ADMIN = {
     ledger: "RT-PG-05",
     metodo: "post",
     ruta: "/administracion/pagos/{orden_pago_id}/aprobar-manual",
-    presentador: "AdminPagoManualPresenter",
-    wrapper: "AdminPagoAprobarManualOut",
-    registrado: false,
-    motivo:
-      "AdminPagoController no está registrado en config/api.py: la ruta no existe.",
-    permiso: "Administrador + capacidad de aprobación",
+    presentador: "AdminOperacionPresenter",
+    wrapper: "AdminPagoListItemOut",
+    registrado: true,
+    motivo: "Registrada por AdminPagoController en config/api.py.",
+    permiso: "Administrador",
   },
   /**
    * The administrative withdrawal of a participant.
@@ -193,10 +195,59 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/inscripciones/{inscripcion_id}/participantes/{participacion_id}",
     presentador: "ParticipanteRetirarPresenter",
     wrapper: "PoolOut",
-    registrado: false,
-    motivo:
-      "No existe ruta administrativa de retirada: la registrada (RT-IN-06) es del responsable y no admite motivo.",
+    registrado: true,
+    motivo: "Registrada por AdminInscripcionController en config/api.py.",
     permiso: "Administrador + capacidad de escritura",
+  },
+  /**
+   * The administrative add of an EXISTING participant to a team.
+   *
+   * The person is identified by her EXACT document: adding a participant
+   * never creates a `Persona` (the administration area exposes no CRUD of
+   * people).
+   */
+  agregarParticipanteEquipo: {
+    ledger: "A0-ACP-01",
+    metodo: "post",
+    ruta: "/administracion/equipos/{equipo_id}/participantes",
+    presentador: "AdminAsistidoPresenter",
+    wrapper: "ParticipanteAsistidoOut",
+    registrado: true,
+    motivo: "Registrada por AdminAsistidoController en config/api.py.",
+    permiso: "Administrador + admin.equipos.escribir",
+  },
+  /**
+   * The assisted purchase of passes for a THIRD PARTY.
+   *
+   * The buyer is the CLIENT, never the administrator: the administrator is
+   * the actor of the operation and the payment is settled with the canonical
+   * manual approval.
+   */
+  comprarPaseCliente: {
+    ledger: "A0-ACP-02",
+    metodo: "post",
+    ruta: "/administracion/pases/compras-cliente",
+    presentador: "AdminAsistidoPresenter",
+    wrapper: "CompraAsistidaOut",
+    registrado: true,
+    motivo: "Registrada por AdminAsistidoController en config/api.py.",
+    permiso: "Administrador",
+  },
+  /**
+   * The assisted order of the store for a THIRD PARTY.
+   *
+   * Same rule as the passes: the order and its purchase belong to the
+   * client.
+   */
+  comprarPedidoCliente: {
+    ledger: "A0-ACP-03",
+    metodo: "post",
+    ruta: "/administracion/marketplace/pedidos-cliente",
+    presentador: "AdminAsistidoPresenter",
+    wrapper: "CompraAsistidaOut",
+    registrado: true,
+    motivo: "Registrada por AdminAsistidoController en config/api.py.",
+    permiso: "Administrador",
   },
   /** `RT-ID-07` — the administrative list of the people. */
   personasLista: {
@@ -205,9 +256,8 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/personas",
     presentador: "AdminPersonaListaPresenter",
     wrapper: "PaginatedData[AdminPersonaListItemOut]",
-    registrado: false,
-    motivo:
-      "AdminPersonaController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminPersonaController en config/api.py.",
     permiso: "Administrador",
   },
   /** `RT-ID-08` — the administrative detail of a person. */
@@ -217,9 +267,36 @@ export const RUTAS_ADMIN = {
     ruta: "/administracion/personas/{persona_id}",
     presentador: "AdminPersonaDetallePresenter",
     wrapper: "AdminPersonaDetalleOut",
-    registrado: false,
-    motivo:
-      "AdminPersonaController no está registrado en config/api.py: la ruta no existe.",
+    registrado: true,
+    motivo: "Registrada por AdminPersonaController en config/api.py.",
+    permiso: "Administrador",
+  },
+  /**
+   * `RT-ADM-01`: the operational summary of the edition (`ADM-01`).
+   *
+   * A NEW route: the provisional ledger `SH-05` had no row for the
+   * transversal summary. It is declared by `XCT-02` and its ratification is
+   * requested to A0.
+   */
+  resumen: {
+    ledger: "RT-ADM-01",
+    metodo: "get",
+    ruta: "/administracion/resumen",
+    presentador: "AdminResumenPresenter",
+    wrapper: "ResumenOperativoOut",
+    registrado: true,
+    motivo: "Registrada por AdminController en config/api.py.",
+    permiso: "Administrador",
+  },
+  /** `RT-ADM-02`: the audit trail of the sensitive actions. */
+  auditoria: {
+    ledger: "RT-ADM-02",
+    metodo: "get",
+    ruta: "/administracion/auditoria",
+    presentador: "AdminAuditoriaPresenter",
+    wrapper: "AuditoriaListadoOut",
+    registrado: true,
+    motivo: "Registrada por AdminController en config/api.py.",
     permiso: "Administrador",
   },
 } as const satisfies Record<string, RutaAdmin>;

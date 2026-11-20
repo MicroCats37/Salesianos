@@ -3,13 +3,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { setCookie } from "cookies-next";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-import { registerUser } from "../services/register.service";
-import { useAuthStore } from "../store/auth.store";
-import type { RegisterFormData, RegisterResponse } from "../schemas";
+import { handleApiError, notify } from "@/errors";
 import { AUTH_COOKIES } from "@/lib/auth";
 import { consumePostAuthRedirect } from "@/lib/post-auth-redirect";
 import { RUTAS } from "@/lib/routes";
+import type { RegisterFormData, RegisterResponse } from "../schemas";
+import { registerUser } from "../services/register.service";
+import { useAuthStore } from "../store/auth.store";
 
 const COOKIE_OPTIONS = {
   path: "/",
@@ -24,7 +24,11 @@ function persistAuthTokens(data: RegisterResponse) {
   setCookie(AUTH_COOKIES.ACCESS_TOKEN, access_token, COOKIE_OPTIONS);
   setCookie(AUTH_COOKIES.REFRESH_TOKEN, refresh_token, COOKIE_OPTIONS);
   setCookie(AUTH_COOKIES.EXPIRES_AT, expires_at, COOKIE_OPTIONS);
-  setCookie(AUTH_COOKIES.USER_SESSION, JSON.stringify(data.user), COOKIE_OPTIONS);
+  setCookie(
+    AUTH_COOKIES.USER_SESSION,
+    JSON.stringify(data.user),
+    COOKIE_OPTIONS,
+  );
 }
 
 /**
@@ -74,14 +78,12 @@ export function useRegister() {
         ? decodeURIComponent(nextUrl)
         : (postAuth ?? RUTAS.cuenta.inscripcion);
 
-      if (message) toast.success(message);
+      if (message) notify.success(message);
       router.push(redirectTo);
       router.refresh();
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Error al crear la cuenta",
-      );
+      notify.error(handleApiError(error).message);
     },
   });
 }

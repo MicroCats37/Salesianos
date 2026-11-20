@@ -1,0 +1,1 @@
+export { useCompetenciasLista } from "./useCompetencias";

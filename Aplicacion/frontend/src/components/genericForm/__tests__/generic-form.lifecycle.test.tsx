@@ -13,6 +13,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -20,8 +21,18 @@ import { z } from "zod";
 import { GenericForm } from "@/components/genericForm/GenericForm";
 import { imageField } from "@/lib/forms/imageField";
 
+/**
+ * The schema of the harness.
+ *
+ * `titulo` is OPTIONAL on purpose: the cases of this suite submit a form that
+ * does NOT carry the title (they exercise the coercion, the hand-off of the
+ * file and the 422 of the server), and Zod — which owns the validation
+ * (`contract/smart.md` §1.A and §5.1) — blocks a submit of a form that does
+ * not comply. A required title would stop those submits BEFORE the behaviour
+ * under test ever runs.
+ */
 const schema = z.object({
-  titulo: z.string(),
+  titulo: z.string().optional(),
   cantidad: z.coerce.number().optional(),
   descripcion: z.string().nullable().optional(),
   imagen: imageField().schema,
@@ -106,7 +117,10 @@ describe("GenericForm — the create mapping", () => {
       <GenericForm<FormValues> schema={schema} onSubmit={onSubmit}>
         {({ methods }) => (
           <>
-            <button type="button" onClick={() => methods.setValue("imagen", file)}>
+            <button
+              type="button"
+              onClick={() => methods.setValue("imagen", file)}
+            >
               Elegir archivo
             </button>
             <button type="submit">Enviar</button>
@@ -177,7 +191,9 @@ describe("GenericForm — the re-hydration", () => {
 
     rerender(<EditForm initialData={{ titulo: "B" }} />);
 
-    await waitFor(() => expect(screen.getByLabelText("titulo")).toHaveValue("B"));
+    await waitFor(() =>
+      expect(screen.getByLabelText("titulo")).toHaveValue("B"),
+    );
   });
 
   it("does NOT reset when the parent rebuilds the SAME initial data", async () => {
@@ -191,14 +207,18 @@ describe("GenericForm — the re-hydration", () => {
     // The parent rebuilds the object: the CONTENT did not change.
     rerender(<EditForm initialData={{ titulo: "A" }} />);
 
-    await waitFor(() => expect(screen.getByLabelText("titulo")).toHaveValue("editado"));
+    await waitFor(() =>
+      expect(screen.getByLabelText("titulo")).toHaveValue("editado"),
+    );
   });
 });
 
 describe("GenericForm — the field errors of the backend", () => {
   it("reaches the control it belongs to", async () => {
     const user = userEvent.setup();
-    const onSubmit = vi.fn().mockRejectedValue(serverError("titulo", "El título es obligatorio."));
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValue(serverError("titulo", "El título es obligatorio."));
 
     render(
       <GenericForm<FormValues>
@@ -218,9 +238,9 @@ describe("GenericForm — the field errors of the backend", () => {
 
   it("calls setError EXACTLY ONCE per field", async () => {
     const user = userEvent.setup();
-    const onSubmit = vi.fn().mockRejectedValue(
-      serverError("titulo", "El título es obligatorio."),
-    );
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValue(serverError("titulo", "El título es obligatorio."));
 
     // The calls are observed OUTSIDE the component, so the assertion can see
     // how many times `setError` was called and for which field.
@@ -230,16 +250,25 @@ describe("GenericForm — the field errors of the backend", () => {
       const methods = useForm<FormValues>({
         resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
       });
-      const originalSetError = methods.setError;
+      // The spy is installed ONCE. Installing it on every render would wrap the
+      // spy of the previous render, and the SAME call would be counted once
+      // per render instead of once per field.
+      const originalSetError = useRef(methods.setError);
+      const spied = useRef(false);
 
-      (
-        methods as unknown as { setError: (...args: unknown[]) => void }
-      ).setError = (...args: unknown[]) => {
-        setErrorCalls.push(String(args[0]));
-        return (
-          originalSetError as unknown as (...inner: unknown[]) => void
-        )(...args);
-      };
+      if (!spied.current) {
+        spied.current = true;
+        const original = originalSetError.current;
+
+        (
+          methods as unknown as { setError: (...args: unknown[]) => void }
+        ).setError = (...args: unknown[]) => {
+          setErrorCalls.push(String(args[0]));
+          return (original as unknown as (...inner: unknown[]) => void)(
+            ...args,
+          );
+        };
+      }
 
       return (
         <GenericForm<FormValues>

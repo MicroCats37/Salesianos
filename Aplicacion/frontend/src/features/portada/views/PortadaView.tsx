@@ -1,3 +1,4 @@
+import { NavbarBrand } from "@/components/brand/NavbarBrand";
 import { ChampionshipSection } from "@/features/portada/components/ChampionshipSection";
 import { ClosingSection } from "@/features/portada/components/ClosingSection";
 import { ExperienceSection } from "@/features/portada/components/ExperienceSection";
@@ -9,7 +10,6 @@ import { LiveSection } from "@/features/portada/components/LiveSection";
 import { MobileTicketBar } from "@/features/portada/components/MobileTicketBar";
 import { MomentosSection } from "@/features/portada/components/MomentosSection";
 import { Navbar } from "@/features/portada/components/Navbar";
-import { NavbarBrand } from "@/components/brand/NavbarBrand";
 import { PartyPassSection } from "@/features/portada/components/PartyPassSection";
 import { PartySection } from "@/features/portada/components/PartySection";
 import { PortadaFooter } from "@/features/portada/components/PortadaFooter";
@@ -19,6 +19,7 @@ import { ScheduleSection } from "@/features/portada/components/ScheduleSection";
 import { ScrollSnapScope } from "@/features/portada/components/ScrollSnapScope";
 import { SponsorsSection } from "@/features/portada/components/SponsorsSection";
 import { TicketsSection } from "@/features/portada/components/TicketsSection";
+import { TiendaSection } from "@/features/portada/components/TiendaSection";
 import { VenueSection } from "@/features/portada/components/VenueSection";
 import { NAV_LINKS } from "@/features/portada/fixtures/festival";
 
@@ -57,6 +58,7 @@ export function PortadaView() {
         <PartyPassSection />
         <RegistrationSteps />
         <LiveSection />
+        <TiendaSection />
         <VenueSection />
         <SponsorsSection />
         <FaqSection />

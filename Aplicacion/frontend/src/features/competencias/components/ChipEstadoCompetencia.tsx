@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   Ban,
   CheckCircle2,
@@ -7,7 +8,6 @@ import {
   TriangleAlert,
   XCircle,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EstadoConRol, RolEstado } from "../types/competencia.types";
 
@@ -105,13 +105,18 @@ export function ChipEstadoCompetencia({
           cubo.superficie,
         )}
       >
-        <Icono className={cn("size-3.5 shrink-0", cubo.trazo)} aria-hidden="true" />
+        <Icono
+          className={cn("size-3.5 shrink-0", cubo.trazo)}
+          aria-hidden="true"
+        />
         <span className="text-xs font-semibold text-foreground">
           {estado.estado.etiqueta}
         </span>
       </span>
       {descripcion ? (
-        <span className="text-caption text-muted-foreground">{descripcion}</span>
+        <span className="text-caption text-muted-foreground">
+          {descripcion}
+        </span>
       ) : null}
     </span>
   );

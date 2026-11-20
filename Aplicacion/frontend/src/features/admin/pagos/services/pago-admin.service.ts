@@ -1,4 +1,3 @@
-import type { PaginatedResult } from "@/shared/schemas/pagination.schema";
 import {
   pedirAdmin,
   RUTAS_ADMIN,
@@ -6,6 +5,7 @@ import {
 import type { ParamsListaAdmin } from "@/features/admin/operaciones/utils/admin.claves.utils";
 import { parametrosConsultaAdmin } from "@/features/admin/operaciones/utils/admin.filtros.utils";
 import type { PayloadAprobarPagoManualAdmin } from "@/features/admin/operaciones/utils/admin.payload.utils";
+import type { PaginatedResult } from "@/shared/schemas/pagination.schema";
 import {
   adminPagoDetalleEnvelope,
   listaPagosAdminEnvelope,
@@ -70,9 +70,13 @@ export async function listarPagosAdmin(
 export async function obtenerPagoAdmin(
   compraId: string,
 ): Promise<AdminPagoDetalleOut> {
-  const detalle = await pedirAdmin(RUTAS_ADMIN.pagoDetalle, adminPagoDetalleEnvelope, {
-    pathParams: { compra_id: compraId },
-  });
+  const detalle = await pedirAdmin(
+    RUTAS_ADMIN.pagoDetalle,
+    adminPagoDetalleEnvelope,
+    {
+      pathParams: { compra_id: compraId },
+    },
+  );
 
   return pagoAdminDetalleDesdeWire(detalle);
 }
@@ -93,10 +97,9 @@ export async function aprobarPagoManualAdmin(
     {
       pathParams: { orden_pago_id: payload.orden_pago_id },
       payload: {
-        monto: payload.monto,
-        moneda: payload.moneda,
+        canal: payload.canal,
+        referencia: payload.referencia,
         motivo: payload.motivo,
-        ...(payload.version === undefined ? {} : { version: payload.version }),
       },
     },
   );

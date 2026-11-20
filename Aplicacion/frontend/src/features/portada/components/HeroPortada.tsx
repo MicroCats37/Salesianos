@@ -250,14 +250,14 @@ export function HeroPortada() {
           >
             <a
               href={COPY.hero.ctaPrimario.href}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-info via-primary to-brand-deep-navy px-8 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-2xl shadow-primary/30 transition-transform hover:scale-105"
+              className="btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-8 text-xs font-black uppercase tracking-widest text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
             >
               {COPY.hero.ctaPrimario.label}
               <ArrowUpRight className="size-4" aria-hidden="true" />
             </a>
             <a
               href={COPY.hero.ctaSecundario.href}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-surface-inverse-foreground/30 px-6 text-xs font-black uppercase tracking-widest text-surface-inverse-foreground transition-colors hover:bg-surface-inverse-foreground/10"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-brand-on-gradient-border px-6 text-xs font-black uppercase tracking-widest text-brand-on-gradient transition-colors hover:bg-brand-on-gradient-soft"
             >
               {COPY.hero.ctaSecundario.label}
             </a>

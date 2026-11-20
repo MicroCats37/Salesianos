@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
-import { type AdminDestino, type AdminGrupo } from "@/features/admin/utils/admin.secciones";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import type {
+  AdminDestino,
+  AdminGrupo,
+} from "@/features/admin/utils/admin.secciones";
 import { AppSidebar } from "./AppSidebar";
 import { AppTopbar } from "./AppTopbar";
 
@@ -75,7 +75,24 @@ export function AppShell({
         area={area}
       />
 
-      <SidebarInset className="min-w-0">
+      {/*
+        El contenido del área.
+
+        El shell NO es dueño del `<main>`: cada layout declara su propio
+        `<main id="contenido">`, con su enlace de salto, y así el área
+        cuenta con UN SOLO landmark de contenido. Por eso el contenedor del
+        shell es una `div` y no el `SidebarInset` de shadcn, que es un
+        `<main>`: usarlo aquí anidaría dos `main` y rompería la estructura
+        de landmarks que el layout publica.
+
+        El tratamiento visual del inset (el margen, la esquina redondeada y
+        la sombra de la variante `inset`) sí es el del producto, y por eso
+        se replica aquí con los mismos roles.
+      */}
+      <div
+        data-slot="sidebar-inset"
+        className="relative flex w-full min-w-0 flex-1 flex-col bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-[var(--radius-xl)] md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2"
+      >
         {topbar ?? (
           <AppTopbar
             nivel={nivel}
@@ -87,7 +104,7 @@ export function AppShell({
         )}
 
         {children}
-      </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }

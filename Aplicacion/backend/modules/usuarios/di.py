@@ -13,6 +13,7 @@ por el grafo de fixtures sin `unittest.mock.patch`
 (`contract/TEST_ARCHITECTURE_CONTRACT.md` §6).
 """
 
+from django.conf import settings
 from injector import Binder, Module
 
 from modules.usuarios.domain.ports import IConsultaDocumentoClient
@@ -42,7 +43,10 @@ from modules.usuarios.domain.services.orchestrators.auth_orchestrator import (
 from modules.usuarios.domain.services.orchestrators.persona_orchestrator import (
     PersonaOrchestrator,
 )
-from modules.usuarios.infrastructure.services import ConsultaDocumentoClient
+from modules.usuarios.infrastructure.services import (
+    ConsultaDocumentoClient,
+    ConsultaDocumentoSimulator,
+)
 from modules.usuarios.presentation.presenters.auth_presenter import AuthPresenter
 from modules.usuarios.presentation.presenters.persona_presenter import (
     PersonaBusquedaPresenter,
@@ -55,8 +59,12 @@ class UsuariosModule(Module):
     """Vínculos del módulo `usuarios`."""
 
     def configure(self, binder: Binder) -> None:
-        # Puerto de la fuente externa de documentos → implementación HTTP.
-        binder.bind(IConsultaDocumentoClient, to=ConsultaDocumentoClient)
+        # Igual que legacy: desarrollo usa el emulador determinístico; fuera
+        # de DEBUG se consulta el worker real.
+        if getattr(settings, "CONSULTA_EXTERNA_USE_SIMULATOR", settings.DEBUG):
+            binder.bind(IConsultaDocumentoClient, to=ConsultaDocumentoSimulator)
+        else:
+            binder.bind(IConsultaDocumentoClient, to=ConsultaDocumentoClient)
 
         # Selectores (sólo lectura).
         binder.bind(PersonaSelector, to=PersonaSelector)

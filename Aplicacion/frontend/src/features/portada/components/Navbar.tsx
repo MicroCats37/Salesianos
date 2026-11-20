@@ -70,7 +70,7 @@ export function Navbar({
         lados, y la píldora los recupera: nada de la portada deja de ser
         clicable por culpa del chrome.
       */}
-      <header className="pointer-events-none sticky top-0 z-50 pt-3 sm:pt-4">
+      <header className="pointer-events-none sticky top-0 z-50 min-h-[var(--portada-chrome-height)] pt-3 sm:pt-4">
         <div
           className={`pointer-events-auto mx-auto flex h-16 w-[calc(100%-1.5rem)] max-w-[1400px] items-center justify-between gap-4 rounded-[var(--radius-2xl)] border px-3 transition-all duration-(--motion-duration-base) sm:w-[calc(100%-2rem)] sm:px-5 ${
             scrolled
@@ -101,11 +101,7 @@ export function Navbar({
                 variant="outline"
                 className="h-11 rounded-full border-primary/25 px-4 text-xs font-black uppercase tracking-wider text-primary"
               >
-                <a
-                  href={EN_VIVO.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={EN_VIVO.url} target="_blank" rel="noopener noreferrer">
                   <Radio className="mr-2 size-4" />
                   En vivo
                 </a>
@@ -143,7 +139,7 @@ export function Navbar({
 
             <Button
               asChild
-              className="btn-brand-gradient btn-shine h-11 rounded-full px-5 text-sm font-black text-primary-foreground"
+              className="btn-shine h-11 rounded-full bg-brand-gradient-deep px-5 text-sm font-black text-brand-on-gradient"
             >
               <Link href={registrationHref}>{ctaLabel}</Link>
             </Button>
@@ -214,7 +210,7 @@ export function Navbar({
 
                 <Button
                   asChild
-                  className="btn-brand-gradient h-11 rounded-xl font-black text-primary-foreground"
+                  className="h-11 rounded-xl bg-brand-gradient-deep font-black text-brand-on-gradient"
                 >
                   <Link href={registrationHref}>{ctaLabel}</Link>
                 </Button>

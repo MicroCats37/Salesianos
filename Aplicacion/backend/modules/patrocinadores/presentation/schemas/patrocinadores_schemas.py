@@ -63,6 +63,7 @@ class PatrocinadorEspecificaOut(BaseSchema):
     descripcion: str = Field("", description="Descripción de la ficha.")
     sitio_web: str = Field("", description="Sitio web del patrocinador.")
     visible: bool = Field(True, description="Visibilidad pública del patrocinador.")
+    orden: int = Field(0, description="Posición persistida del banner público.")
 
 
 class PatrocinadorLogoOut(BaseSchema):
@@ -164,19 +165,21 @@ class CrearPatrocinadorIn(BaseSchema):
             return ""
         return valor
 
+
+class ActualizarPatrocinadorIn(BaseSchema):
+    """Edición parcial de la ficha, sin alterar piezas de media."""
+
+    nombre: str | None = Field(None, min_length=1, max_length=200)
+    descripcion: str | None = Field(None, max_length=5000)
+    sitio_web: str | None = Field(None, max_length=300)
+    visible: bool | None = None
+
+    _texto_opcional_a_cadena = field_validator("descripcion", "sitio_web", mode="before")(
+        CrearPatrocinadorIn._texto_opcional_a_cadena
+    )
     @field_validator("sitio_web")
     @classmethod
-    def _sitio_web_valido(cls, valor: str) -> str:
-        """El sitio web se valida EN EL BORDE HTTP.
-
-        El campo del modelo es un `URLField` de Django, pero `Model.save()`
-        NO ejecuta los validadores: sin esta comprobación una URL inválida
-        se persistiría en silencio. Se usa el MISMO validador que el modelo
-        (`URLValidator`), de modo que el contrato del wire y el de la base de
-        datos no puedan divergir.
-
-        El campo es opcional: la cadena vacía significa "sin sitio web".
-        """
+    def _sitio_web_valido(cls, valor: str | None) -> str | None:
         if not valor:
             return valor
         try:
@@ -186,8 +189,25 @@ class CrearPatrocinadorIn(BaseSchema):
         return valor
 
 
+class ReordenarImagenesPatrocinadorIn(BaseSchema):
+    """La secuencia ordenada de identificadores de piezas de la galería."""
+
+    imagen_ids: list[UUID] = Field(default_factory=list)
+
+
+class ReordenarPatrocinadoresIn(BaseSchema):
+    patrocinador_ids: list[UUID] = Field(default_factory=list)
+
+
+class ReemplazarArchivoPatrocinadorIn(BaseSchema):
+    """Token multipart de una pieza que se reemplaza."""
+
+    archivo: str = Field(..., min_length=1)
+
+
 __all__ = [
     "CrearPatrocinadorIn",
+    "ActualizarPatrocinadorIn",
     "ImagenPatrocinadorIn",
     "PatrocinadorEspecificaOut",
     "PatrocinadorGeneralOut",
@@ -195,4 +215,7 @@ __all__ = [
     "PatrocinadorImagenOut",
     "PatrocinadorLogoOut",
     "PatrocinadorOut",
+    "ReemplazarArchivoPatrocinadorIn",
+    "ReordenarImagenesPatrocinadorIn",
+    "ReordenarPatrocinadoresIn",
 ]

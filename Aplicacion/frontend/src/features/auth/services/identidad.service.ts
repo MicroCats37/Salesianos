@@ -1,16 +1,16 @@
 import { apiSend } from "@/lib/api";
 import { apiResponseSchema } from "@/types/api.types";
 import {
-  DocumentoConsultaSchema,
-  PersonaConfirmarInSchema,
-  PersonaResueltaSchema,
-  PersonaResolverInSchema,
-  PersonaSchema,
   type DocumentoConsulta,
+  DocumentoConsultaSchema,
   type Persona,
   type PersonaConfirmarIn,
-  type PersonaResuelta,
+  PersonaConfirmarInSchema,
   type PersonaResolverIn,
+  PersonaResolverInSchema,
+  type PersonaResuelta,
+  PersonaResueltaSchema,
+  PersonaSchema,
 } from "../schemas/identidad.schema";
 
 /**
@@ -31,7 +31,9 @@ export const PERSONA_RESOLVER_PATH = "/personas/resolver";
 export const PERSONA_CONFIRMAR_PATH = "/personas/confirmar";
 
 /** The envelopes of the three routes, with the EXACT mirror of their wrapper. */
-const documentoConsultaResponseSchema = apiResponseSchema(DocumentoConsultaSchema);
+const documentoConsultaResponseSchema = apiResponseSchema(
+  DocumentoConsultaSchema,
+);
 const personaResueltaResponseSchema = apiResponseSchema(PersonaResueltaSchema);
 const personaResponseSchema = apiResponseSchema(PersonaSchema);
 
@@ -42,7 +44,11 @@ const personaResponseSchema = apiResponseSchema(PersonaSchema);
  * a partially trusted value (`contract/api-wrapper-presenter-contract.md` §7).
  */
 function leerRespuesta<T>(
-  envelope: { success: boolean; data: T | null; error?: { message: string } | null },
+  envelope: {
+    success: boolean;
+    data: T | null;
+    error?: { message: string } | null;
+  },
   mensaje: string,
 ): T {
   if (!envelope.success) {
@@ -88,7 +94,11 @@ export async function resolverPersona(
 ): Promise<PersonaResuelta> {
   const cuerpo = PersonaResolverInSchema.parse(payload);
 
-  const { data } = await apiSend<unknown>("POST", PERSONA_RESOLVER_PATH, cuerpo);
+  const { data } = await apiSend<unknown>(
+    "POST",
+    PERSONA_RESOLVER_PATH,
+    cuerpo,
+  );
 
   const envelope = personaResueltaResponseSchema.parse(data);
 
@@ -111,7 +121,11 @@ export async function confirmarPersona(
 ): Promise<Persona> {
   const cuerpo = PersonaConfirmarInSchema.parse(payload);
 
-  const { data } = await apiSend<unknown>("POST", PERSONA_CONFIRMAR_PATH, cuerpo);
+  const { data } = await apiSend<unknown>(
+    "POST",
+    PERSONA_CONFIRMAR_PATH,
+    cuerpo,
+  );
 
   const envelope = personaResponseSchema.parse(data);
 

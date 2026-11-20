@@ -20,11 +20,15 @@ estado) vive en `EncuentroFlujo`: son comandos distintos, con reglas
 distintas.
 """
 
+from math import log2
+
 from asgiref.sync import sync_to_async
 from django.db import transaction
+from django.utils import timezone
 from injector import inject
 
 from modules.competencias.domain.models.auditoria import AccionAuditada
+from modules.competencias.domain.constants import EstadoCompetenciaEquipo, EstadoEncuentro, SlotDestino
 from modules.competencias.domain.ports import IAlcanceEdicion, IEquipoElegibleService
 from modules.competencias.domain.results.competencias_results import (
     CompetenciaDetalleResult,
@@ -198,6 +202,11 @@ class CuadroFlujo:
         encuentro = await sync_to_async(self._crear_encuentro_sync)(ronda, data, actor)
         return await sync_to_async(self._proyectar_encuentro)(encuentro)
 
+    async def generar_cuadro(self, competencia_id, *, actor=None):
+        """Genera una llave de eliminación simple desde las semillas activas."""
+        await sync_to_async(self._generar_cuadro_sync)(competencia_id, actor)
+        return await sync_to_async(self.selector.detalle)(competencia_id)
+
     # ── internos ───────────────────────────────────────────────────────────
 
     def _veredicto(self, equipo_id, edicion_id, disciplina_id, categoria_id):
@@ -281,6 +290,123 @@ class CuadroFlujo:
             detalle={"orden": encuentro.orden},
         )
         return encuentro
+
+    @transaction.atomic()
+    def _generar_cuadro_sync(self, competencia_id, actor):
+        """Persiste en una única transacción la llave inicial y sus enlaces."""
+        from modules.competencias.domain.exceptions import TransicionInvalidaError
+        from modules.competencias.domain.models import Competencia, CompetenciaEquipo, Encuentro, Ronda
+
+        competencia_base = self.selector.obtener_por_id(competencia_id)
+        competencia = Competencia.objects.select_for_update().get(id=competencia_base.id)
+        if Ronda.objects.filter(competencia=competencia).exists():
+            raise TransicionInvalidaError()
+
+        equipos = list(
+            CompetenciaEquipo.objects.select_for_update()
+            .filter(competencia=competencia, estado=EstadoCompetenciaEquipo.ACTIVO)
+            .order_by("orden")
+        )
+        if len(equipos) < 2:
+            raise TransicionInvalidaError()
+
+        tamano_llave = 1 << (len(equipos) - 1).bit_length()
+        total_rondas = int(log2(tamano_llave))
+        rondas = []
+        encuentros_por_ronda = []
+
+        for indice_ronda in range(total_rondas):
+            encuentros_en_ronda = tamano_llave >> (indice_ronda + 1)
+            ronda = Ronda.objects.create(
+                competencia=competencia,
+                etiqueta=self._etiqueta_ronda(encuentros_en_ronda),
+                orden=indice_ronda + 1,
+            )
+            rondas.append(ronda)
+            encuentros = []
+            for indice_encuentro in range(encuentros_en_ronda):
+                participante_1 = None
+                participante_2 = None
+                if indice_ronda == 0:
+                    siembras = self._orden_siembra(tamano_llave)
+                    posicion = indice_encuentro * 2
+                    semilla_1 = siembras[posicion]
+                    semilla_2 = siembras[posicion + 1]
+                    participante_1 = equipos[semilla_1 - 1] if semilla_1 <= len(equipos) else None
+                    participante_2 = equipos[semilla_2 - 1] if semilla_2 <= len(equipos) else None
+
+                es_bye = (participante_1 is None) != (participante_2 is None)
+                ganador = (participante_1 or participante_2) if es_bye else None
+                encuentros.append(
+                    Encuentro.objects.create(
+                        ronda=ronda,
+                        orden=indice_encuentro + 1,
+                        participante_1=participante_1,
+                        participante_2=participante_2,
+                        es_bye=es_bye,
+                        ganador=ganador,
+                        estado=(EstadoEncuentro.FINALIZADO if es_bye else EstadoEncuentro.BORRADOR),
+                        finalizado_en=timezone.now() if es_bye else None,
+                    )
+                )
+            encuentros_por_ronda.append(encuentros)
+
+        for indice_ronda, encuentros in enumerate(encuentros_por_ronda[:-1]):
+            destinos = encuentros_por_ronda[indice_ronda + 1]
+            for indice, encuentro in enumerate(encuentros):
+                encuentro.siguiente_encuentro = destinos[indice // 2]
+                encuentro.slot_destino = (
+                    SlotDestino.PARTICIPANTE_1
+                    if indice % 2 == 0
+                    else SlotDestino.PARTICIPANTE_2
+                )
+                encuentro.save(update_fields=["siguiente_encuentro", "slot_destino", "updated_at"])
+
+        # A bye is already resolved at generation time, so its winner must occupy
+        # the successor slot before an administrator starts operating the bracket.
+        for encuentro in encuentros_por_ronda[0]:
+            if not encuentro.es_bye:
+                continue
+            campo_destino = (
+                "participante_1"
+                if encuentro.slot_destino == SlotDestino.PARTICIPANTE_1
+                else "participante_2"
+            )
+            setattr(encuentro.siguiente_encuentro, campo_destino, encuentro.ganador)
+            encuentro.siguiente_encuentro.save(
+                update_fields=[campo_destino, "updated_at"]
+            )
+
+        self.auditoria_core.registrar(
+            accion=AccionAuditada.CREACION_ENCUENTRO,
+            motivo="Generación inicial del cuadro de eliminación simple",
+            competencia=competencia,
+            actor=actor,
+            detalle={
+                "equipos_activos": len(equipos),
+                "tamano_llave": tamano_llave,
+                "rondas": len(rondas),
+                "encuentros": sum(len(encuentros) for encuentros in encuentros_por_ronda),
+            },
+        )
+
+    @staticmethod
+    def _etiqueta_ronda(encuentros: int) -> str:
+        etiquetas = {1: "Final", 2: "Semifinales", 4: "Cuartos de final", 8: "Octavos de final"}
+        return etiquetas.get(encuentros, f"Ronda de {encuentros * 2}")
+
+    @staticmethod
+    def _orden_siembra(tamano_llave: int) -> list[int]:
+        """Distribuye las semillas para que las más altas reciban los byes."""
+        siembras = [1, 2]
+        while len(siembras) < tamano_llave:
+            siguiente_tamano = len(siembras) * 2 + 1
+            siembras = [
+                semilla
+                for semilla in siembras
+                for semilla in (semilla, siguiente_tamano - semilla)
+            ]
+        return siembras
 
     def _obtener_participacion(self, competencia_id, participacion_id):
         """La participación, comprobando que es de la competencia indicada."""

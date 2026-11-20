@@ -1,15 +1,15 @@
 "use client";
 
+import { gsap } from "gsap";
 import {
-  CalendarRange,
   ChevronDown,
+  Clapperboard,
   ClipboardList,
   Contact,
   CreditCard,
   Handshake,
   LayoutDashboard,
   type LucideIcon,
-  PackageCheck,
   ScanLine,
   ScrollText,
   Store,
@@ -19,7 +19,6 @@ import {
   UserCog,
   UsersRound,
 } from "lucide-react";
-import { gsap } from "gsap";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -56,7 +55,6 @@ import { AdminUserMenu } from "./AdminUserMenu";
 
 const ADMIN_ICONOS: Record<AdminIcono, LucideIcon> = {
   resumen: LayoutDashboard,
-  ediciones: CalendarRange,
   inscripciones: ClipboardList,
   equipos: Trophy,
   participantes: UsersRound,
@@ -65,11 +63,11 @@ const ADMIN_ICONOS: Record<AdminIcono, LucideIcon> = {
   pases: Ticket,
   ingreso: ScanLine,
   tienda: Store,
-  entregas: PackageCheck,
   patrocinadores: Handshake,
   personas: Contact,
   usuarios: UserCog,
   validaciones: ScrollText,
+  videos: Clapperboard,
 };
 
 /**
@@ -236,119 +234,131 @@ export function AppSidebar({
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="gap-1 px-2 py-3">
-        <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sidebar-primary/80">
-            Navegación
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {DESTINOS_CUENTA.map((destino) => {
-                const esActivo = pathname === destino.href;
-                const DestinoIcono = destino.icon;
+      <SidebarContent className="px-2 py-3">
+        {/*
+          La navegación del producto es UN landmark: los destinos de la
+          cuenta, el resumen de la edición y los grupos de administración
+          viven en la misma lista, y un lector de pantalla la recorre de
+          una sola vez. El nombre accesible dice qué lista es.
+        */}
+        <nav
+          aria-label="Navegación de la consola"
+          className="flex flex-col gap-1"
+        >
+          <SidebarGroup className="p-0">
+            <SidebarGroupLabel className="px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sidebar-primary/80">
+              Navegación
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {DESTINOS_CUENTA.map((destino) => {
+                  const esActivo = pathname === destino.href;
+                  const DestinoIcono = destino.icon;
 
-                return (
-                  <SidebarMenuItem key={destino.id}>
+                  return (
+                    <SidebarMenuItem key={destino.id}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={esActivo}
+                        tooltip={destino.titulo}
+                        className={cn(
+                          "h-auto min-h-11 gap-2.5 rounded-[var(--radius-md)] py-2 transition-transform duration-(--motion-duration-fast) hover:translate-x-0.5",
+                          esActivo &&
+                            "border-l-2 border-sidebar-primary bg-sidebar-accent font-bold text-sidebar-foreground",
+                        )}
+                      >
+                        <Link
+                          href={destino.href}
+                          onClick={cerrarEnMovil}
+                          aria-current={esActivo ? "page" : undefined}
+                        >
+                          <DestinoIcono
+                            className={cn(
+                              "size-4 shrink-0 transition-transform duration-(--motion-duration-fast) group-hover/menu-button:scale-110",
+                              esActivo && "text-sidebar-primary",
+                            )}
+                            aria-hidden="true"
+                          />
+                          <span className="flex flex-col items-start leading-tight">
+                            <span>{destino.titulo}</span>
+                            <span className="text-xs font-normal text-sidebar-foreground/70">
+                              {destino.descripcion}
+                            </span>
+                          </span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {resumen ? (
+            <SidebarGroup className="p-0">
+              <SidebarGroupLabel className="px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sidebar-primary/80">
+                Edición
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      isActive={esActivo}
-                      tooltip={destino.titulo}
+                      isActive={activo?.id === resumen.id}
+                      tooltip={resumen.title}
                       className={cn(
                         "h-auto min-h-11 gap-2.5 rounded-[var(--radius-md)] py-2 transition-transform duration-(--motion-duration-fast) hover:translate-x-0.5",
-                        esActivo &&
+                        activo?.id === resumen.id &&
                           "border-l-2 border-sidebar-primary bg-sidebar-accent font-bold text-sidebar-foreground",
                       )}
                     >
                       <Link
-                        href={destino.href}
+                        href={resumen.href}
                         onClick={cerrarEnMovil}
-                        aria-current={esActivo ? "page" : undefined}
+                        aria-current={
+                          activo?.id === resumen.id ? "page" : undefined
+                        }
                       >
-                        <DestinoIcono
-                          className={cn(
-                            "size-4 shrink-0 transition-transform duration-(--motion-duration-fast) group-hover/menu-button:scale-110",
-                            esActivo && "text-sidebar-primary",
-                          )}
-                          aria-hidden="true"
-                        />
+                        {ResumenIcono ? (
+                          <ResumenIcono
+                            className={cn(
+                              "size-4 shrink-0 transition-transform duration-(--motion-duration-fast) group-hover/menu-button:scale-110",
+                              activo?.id === resumen.id &&
+                                "text-sidebar-primary",
+                            )}
+                            aria-hidden="true"
+                          />
+                        ) : null}
                         <span className="flex flex-col items-start leading-tight">
-                          <span>{destino.titulo}</span>
+                          <span>{resumen.title}</span>
                           <span className="text-xs font-normal text-sidebar-foreground/70">
-                            {destino.descripcion}
+                            {resumen.description}
                           </span>
                         </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ) : null}
 
-        {resumen ? (
-          <SidebarGroup className="p-0">
-            <SidebarGroupLabel className="px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sidebar-primary/80">
-              Edición
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={activo?.id === resumen.id}
-                    tooltip={resumen.title}
-                    className={cn(
-                      "h-auto min-h-11 gap-2.5 rounded-[var(--radius-md)] py-2 transition-transform duration-(--motion-duration-fast) hover:translate-x-0.5",
-                      activo?.id === resumen.id &&
-                        "border-l-2 border-sidebar-primary bg-sidebar-accent font-bold text-sidebar-foreground",
-                    )}
-                  >
-                    <Link
-                      href={resumen.href}
-                      onClick={cerrarEnMovil}
-                      aria-current={
-                        activo?.id === resumen.id ? "page" : undefined
-                      }
-                    >
-                      {ResumenIcono ? (
-                        <ResumenIcono
-                          className={cn(
-                            "size-4 shrink-0 transition-transform duration-(--motion-duration-fast) group-hover/menu-button:scale-110",
-                            activo?.id === resumen.id && "text-sidebar-primary",
-                          )}
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                      <span className="flex flex-col items-start leading-tight">
-                        <span>{resumen.title}</span>
-                        <span className="text-xs font-normal text-sidebar-foreground/70">
-                          {resumen.description}
-                        </span>
-                      </span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : null}
-
-        {grupos.map((grupo) => (
-          <AppGrupoNavegacion
-            key={grupo.id}
-            grupo={grupo}
-            destinoActivoId={activo?.id}
-            abierto={!cerrados[grupo.id]}
-            onNavegar={cerrarEnMovil}
-            onToggle={(abierto) =>
-              setCerrados((previos) => ({
-                ...previos,
-                [grupo.id]: !abierto,
-              }))
-            }
-          />
-        ))}
+          {grupos.map((grupo) => (
+            <AppGrupoNavegacion
+              key={grupo.id}
+              grupo={grupo}
+              destinoActivoId={activo?.id}
+              abierto={!cerrados[grupo.id]}
+              onNavegar={cerrarEnMovil}
+              onToggle={(abierto) =>
+                setCerrados((previos) => ({
+                  ...previos,
+                  [grupo.id]: !abierto,
+                }))
+              }
+            />
+          ))}
+        </nav>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/60 p-3 group-data-[collapsible=icon]:p-1">
@@ -435,11 +445,7 @@ function AppGrupoNavegacion({
   );
 
   return (
-    <Collapsible
-      open={abierto}
-      onOpenChange={onToggle}
-      className="group/grupo"
-    >
+    <Collapsible open={abierto} onOpenChange={onToggle} className="group/grupo">
       <SidebarGroup className="p-0">
         <CollapsibleTrigger
           className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sidebar-primary/80 transition-colors duration-(--motion-duration-fast) hover:bg-sidebar-accent hover:text-sidebar-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring group-data-[collapsible=icon]:hidden"

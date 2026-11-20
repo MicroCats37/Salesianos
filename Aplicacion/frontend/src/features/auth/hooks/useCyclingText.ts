@@ -26,8 +26,7 @@ const DEFAULT_REGISTER_WORDS: CyclingEntry[] = [
 ];
 
 export function useCyclingText(words?: CyclingEntry[]) {
-  const entries =
-    words && words.length > 0 ? words : DEFAULT_LOGIN_WORDS;
+  const entries = words && words.length > 0 ? words : DEFAULT_LOGIN_WORDS;
   const [currentEntry, setCurrentEntry] = useState<CyclingEntry>(entries[0]);
   const [mounted, setMounted] = useState(false);
 

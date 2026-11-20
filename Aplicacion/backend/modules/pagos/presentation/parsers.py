@@ -23,6 +23,7 @@ import json
 
 def construir_payload_proveedor(
     *,
+    kr_answer: dict | None = None,
     payload_http: str | None = None,
     transaction_id: str | None = None,
     code: str | None = None,
@@ -53,6 +54,11 @@ def construir_payload_proveedor(
     Returns:
         El diccionario de proveedor. Nunca contiene credenciales.
     """
+    # El SDK entrega el objeto firmado completo bajo `kr_answer`. No se debe
+    # reducir ni reconstruir antes de que el flujo valide su firma.
+    if kr_answer:
+        return kr_answer
+
     payload: dict = {}
 
     if payload_http:

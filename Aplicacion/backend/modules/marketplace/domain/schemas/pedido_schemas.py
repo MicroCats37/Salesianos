@@ -63,6 +63,11 @@ class PedidoCreateData(BaseModel):
         min_length=1,
         description="Artículos del pedido.",
     )
+    tipo_documento: str = Field(..., max_length=3)
+    numero_documento: str = Field(..., max_length=20)
+    nombres: str = Field(..., max_length=255)
+    apellidos: str = Field(default="", max_length=255)
+    contacto_email: str = Field(default="", max_length=255)
 
 
 class PedidoLineaResuelta(BaseModel):

@@ -23,7 +23,7 @@ from asgiref.sync import async_to_sync
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from modules.eventos.domain.constants import EstadoEdicion
+from modules.eventos.domain.constants import MODULOS_HABILITABLES, EstadoEdicion
 from modules.eventos.domain.models import Edicion, Evento
 from modules.salesianos_fest.domain.models import (
     Categoria,
@@ -88,9 +88,8 @@ def _edicion_operador(estado=EstadoEdicion.PUBLICADA, modulos=("inscripciones",)
 def test_el_seed_deja_el_evento_y_la_edicion_publicada():
     """GIVEN una base de datos vacía
     WHEN  se ejecuta el seed
-    THEN  queda el evento raíz y su edición `PUBLICADA` con el módulo
-          `inscripciones` habilitado: es lo que resuelve el alcance cuando el
-          cliente no manda `edicion_id` (`FR-02` §2.2).
+    THEN  queda el evento raíz y su edición `PUBLICADA` con todos los módulos
+          implementados habilitados.
     """
     _sembrar()
 
@@ -98,7 +97,7 @@ def test_el_seed_deja_el_evento_y_la_edicion_publicada():
     edicion = Edicion.objects.get(evento=evento, slug="2026")
 
     assert edicion.estado == EstadoEdicion.PUBLICADA
-    assert edicion.modulo_habilitado("inscripciones")
+    assert set(edicion.modulos_habilitados) == set(MODULOS_HABILITABLES)
 
 
 def test_el_seed_deja_el_catalogo_completo_de_la_edicion():
@@ -268,8 +267,7 @@ def test_el_seed_no_borra_los_vinculos_del_operador():
 def test_el_seed_publica_una_edicion_que_estaba_en_borrador():
     """GIVEN una edición del operador en `BORRADOR`
     WHEN  se ejecuta el seed
-    THEN  la publica y le habilita el módulo `inscripciones`: el catálogo
-          tiene que ser resoluble sin que el frontend elija edición.
+    THEN  la publica y le habilita todos los módulos implementados.
     """
     edicion = _edicion_operador(
         estado=EstadoEdicion.BORRADOR,
@@ -280,7 +278,7 @@ def test_el_seed_publica_una_edicion_que_estaba_en_borrador():
 
     edicion.refresh_from_db()
     assert edicion.estado == EstadoEdicion.PUBLICADA
-    assert edicion.modulo_habilitado("inscripciones")
+    assert set(edicion.modulos_habilitados) == set(MODULOS_HABILITABLES)
 
 
 def test_el_seed_falla_si_ya_hay_otra_edicion_publicada():

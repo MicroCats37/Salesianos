@@ -24,7 +24,11 @@ import type { ApiError, ErrorParser } from "./types";
 const genericRestParser: ErrorParser = (_status, data: any) => {
   // Prefer the server-built, human-readable top-level `error.message`
   // when present (backend now concatenates NonFieldErrors + field errors with " • ").
-  if (data?.error?.message && typeof data.error.message === "string" && data.error.message.length > 0) {
+  if (
+    data?.error?.message &&
+    typeof data.error.message === "string" &&
+    data.error.message.length > 0
+  ) {
     return { message: data.error.message, status: _status };
   }
 

@@ -3,8 +3,8 @@
 import { ArrowUpRight, CalendarPlus } from "lucide-react";
 import Image from "next/image";
 import { PortadaSection } from "@/features/portada/components/PortadaSection";
-import { ENLACES, SECCIONES } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { ENLACES, SECCIONES } from "@/features/portada/fixtures/festival";
 
 /**
  * Sección "01 / LA EXPERIENCIA".
@@ -63,7 +63,7 @@ export function ExperienceSection() {
               </p>
               <span
                 aria-hidden="true"
-                className="mt-5 grid size-10 place-items-center rounded-full border border-primary/25 text-primary transition-transform duration-300 group-hover:rotate-45 group-hover:bg-primary group-hover:text-primary-foreground"
+                className="mt-5 grid size-10 place-items-center rounded-full border border-primary/25 text-primary transition-transform duration-300 group-hover:rotate-45 group-hover:bg-accent group-hover:text-accent-foreground"
               >
                 <ArrowUpRight className="size-5" />
               </span>

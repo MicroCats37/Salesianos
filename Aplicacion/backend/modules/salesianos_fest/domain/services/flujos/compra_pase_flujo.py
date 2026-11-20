@@ -258,11 +258,18 @@ class CompraPaseFlujo:
     def _resolver_comprador(self, data: ComprarPaseData, actor) -> str:
         """La identidad del COMPRADOR.
 
+        - Identidad YA RESUELTA (`data.persona_id`) → el comprador es esa
+          persona. Es el camino del comando ADMINISTRATIVO de compra asistida:
+          el cliente se resolvió una vez y la compra NUNCA se atribuye a la
+          cuenta del administrador.
         - Actor AUTENTICADO → el comprador es el actor. El documento del
           payload se IGNORA: el servidor decide quién compra.
         - INVITADO → el comprador es la identidad civil declarada; se
           REGISTRA en el padrón si no existía. Nunca se crea una CUENTA.
         """
+        if data.persona_id:
+            return str(data.persona_id)
+
         if actor is not None and getattr(actor, "is_authenticated", False):
             persona_id = self.titularidad.persona_id_del_actor(actor)
             if not persona_id:

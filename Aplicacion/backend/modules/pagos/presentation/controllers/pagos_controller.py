@@ -46,6 +46,10 @@ from modules.pagos.presentation.schemas.pago_schemas import (
     OrdenPagoOut,
     PagoConfirmadoOut,
 )
+from modules.pagos.presentation.schemas.marketplace_pago_schemas import (
+    MarketplaceIzipayPrepareOut,
+    MarketplaceTransaccionOut,
+)
 
 
 @api_controller("/pagos", tags=["Pagos"])
@@ -77,6 +81,7 @@ class PagosController:
         verifica en servidor antes de mutar nada (FR-04 §3).
         """
         payload_proveedor = construir_payload_proveedor(
+            kr_answer=payload.kr_answer,
             payload_http=payload.payload_http,
             transaction_id=payload.transaction_id,
             code=payload.code,
@@ -151,6 +156,68 @@ class PagosController:
             persona_id=_persona_id(request),
         )
         return success_response(OrdenPagoPresenter.present_orden(result))
+
+    @route.post(
+        "/marketplace/pedidos/{token}/izipay",
+        response={200: ApiResponse[MarketplaceIzipayPrepareOut]},
+        auth=None,
+        permissions=[],
+        summary="Prepara el pago privado de un pedido de tienda.",
+    )
+    async def preparar_marketplace(self, token: str):
+        result = await self.orchestrator.preparar_marketplace(token)
+        return success_response(result)
+
+    @route.post(
+        "/marketplace/pedidos/{token}/izipay/confirmar",
+        response={200: ApiResponse[PagoConfirmadoOut]},
+        auth=None,
+        permissions=[],
+        summary="Confirma el pago privado de un pedido de tienda.",
+    )
+    async def confirmar_marketplace(
+        self, request, token: str, payload: ConfirmarPagoIn
+    ):
+        payload_proveedor = construir_payload_proveedor(
+            kr_answer=payload.kr_answer,
+            payload_http=payload.payload_http,
+            transaction_id=payload.transaction_id,
+            code=payload.code,
+            message=payload.message,
+            order_number=payload.order_number,
+            amount=payload.amount,
+            currency=payload.currency,
+            signature=payload.signature,
+            respuesta=payload.response,
+        )
+        result = await self.orchestrator.confirmar_marketplace(
+            token,
+            payload_proveedor,
+            request.headers.get("Idempotency-Key"),
+        )
+        return success_response(
+            PagosPresenter.present_confirmado(result),
+            message="Pago confirmado correctamente.",
+        )
+
+    @route.get(
+        "/marketplace/pedidos/{token}/transacciones/{transaction_id}",
+        response={200: ApiResponse[MarketplaceTransaccionOut]},
+        auth=None,
+        permissions=[],
+        summary="Consulta una transacción del pedido privado.",
+    )
+    async def estado_transaccion_marketplace(self, token: str, transaction_id: str):
+        intento = await self.orchestrator.estado_transaccion_marketplace(
+            token, transaction_id
+        )
+        return success_response(
+            {
+                "transaction_id": intento.referencia_proveedor,
+                "status": intento.estado,
+                "response_message": "Transacción encontrada.",
+            }
+        )
 
 
 def _persona_id(request) -> str | None:

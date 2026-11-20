@@ -125,6 +125,13 @@ class Pedido(BaseModel):
         default=MONEDA_PEDIDO,
         verbose_name="Moneda",
     )
+    contacto_email = models.EmailField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name="Correo de contacto",
+        help_text="Correo declarado en el checkout invitado para el pago y avisos.",
+    )
     token = models.CharField(
         max_length=64,
         unique=True,

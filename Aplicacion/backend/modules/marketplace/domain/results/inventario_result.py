@@ -54,6 +54,9 @@ class EntregaPendienteResult(BaseModel):
     """Un pedido pagado que todavía espera su entrega."""
 
     pedido_id: UUID = Field(..., description="Identificador del pedido.")
+    comprador_nombres: str = Field(..., description="Nombres del comprador del pedido.")
+    comprador_apellidos: str = Field(..., description="Apellidos del comprador del pedido.")
+    comprador_documento: str = Field(..., description="Documento del comprador.")
     estado: str = Field(..., description="Estado del pedido.")
     estado_entrega: str = Field(..., description="Estado de la entrega.")
     total: Decimal = Field(..., ge=0, description="Total congelado del pedido.")
@@ -63,6 +66,29 @@ class EntregaPendienteResult(BaseModel):
         description="Detalle congelado del pedido.",
     )
     created_at: datetime = Field(..., description="Momento de creación del pedido.")
+
+
+class EntregaEntregadaResult(BaseModel):
+    """Un pedido cuya entrega física ya fue registrada."""
+
+    pedido_id: UUID = Field(..., description="Identificador del pedido.")
+    comprador_nombres: str = Field(..., description="Nombres del comprador del pedido.")
+    comprador_apellidos: str = Field(..., description="Apellidos del comprador del pedido.")
+    comprador_documento: str = Field(..., description="Documento del comprador.")
+    total: Decimal = Field(..., ge=0, description="Total congelado del pedido.")
+    moneda: str = Field(..., description="Moneda del pedido.")
+    lineas: list[PedidoLineaResult] = Field(
+        default_factory=list,
+        description="Detalle congelado del pedido.",
+    )
+    entregada_en: datetime = Field(..., description="Momento del acta de entrega.")
+
+
+class EntregasResult(BaseModel):
+    """Las colas operativas de recogidas de la edición vigente."""
+
+    pendientes: list[EntregaPendienteResult] = Field(default_factory=list)
+    entregadas: list[EntregaEntregadaResult] = Field(default_factory=list)
 
 
 class EntregaConfirmadaResult(BaseModel):
@@ -80,8 +106,10 @@ class EntregaConfirmadaResult(BaseModel):
 
 
 __all__ = [
+    "EntregaEntregadaResult",
     "EntregaConfirmadaResult",
     "EntregaPendienteResult",
+    "EntregasResult",
     "InventarioProductoResult",
     "MovimientoInventarioResult",
 ]

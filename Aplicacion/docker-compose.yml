@@ -6,7 +6,12 @@ services:
       # PostgreSQL usa POSTGRES_* internamente; mapeamos desde DB_* del .env
       POSTGRES_DB: ${DB_NAME:-salesianos_db}
       POSTGRES_USER: ${DB_USER:-salesianos_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      # La contraseña NO tiene valor por defecto (A0-VER03-05): el despliegue
+      # debe supplying `DB_PASSWORD` de forma explícita (archivo `.env` del
+      # despliegue o variable de entorno del proceso). Si falta, `docker
+      # compose` ABORTA antes de crear el contenedor, en vez de levantar
+      # PostgreSQL con una credencial conocida por cualquiera.
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD es obligatoria para el despliegue (sin valor por defecto)}"
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -54,6 +59,11 @@ services:
         condition: service_healthy
     volumes:
       - backend_static:/app/staticfiles
+      # Volumen PERSISTENTE de media (FREEZE-MD-1.0.0 · FR-06 §2.1).
+      # `MEDIA_ROOT` es estado durable de negocio: un archivo escrito NO es un
+      # caché y no se regenera. Sin este volumen, cada `docker compose up`
+      # perdería los logos y las imágenes ya subidos.
+      - backend_media:/app/media
     restart: unless-stopped
     entrypoint: ["/app/docker/entrypoint.sh"]
 
@@ -104,8 +114,13 @@ services:
       - "${PROXY_PORT:-7000}:80"
     volumes:
       - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      # El servidor de archivos del despliegue lee el volumen de media en
+      # modo SÓLO-LECTURA: el backend es su único escritor (FR-06 §2.1).
+      - backend_media:/var/www/media:ro
     restart: unless-stopped
 
 volumes:
   postgres_data:
   backend_static:
+  # Volumen persistente de media (FREEZE-MD-1.0.0 · FR-06 §2.1).
+  backend_media:

@@ -2,12 +2,12 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { detallePagoAdmin, listaPagosAdmin } from "./pago-admin.datos";
 import { PagosAdminView } from "../views/PagosAdminView";
+import { detallePagoAdmin, listaPagosAdmin } from "./pago-admin.datos";
 
 /**
  * The renders of this suite happen inside a `QueryClientProvider`: the S-10
@@ -48,12 +48,10 @@ describe("ADM-14 — el listado operativo de los pagos", () => {
 
   it("cada fila tiene UN estado comprensible, el del backend", () => {
     renderConProveedor(
-      <PagosAdminView
-        estado={{ estado: "listo", datos: listaPagosAdmin }}
-      />,
+      <PagosAdminView estado={{ estado: "listo", datos: listaPagosAdmin }} />,
     );
 
-    expect(screen.getByText("Pago pendiente")).toBeDefined();
+    expect(screen.getAllByText("Pago pendiente")[0]).toBeDefined();
     expect(
       screen.getByText("El pago todavía no ha sido confirmado."),
     ).toBeDefined();
@@ -143,17 +141,20 @@ describe("la zona de los pagos no inventa colores literales (T-01)", () => {
 });
 
 describe("el veredicto de un pago NUNCA se deriva de los campos crudos", () => {
-  it.each(FUENTES)("%s no cruza compra, orden e intento para decidir", (ruta) => {
-    const fuente = readFileSync(
-      join(process.cwd(), "src", "features", "admin", "pagos", ruta),
-      "utf8",
-    );
+  it.each(FUENTES)(
+    "%s no cruza compra, orden e intento para decidir",
+    (ruta) => {
+      const fuente = readFileSync(
+        join(process.cwd(), "src", "features", "admin", "pagos", ruta),
+        "utf8",
+      );
 
-    // Prohibido derivar el veredicto cruzando los estados crudos
-    // (`GOV-02-RB-06a` · `contratos/01` §1.4).
-    expect(fuente).not.toMatch(/estado_operativo\.codigo\s*===/);
-    expect(fuente).not.toMatch(/compra\.estado\s*===/);
-    expect(fuente).not.toMatch(/orden\.estado\s*===/);
-    expect(fuente).not.toMatch(/intento\.estado\s*===/);
-  });
+      // Prohibido derivar el veredicto cruzando los estados crudos
+      // (`GOV-02-RB-06a` · `contratos/01` §1.4).
+      expect(fuente).not.toMatch(/estado_operativo\.codigo\s*===/);
+      expect(fuente).not.toMatch(/compra\.estado\s*===/);
+      expect(fuente).not.toMatch(/orden\.estado\s*===/);
+      expect(fuente).not.toMatch(/intento\.estado\s*===/);
+    },
+  );
 });

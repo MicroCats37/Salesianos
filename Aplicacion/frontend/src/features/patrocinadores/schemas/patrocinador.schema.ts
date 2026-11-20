@@ -49,9 +49,6 @@ import { apiResponseSchema } from "@/types/api.types";
 /** An identifier of the domain: `DOM-08` declares its identifiers as `UUID`. */
 const id = z.string().uuid();
 
-/** A machine code published by the presenter. */
-const codigo = z.string().min(1);
-
 /** An instant published by the presenter (`datetime`). */
 const marcaTiempo = z.string().min(1);
 
@@ -85,6 +82,7 @@ export const patrocinadorEspecificaSchema = z.object({
   sitio_web: z.string(),
   /** The public visibility of the sponsor. */
   visible: z.boolean(),
+  orden: z.number().int(),
 });
 
 /** The logo of identity of a sponsor (`PatrocinadorLogoOut`). */
@@ -167,10 +165,65 @@ export const crearPatrocinadorSchema = z.object({
   imagenes: z.array(imagenPatrocinadorInSchema),
 });
 
+/**
+ * The FORM of the record of a sponsor.
+ *
+ * It is the mirror of what the operator fills in, NOT of what the server
+ * publishes: the files travel AS FILES (the multipart protocol turns them
+ * into their `file_<uuid>` token) and the identifier of the edition is
+ * resolved by the server.
+ */
+export const formularioPatrocinadorSchema = z.object({
+  nombre: z
+    .string()
+    .trim()
+    .min(1, "Escribe el nombre del patrocinador.")
+    .max(200, "El nombre admite 200 caracteres como máximo."),
+  slug: z
+    .string()
+    .trim()
+    .min(1, "El identificador es obligatorio.")
+    .max(200, "El identificador admite 200 caracteres como máximo.")
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "El identificador va en minúsculas y con guiones, por ejemplo colegio-norte.",
+    ),
+  descripcion: z
+    .string()
+    .max(5000, "La descripción admite 5000 caracteres como máximo."),
+  sitio_web: z
+    .string()
+    .trim()
+    .max(300, "El sitio web admite 300 caracteres como máximo."),
+  visible: z.boolean(),
+  logo: z
+    .custom<File>(
+      (valor) => typeof File !== "undefined" && valor instanceof File,
+      "Selecciona un archivo válido.",
+    )
+    .nullable()
+    .optional(),
+  imagenes: z.array(
+    z.custom<File>(
+      (valor) => typeof File !== "undefined" && valor instanceof File,
+      "Selecciona un archivo válido.",
+    ),
+  ),
+});
+
+export type FormularioPatrocinadorDatos = z.infer<
+  typeof formularioPatrocinadorSchema
+>;
+
 // ── Envelopes ────────────────────────────────────────────────────────────────
 
 /** The sponsor that was just created (`POST /patrocinadores`). */
 export const patrocinadorEnvelope = apiResponseSchema(patrocinadorSchema);
+
+/** The list of the sponsors of the edition. */
+export const listaPatrocinadoresEnvelope = apiResponseSchema(
+  z.array(patrocinadorSchema),
+);
 
 // ── Inferred types ───────────────────────────────────────────────────────────
 

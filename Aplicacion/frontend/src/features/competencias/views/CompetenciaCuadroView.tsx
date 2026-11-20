@@ -1,22 +1,24 @@
 import { GitBranch } from "lucide-react";
 import Link from "next/link";
+import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AdminEmptyState,
   AdminNotice,
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
-import {
-  ShellErrorState,
-  ShellPermissionDenied,
-} from "@/components/shell/ShellState";
-import { Skeleton } from "@/components/ui/skeleton";
 import { RUTAS } from "@/lib/routes";
 import { CuadroCompetencia } from "../components/CuadroCompetencia";
+import { GestionEquiposCompetencia } from "../components/GestionEquiposCompetencia";
 import type {
-  Ronda,
+  CompetenciaEquipo,
   EstadoVistaCompetencias,
+  Ronda,
   VistaPreviaAvance,
   VistaPreviaCorreccion,
 } from "../types/competencia.types";
@@ -35,6 +37,9 @@ export function CompetenciaCuadroView({
   id,
   estado = "sin-datos",
   rondas = [],
+  equipos = [],
+  generarCuadro,
+  generando = false,
   vistaPreviaAvancePorEncuentro,
   vistaPreviaCorreccionPorEncuentro,
 }: {
@@ -42,6 +47,9 @@ export function CompetenciaCuadroView({
   id: string;
   estado?: EstadoVistaCompetencias;
   rondas?: Ronda[];
+  equipos?: CompetenciaEquipo[];
+  generarCuadro?: () => Promise<unknown>;
+  generando?: boolean;
   vistaPreviaAvancePorEncuentro?: Record<string, VistaPreviaAvance>;
   vistaPreviaCorreccionPorEncuentro?: Record<string, VistaPreviaCorreccion>;
 }) {
@@ -53,25 +61,40 @@ export function CompetenciaCuadroView({
         description="El cuadro de la competencia: una columna por ronda, una celda por encuentro, con el ganador que avanza a la siguiente."
         meta={[{ etiqueta: "Competencia", valor: id }]}
         actions={
-          <Button variant="outline" asChild className="min-h-11">
-            <Link href={RUTAS.administracion.competencias}>
-              Volver a las competencias
-            </Link>
-          </Button>
+          <>
+            {rondas.length === 0 && generarCuadro ? (
+              <Button
+                type="button"
+                className="min-h-11"
+                disabled={generando}
+                onClick={() => void generarCuadro()}
+              >
+                {generando ? "Generando cuadro..." : "Generar cuadro"}
+              </Button>
+            ) : null}
+            <Button variant="outline" asChild className="min-h-11">
+              <Link href={RUTAS.administracion.competencias}>
+                Volver a las competencias
+              </Link>
+            </Button>
+          </>
         }
       />
 
       <AdminNotice title="El servidor manda en el cuadro">
-        Programar un encuentro, configurar un pase libre, enlazar, registrar
-        un resultado o confirmar un avance son acciones con motivo auditado y
-        bloqueo optimista: si otra persona cambió la misma versión, el
-        servidor rechaza el cambio y nada se escribe.
+        Programar un encuentro, configurar un pase libre, enlazar, registrar un
+        resultado o confirmar un avance son acciones con motivo auditado y
+        bloqueo optimista: si otra persona cambió la misma versión, el servidor
+        rechaza el cambio y nada se escribe.
       </AdminNotice>
 
       <AdminPanel
         title="Cuadro"
         description="Las rondas del cuadro y los encuentros de cada una."
       >
+        {estado === "listo" && rondas.length === 0 ? (
+          <GestionEquiposCompetencia competenciaId={id} equipos={equipos} />
+        ) : null}
         {estado === "listo" ? (
           <CuadroCompetencia
             rondas={rondas}

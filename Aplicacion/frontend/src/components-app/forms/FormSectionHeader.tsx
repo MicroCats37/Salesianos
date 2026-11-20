@@ -40,17 +40,17 @@ export function FormSectionHeader({
         className,
       )}
     >
-      {Icon && <Icon className="h-4 w-4 shrink-0" />}
-      <h3 className="text-sm font-semibold uppercase tracking-wide">{title}</h3>
-      {count !== undefined && (
-        <span className="ml-auto text-[10px] font-medium opacity-75">
+      {Icon ? <Icon className="size-4 shrink-0" aria-hidden="true" /> : null}
+      <h3 className="text-sm font-semibold">{title}</h3>
+      {count !== undefined ? (
+        <span className="ml-auto text-xs font-medium text-muted-foreground">
           ({count} {countLabel ?? "seleccionado"}
           {count !== 1 ? "s" : ""})
         </span>
-      )}
-      {description && variant === "plain" && (
-        <p className="text-xs text-muted-foreground ml-2">{description}</p>
-      )}
+      ) : null}
+      {description && variant === "plain" ? (
+        <p className="ml-2 text-caption text-muted-foreground">{description}</p>
+      ) : null}
     </div>
   );
 }

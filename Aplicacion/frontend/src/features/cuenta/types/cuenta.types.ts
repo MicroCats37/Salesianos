@@ -135,4 +135,9 @@ export interface Pagina<T> {
  * The default of every view is `sin-datos`: the service is not connected
  * yet, and the view says so instead of drawing a list that does not exist.
  */
-export type EstadoVista = "sin-datos" | "listo" | "sin-permiso" | "error";
+export type EstadoVista =
+  | "cargando"
+  | "sin-datos"
+  | "listo"
+  | "sin-permiso"
+  | "error";

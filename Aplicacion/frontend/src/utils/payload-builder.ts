@@ -19,7 +19,8 @@ const toBoolean = (val: string | undefined): boolean => {
  * correlation id and two parts must never share it.
  */
 const manualGenerateUUID = (): string => {
-  const cryptoApi = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+  const cryptoApi =
+    typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
 
   if (cryptoApi && typeof cryptoApi.getRandomValues === "function") {
     const bytes = new Uint8Array(16);

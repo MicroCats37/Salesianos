@@ -1,4 +1,4 @@
-import { MisComprasView } from "@/features/cuenta/views";
+import { MisComprasRuta } from "@/features/cuenta/views";
 
 /**
  * ACCOUNT-04 - Listar tus compras
@@ -18,5 +18,5 @@ export default async function Page({
     return Array.isArray(bruto) ? bruto[0] : bruto;
   };
 
-  return <MisComprasView filtros={{ origen: valor("origen") }} />;
+  return <MisComprasRuta filtros={{ origen: valor("origen") }} />;
 }

@@ -18,8 +18,8 @@ export default function NotFound() {
           No encontramos este registro
         </h1>
         <p className="max-w-measure text-lead text-muted-foreground">
-          Puede que el registro no exista, que pertenezca a otra edición o
-          que el enlace no sea correcto.
+          Puede que el registro no exista, que pertenezca a otra edición o que
+          el enlace no sea correcto.
         </p>
       </div>
 

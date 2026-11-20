@@ -1,5 +1,5 @@
 import { ImageOff } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, resolveImageUrl } from "@/lib/utils";
 import type { LogoPatrocinador as Logo } from "../types/patrocinador.types";
 
 export interface LogoPatrocinadorProps {
@@ -7,6 +7,14 @@ export interface LogoPatrocinadorProps {
   logo: Logo | null;
   /** The name of the sponsor: it is the alternative text of the logo. */
   nombre: string;
+  /**
+   * Whether the logo REPEATS a name that the markup around it already says.
+   *
+   * Inside a row of the table the name of the sponsor is already in the next
+   * cell: the logo is then decorative and its alternative text is empty
+   * (`A11Y-13`). Alone, under its own caption, the logo keeps its name.
+   */
+  decorativo?: boolean;
   className?: string;
 }
 
@@ -23,6 +31,7 @@ export interface LogoPatrocinadorProps {
 export function LogoPatrocinador({
   logo,
   nombre,
+  decorativo = false,
   className,
 }: LogoPatrocinadorProps) {
   if (!logo) {
@@ -55,8 +64,8 @@ export function LogoPatrocinador({
 
   return (
     <img
-      src={logo.url}
-      alt={`Logo de ${nombre}`}
+      src={resolveImageUrl(logo.url)}
+      alt={decorativo ? "" : `Logo de ${nombre}`}
       className={cn(
         "aspect-square w-16 rounded-[var(--radius-md)] border border-border bg-surface-raised object-contain p-1",
         className,

@@ -12,8 +12,8 @@ import {
   useState,
 } from "react";
 import { PortadaSection } from "@/features/portada/components/PortadaSection";
-import { SECCIONES } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { SECCIONES } from "@/features/portada/fixtures/festival";
 import {
   DISCIPLINAS_FALLBACK,
   ORDEN_DISCIPLINAS,
@@ -170,7 +170,7 @@ export function ChampionshipSection() {
                     className={cn(
                       "h-12 shrink-0 whitespace-nowrap rounded-full px-5 text-xs font-black uppercase tracking-wider transition-colors",
                       seleccionado
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        ? "bg-brand-gradient-deep text-brand-on-gradient"
                         : "border border-primary/20 bg-surface-raised/70 text-primary hover:bg-primary/5",
                     )}
                   >
@@ -195,7 +195,7 @@ export function ChampionshipSection() {
                 {activa.min_jugadores} integrantes.
               </p>
               <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span className="rounded-full bg-primary px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-primary-foreground">
+                <span className="rounded-full bg-accent px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-accent-foreground">
                   {presentacion.stat}
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">

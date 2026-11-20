@@ -17,10 +17,16 @@ describe("REC-01 - el formulario de recuperación", () => {
   it("un envío inválido resume los errores y los asocia a su campo", async () => {
     render(<RecuperarCompraForm />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Solicitar el enlace" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Solicitar el enlace" }),
+    );
 
-    const resumen = await screen.findByRole("alert");
-    expect(resumen.textContent).toContain("Revisa");
+    // El resumen y el error de cada campo son anuncios: se busca el resumen.
+    const alertas = await screen.findAllByRole("alert");
+    const resumen = alertas.find((alerta) =>
+      alerta.textContent?.includes("Revisa"),
+    );
+    expect(resumen).toBeDefined();
 
     // El error está ASOCIADO al campo, no sólo resumido.
     expect(document.getElementById("correo-error")).not.toBeNull();
@@ -38,7 +44,9 @@ describe("REC-01 - el formulario de recuperación", () => {
     fireEvent.change(screen.getByLabelText("Número de orden"), {
       target: { value: "1234" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Solicitar el enlace" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Solicitar el enlace" }),
+    );
 
     await waitFor(() => {
       expect(
@@ -56,7 +64,9 @@ describe("REC-01 - el formulario de recuperación", () => {
     fireEvent.change(screen.getByLabelText("Número de orden"), {
       target: { value: "1234" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Solicitar el enlace" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Solicitar el enlace" }),
+    );
 
     await waitFor(() => {
       expect(
@@ -79,7 +89,9 @@ describe("REC-01 - el formulario de recuperación", () => {
     fireEvent.change(screen.getByLabelText("Número de orden"), {
       target: { value: "1234" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Solicitar el enlace" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Solicitar el enlace" }),
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Solicitud registrada")).toBeDefined();

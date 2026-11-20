@@ -25,10 +25,25 @@ class ComprarPaseData(BaseModel):
     El comprador es una identidad CIVIL: puede no tener cuenta
     (`FL-06` paso 2). El servidor resuelve o registra la `Persona`; este
     paquete NO crea un `Usuario` nunca.
+
+    **`persona_id` es la identidad YA RESUELTA del comprador.** Cuando viaja,
+    el comprador es esa persona y el servidor NO vuelve a resolverlo ni a
+    registrarlo. Lo usa el comando administrativo de compra asistida, que
+    resuelve la identidad del CLIENTE una sola vez y la declara aquí para que
+    la compra NEVER se atribuya a la cuenta del administrador. La ruta pública
+    NO lo expone: el documento de identidad no es una credencial (`RN-U04`).
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
+    persona_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "Identificador de la persona del padrón ya resuelta. Si viaja, el "
+            "comprador es esa persona."
+        ),
+    )
     pase_id: str = Field(
         ...,
         max_length=64,

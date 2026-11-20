@@ -1,20 +1,21 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, TriangleAlert, UserPlus } from "lucide-react";
+import { Hash, TriangleAlert, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { FormField } from "@/components/forms/FormField";
+import { FormFooter } from "@/components/forms/FormFooter";
+import { FormGrid } from "@/components/forms/FormGrid";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { handleApiError } from "@/errors";
 import { useAgregarParticipante } from "../hooks";
 import {
+  type FormularioParticipanteFormData,
   FormularioParticipanteSchema,
   ROLES_PARTICIPANTE,
   TIPOS_DOCUMENTO,
-  type FormularioParticipanteFormData,
 } from "../schemas/participante.schema";
 import type { EquipoInscripcion } from "../types/inscripcion.types";
 import { construirPayloadParticipante } from "../utils/inscripcion.payloads.utils";
@@ -92,10 +93,6 @@ export function FormularioParticipante(props: FormularioParticipanteProps) {
   const idNumero = "participante-numero-documento";
   const idEquipo = "participante-equipo";
   const idRol = "participante-rol";
-  const idErrorTipo = idTipo + "-error";
-  const idErrorNumero = idNumero + "-error";
-  const idErrorEquipo = idEquipo + "-error";
-  const idErrorRol = idRol + "-error";
 
   const errorTipo = errores.tipo_documento?.message;
   const errorNumero = errores.numero_documento?.message;
@@ -116,118 +113,99 @@ export function FormularioParticipante(props: FormularioParticipanteProps) {
       </div>
 
       <p className="text-caption text-muted-foreground">
-        La persona se resuelve en el padrón a partir de su documento. El cupo
-        lo asigna el servidor: sólo una persona ocupa un cupo.
+        La persona se resuelve en el padrón a partir de su documento. El cupo lo
+        asigna el servidor: sólo una persona ocupa un cupo.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label
-            htmlFor={idTipo}
-            className="text-sm font-semibold text-foreground"
-          >
-            Tipo de documento
-          </Label>
-          <select
-            id={idTipo}
-            aria-invalid={Boolean(errorTipo)}
-            aria-describedby={errorTipo ? idErrorTipo : undefined}
-            className="min-h-11 w-full rounded-[var(--radius-md)] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive"
-            {...methods.register("tipo_documento")}
-          >
-            {TIPOS_DOCUMENTO.map((tipo) => (
-              <option key={tipo} value={tipo}>
-                {tipo}
-              </option>
-            ))}
-          </select>
-          {errorTipo ? (
-            <p id={idErrorTipo} className="text-xs text-destructive">
-              {errorTipo}
-            </p>
-          ) : null}
-        </div>
+      <FormGrid>
+        <FormField
+          id={idTipo}
+          label="Tipo de documento"
+          required
+          span={6}
+          error={errorTipo}
+        >
+          {(control) => (
+            <select
+              {...control}
+              className="min-h-11 w-full rounded-[var(--radius-md)] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive"
+              {...methods.register("tipo_documento")}
+            >
+              {TIPOS_DOCUMENTO.map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {tipo}
+                </option>
+              ))}
+            </select>
+          )}
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <Label
-            htmlFor={idNumero}
-            className="text-sm font-semibold text-foreground"
-          >
-            Número de documento
-          </Label>
-          <Input
-            id={idNumero}
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="Por ejemplo, 12345678"
-            aria-invalid={Boolean(errorNumero)}
-            aria-describedby={errorNumero ? idErrorNumero : undefined}
-            className="min-h-11"
-            {...methods.register("numero_documento")}
-          />
-          {errorNumero ? (
-            <p id={idErrorNumero} className="text-xs text-destructive">
-              {errorNumero}
-            </p>
-          ) : null}
-        </div>
+        <FormField
+          id={idNumero}
+          label="Número de documento"
+          required
+          icon={Hash}
+          span={6}
+          error={errorNumero}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="Por ejemplo, 12345678"
+              {...methods.register("numero_documento")}
+            />
+          )}
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <Label
-            htmlFor={idEquipo}
-            className="text-sm font-semibold text-foreground"
-          >
-            Equipo
-          </Label>
-          <select
-            id={idEquipo}
-            aria-invalid={Boolean(errorEquipo)}
-            aria-describedby={errorEquipo ? idErrorEquipo : undefined}
-            className="min-h-11 w-full rounded-[var(--radius-md)] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive"
-            {...methods.register("equipo_id")}
-          >
-            <option value="">Elige el equipo</option>
-            {equipos.map((equipo) => (
-              <option key={equipo.id} value={equipo.id}>
-                {equipo.nombre}
-              </option>
-            ))}
-          </select>
-          {errorEquipo ? (
-            <p id={idErrorEquipo} className="text-xs text-destructive">
-              {errorEquipo}
-            </p>
-          ) : null}
-        </div>
+        <FormField
+          id={idEquipo}
+          label="Equipo"
+          required
+          span={6}
+          error={errorEquipo}
+        >
+          {(control) => (
+            <select
+              {...control}
+              className="min-h-11 w-full rounded-[var(--radius-md)] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive"
+              {...methods.register("equipo_id")}
+            >
+              <option value="">Elige el equipo</option>
+              {equipos.map((equipo) => (
+                <option key={equipo.id} value={equipo.id}>
+                  {equipo.nombre}
+                </option>
+              ))}
+            </select>
+          )}
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <Label
-            htmlFor={idRol}
-            className="text-sm font-semibold text-foreground"
-          >
-            Rol
-          </Label>
-          <select
-            id={idRol}
-            aria-invalid={Boolean(errorRol)}
-            aria-describedby={errorRol ? idErrorRol : undefined}
-            className="min-h-11 w-full rounded-[var(--radius-md)] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive"
-            {...methods.register("rol")}
-          >
-            {ROLES_PARTICIPANTE.map((rol) => (
-              <option key={rol} value={rol}>
-                {rol}
-              </option>
-            ))}
-          </select>
-          {errorRol ? (
-            <p id={idErrorRol} className="text-xs text-destructive">
-              {errorRol}
-            </p>
-          ) : null}
-        </div>
-      </div>
+        <FormField id={idRol} label="Rol" required span={6} error={errorRol}>
+          {(control) => (
+            <select
+              {...control}
+              className="min-h-11 w-full rounded-[var(--radius-md)] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive"
+              {...methods.register("rol")}
+            >
+              {ROLES_PARTICIPANTE.map((rol) => (
+                <option key={rol} value={rol}>
+                  {rol}
+                </option>
+              ))}
+            </select>
+          )}
+        </FormField>
+
+        <FormFooter
+          submitLabel="Asignar al equipo"
+          pendingLabel="Asignando…"
+          isSubmitting={agregar.isPending}
+          isDisabled={equipos.length === 0}
+        />
+      </FormGrid>
 
       {mensaje ? (
         <Alert className="border-destructive/45 bg-destructive/10">
@@ -243,21 +221,6 @@ export function FormularioParticipante(props: FormularioParticipanteProps) {
           </AlertDescription>
         </Alert>
       ) : null}
-
-      <Button
-        type="submit"
-        disabled={agregar.isPending || equipos.length === 0}
-        className="min-h-11 self-start"
-      >
-        {agregar.isPending ? (
-          <>
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            Asignando…
-          </>
-        ) : (
-          "Asignar al equipo"
-        )}
-      </Button>
 
       {equipos.length === 0 ? (
         <p className="text-caption text-muted-foreground">

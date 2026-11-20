@@ -1,10 +1,10 @@
 import { entregaPendienteSchema } from "../schemas/validacion.schema";
-import { resolverVeredicto } from "../utils/validaciones.estados.utils";
 import type {
   RegistroValidacion,
   ResultadoValidacion,
   VistaPreviaValidacion,
 } from "../types/validacion.types";
+import { resolverVeredicto } from "../utils/validaciones.estados.utils";
 
 /**
  * The data of the validation suite.
@@ -34,6 +34,9 @@ import type {
 /** A paid order that still waits for its pickup (`EntregaPendienteOut`). */
 export const ENTREGA_PENDIENTE = entregaPendienteSchema.parse({
   pedido_id: "8b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e",
+  comprador_nombres: "María",
+  comprador_apellidos: "Fernández",
+  comprador_documento: "10000001",
   estado: "PAGADO",
   estado_entrega: "PENDIENTE",
   total: 24,

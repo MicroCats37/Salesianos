@@ -6,6 +6,11 @@ import {
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
+import type {
+  ColumnaOperativa,
+  FilaOperativa,
+  FiltroOperativo,
+} from "@/features/admin/operaciones";
 import {
   BarraFiltros,
   BusquedaOperativa,
@@ -14,11 +19,6 @@ import {
   MarcoOperativo,
   VeredictoConCausa,
   VeredictoOperativo,
-} from "@/features/admin/operaciones";
-import type {
-  ColumnaOperativa,
-  FilaOperativa,
-  FiltroOperativo,
 } from "@/features/admin/operaciones";
 import { RUTAS } from "@/lib/routes";
 import type {
@@ -38,13 +38,28 @@ import type {
 const COLUMNAS: ColumnaOperativa[] = [
   { key: "responsable", label: "Responsable", prioridad: 1, titular: true },
   { key: "estado", label: "Estado", prioridad: 1 },
-  { key: "cupos_disponibles", label: "Cupos disponibles", prioridad: 1, numerico: true },
+  {
+    key: "cupos_disponibles",
+    label: "Cupos disponibles",
+    prioridad: 1,
+    numerico: true,
+  },
   { key: "paquete", label: "Paquete", prioridad: 2 },
   { key: "edicion", label: "Edición", prioridad: 2 },
   { key: "equipos", label: "Equipos", prioridad: 2, numerico: true },
   { key: "personas", label: "Personas", prioridad: 2, numerico: true },
-  { key: "cupos_adquiridos", label: "Cupos adquiridos", prioridad: 2, numerico: true },
-  { key: "cupos_asignados", label: "Cupos asignados", prioridad: 2, numerico: true },
+  {
+    key: "cupos_adquiridos",
+    label: "Cupos adquiridos",
+    prioridad: 2,
+    numerico: true,
+  },
+  {
+    key: "cupos_asignados",
+    label: "Cupos asignados",
+    prioridad: 2,
+    numerico: true,
+  },
   { key: "pago", label: "Pago", prioridad: 2 },
   { key: "alerta", label: "Alerta", prioridad: 2 },
 ];
@@ -116,7 +131,9 @@ function filaDe(inscripcion: AdminInscripcionListItemOut): FilaOperativa {
         <span className="text-foreground-muted">Sin dato de pago</span>
       ),
       alerta: inscripcion.alerta ? (
-        <span className="text-sm leading-snug">{inscripcion.alerta.mensaje}</span>
+        <span className="text-sm leading-snug">
+          {inscripcion.alerta.mensaje}
+        </span>
       ) : (
         <span className="text-foreground-muted">—</span>
       ),

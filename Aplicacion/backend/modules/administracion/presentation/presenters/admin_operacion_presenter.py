@@ -366,6 +366,7 @@ class AdminOperacionPresenter:
         return AdminPagoListItemOut(
             compra_id=item.compra_id,
             orden_pago_id=item.orden_pago_id,
+            inscripcion_id=item.inscripcion_id,
             tipo_compra=item.tipo_compra,
             resumen_concepto=item.resumen_concepto,
             comprador=CompradorOut(

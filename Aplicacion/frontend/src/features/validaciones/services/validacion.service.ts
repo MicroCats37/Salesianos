@@ -2,13 +2,13 @@ import type { Method } from "axios";
 import type { ZodType } from "zod";
 import { apiSend } from "@/lib/api";
 import {
+  type ConfirmarTicketDatos,
   confirmarTicketSchema,
   previewTicketSchema,
-  ticketConfirmadoEnvelope,
-  ticketPreviewEnvelope,
-  type ConfirmarTicketDatos,
   type TicketConfirmado,
   type TicketPreview,
+  ticketConfirmadoEnvelope,
+  ticketPreviewEnvelope,
 } from "../schemas/validacion.schema";
 
 /**

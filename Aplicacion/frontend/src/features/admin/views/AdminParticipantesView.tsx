@@ -28,8 +28,7 @@ export function AdminParticipantesView() {
       <AdminNotice title="Dos magnitudes, no una">
         Las dos listas nunca se reconcilian en el navegador. Un cupo pagado
         habilita a una persona en todas las disciplinas contratadas, así que
-        «personas» y «participaciones» son recuentos distintos por
-        construcción.
+        «personas» y «participaciones» son recuentos distintos por construcción.
       </AdminNotice>
 
       <Tabs defaultValue="personas" className="gap-4">

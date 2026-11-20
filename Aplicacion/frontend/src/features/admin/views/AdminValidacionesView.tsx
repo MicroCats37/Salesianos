@@ -24,9 +24,8 @@ export function AdminValidacionesView() {
       />
 
       <AdminNotice title="El registro no se reescribe">
-        La auditoría es de solo lectura y conserva el orden de los hechos.
-        Una incidencia se corrige con un asiento nuevo, nunca editando el
-        anterior.
+        La auditoría es de solo lectura y conserva el orden de los hechos. Una
+        incidencia se corrige con un asiento nuevo, nunca editando el anterior.
       </AdminNotice>
 
       <AdminPanel

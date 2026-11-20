@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,8 +13,8 @@ import {
 import { invalidarAdmin } from "../utils/admin.cache.utils";
 import { adminClaves } from "../utils/admin.claves.utils";
 import {
-  estadoDesdeConsulta,
   erroresDeCampoDeError,
+  estadoDesdeConsulta,
   mensajeDeError,
   statusDeError,
 } from "../utils/admin.estado.utils";
@@ -55,8 +55,14 @@ beforeEach(() => {
 describe("API-04 — el ledger de las rutas administrativas", () => {
   it("cada ruta declara su verdad de registro y su motivo", () => {
     for (const [id, ruta] of Object.entries(RUTAS_ADMIN)) {
-      expect(ruta.ledger, `la ruta ${id} declara su id del ledger`).toBeTruthy();
-      expect(ruta.presentador, `la ruta ${id} declara su presentador`).toBeTruthy();
+      expect(
+        ruta.ledger,
+        `la ruta ${id} declara su id del ledger`,
+      ).toBeTruthy();
+      expect(
+        ruta.presentador,
+        `la ruta ${id} declara su presentador`,
+      ).toBeTruthy();
       expect(ruta.wrapper, `la ruta ${id} declara su wrapper`).toBeTruthy();
       expect(ruta.motivo, `la ruta ${id} declara el motivo`).toBeTruthy();
       expect(ruta.permiso, `la ruta ${id} declara el permiso`).toBeTruthy();
@@ -198,9 +204,7 @@ describe("API-04 — las claves de la caché", () => {
   });
 
   it("el registro y la versión viajan en la clave de la acción", () => {
-    expect(
-      adminClaves.accion("pagos", "compra-1", "v3"),
-    ).toEqual([
+    expect(adminClaves.accion("pagos", "compra-1", "v3")).toEqual([
       "admin",
       "pagos",
       "accion",
@@ -229,7 +233,11 @@ describe("API-04 — el estado de una superficie", () => {
   });
 
   it("un 403 es un estado de PERMISO, con la prosa del backend", () => {
-    const error = new ErrorAdmin(403, "ACTION_NOT_ALLOWED", "No tienes permiso.");
+    const error = new ErrorAdmin(
+      403,
+      "ACTION_NOT_ALLOWED",
+      "No tienes permiso.",
+    );
 
     const estado = estadoDesdeConsulta(
       { isPending: false, isError: true, data: undefined, error },
@@ -248,7 +256,11 @@ describe("API-04 — el estado de una superficie", () => {
         isPending: false,
         isError: true,
         data: undefined,
-        error: new ErrorAdmin(409, "ORDEN_YA_PAGADA_CON_IZIPAY", "Ya está paga."),
+        error: new ErrorAdmin(
+          409,
+          "ORDEN_YA_PAGADA_CON_IZIPAY",
+          "Ya está paga.",
+        ),
       },
       true,
     );
@@ -271,7 +283,13 @@ describe("API-04 — el estado de una superficie", () => {
       {
         isPending: false,
         isError: false,
-        data: { items: [1, 2], total: 2, page: 1, page_size: 25, total_pages: 1 },
+        data: {
+          items: [1, 2],
+          total: 2,
+          page: 1,
+          page_size: 25,
+          total_pages: 1,
+        },
         error: null,
       },
       true,
@@ -285,7 +303,11 @@ describe("API-04 — el estado de una superficie", () => {
 describe("API-04 — los errores de campo del 422", () => {
   it("el 422 lleva el error de campo a su control", () => {
     const error = new ErrorAdmin(422, "VALIDATION_ERROR", "Datos inválidos.", [
-      { campo: "motivo", codigo: "REQUIRED", mensaje: "El motivo es obligatorio." },
+      {
+        campo: "motivo",
+        codigo: "REQUIRED",
+        mensaje: "El motivo es obligatorio.",
+      },
     ]);
 
     expect(erroresDeCampoDeError(error)).toEqual({
@@ -298,7 +320,11 @@ describe("API-04 — los errores de campo del 422", () => {
   });
 
   it("el estado HTTP se lee del error y el mensaje es el del servidor", () => {
-    const error = new ErrorAdmin(403, "ACTION_NOT_ALLOWED", "No tienes permiso.");
+    const error = new ErrorAdmin(
+      403,
+      "ACTION_NOT_ALLOWED",
+      "No tienes permiso.",
+    );
 
     expect(statusDeError(error)).toBe(403);
     expect(mensajeDeError(error)).toBe("No tienes permiso.");
@@ -346,18 +372,19 @@ describe("API-04 — los comandos sensibles llevan el motivo y la versión", () 
     expect(Object.keys(payload)).not.toContain("version");
   });
 
-  it("la aprobación manual envía el importe QUE PUBLICÓ el servidor", () => {
+  it("la aprobación manual NO envía el importe: lo congela el servidor", () => {
     const payload = payloadAprobarPagoManualAdmin({
       orden_pago_id: "orden-1",
-      monto: "0.00",
-      moneda: "PEN",
+      canal: "EFECTIVO",
+      referencia: "OP-99182",
       motivo: "Pago recibido en efectivo",
-      version: "v2",
     });
 
-    expect(payload.monto).toBe("0.00");
-    expect(payload.moneda).toBe("PEN");
-    expect(payload.version).toBe("v2");
+    expect(payload.canal).toBe("EFECTIVO");
+    expect(payload.referencia).toBe("OP-99182");
+    expect(Object.keys(payload)).not.toContain("monto");
+    expect(Object.keys(payload)).not.toContain("moneda");
+    expect(Object.keys(payload)).not.toContain("version");
   });
 });
 

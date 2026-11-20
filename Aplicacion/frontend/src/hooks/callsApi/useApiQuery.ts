@@ -3,7 +3,7 @@ import {
   type UseQueryOptions,
   useQuery,
 } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosRequestConfig } from "axios";
 import type { ZodType } from "zod";
 import { getErrorMessage, notify } from "@/errors";
 import api from "@/lib/api";
@@ -12,12 +12,18 @@ import {
   type DatasetKind,
   datasetQueryOptions,
 } from "@/shared/utils/query-options";
+import { relanzarSiCancelacion } from "./cancelacion";
 
 interface UseApiQueryProps<T, TData = T> {
   queryKey: QueryKey;
   url: string | null;
   schema: ZodType<T>;
   params?: Record<string, unknown>;
+  /**
+   * The configuration of the request: the headers of the endpoint (a token
+   * that travels in a header, not in the query) and its timeout.
+   */
+  config?: AxiosRequestConfig;
   showToast?: boolean;
   queryOptions?: Omit<
     UseQueryOptions<T, ApiQueryError, TData>,
@@ -50,8 +56,10 @@ async function fetchApiResource<T>(
   url: string,
   schema: ZodType<T>,
   params?: Record<string, unknown>,
+  config?: AxiosRequestConfig,
+  signal?: AbortSignal,
 ): Promise<T> {
-  const { data } = await api.get(url, { params });
+  const { data } = await api.get(url, { ...config, params, signal });
   return schema.parse(data);
 }
 
@@ -60,6 +68,7 @@ export function useApiQuery<T, TData = T>({
   url,
   schema,
   params,
+  config,
   showToast = true,
   queryOptions,
 }: UseApiQueryProps<T, TData>) {
@@ -73,12 +82,13 @@ export function useApiQuery<T, TData = T>({
 
   return useQuery<T, ApiQueryError, TData>({
     queryKey: finalQueryKey,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!url) throw new Error("URL is required");
 
       try {
-        return await fetchApiResource(url, schema, params);
+        return await fetchApiResource(url, schema, params, config, signal);
       } catch (error) {
+        relanzarSiCancelacion(error);
         const axiosError = error as AxiosError;
         const msg = getErrorMessage(error);
         if (showToast) notify.error(msg);
@@ -101,6 +111,8 @@ export interface ApiQueryOptionsInput<T> {
   url: string;
   schema: ZodType<T>;
   params?: Record<string, unknown>;
+  /** The configuration of the request: its headers and its timeout. */
+  config?: AxiosRequestConfig;
   /** The kind of dataset, which decides the staleness of the read. */
   kind?: DatasetKind;
   staleTime?: number;
@@ -119,13 +131,14 @@ export function apiQueryOptions<T>({
   url,
   schema,
   params,
+  config,
   kind = "comercial",
   staleTime,
   gcTime,
 }: ApiQueryOptionsInput<T>) {
   return datasetQueryOptions<T>({
     queryKey: buildQueryKey(queryKey, params),
-    queryFn: () => fetchApiResource(url, schema, params),
+    queryFn: () => fetchApiResource(url, schema, params, config),
     kind,
     staleTime,
     gcTime,

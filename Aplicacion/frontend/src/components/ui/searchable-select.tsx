@@ -223,7 +223,7 @@ export function SearchableSelect({
         </PopoverTrigger>
 
         <PopoverContent
-          className="w-full max-w-[var(--radix-popover-trigger-width)] p-0 overflow-hidden flex flex-col"
+          className="w-full max-w-[var(--radix-popover-trigger-width,100%)] p-0 overflow-hidden flex flex-col"
           align="start"
           side="bottom"
           sideOffset={4}

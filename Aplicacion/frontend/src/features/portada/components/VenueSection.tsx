@@ -3,8 +3,8 @@
 import { ArrowUpRight, CalendarPlus, MapPin } from "lucide-react";
 import Image from "next/image";
 import { PortadaSection } from "@/features/portada/components/PortadaSection";
-import { ENLACES, SEDE } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { ENLACES, SEDE } from "@/features/portada/fixtures/festival";
 
 /**
  * Sección "07 / NUESTRO PUNTO DE ENCUENTRO".
@@ -87,7 +87,7 @@ export function VenueSection() {
               href={SEDE.mapaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-brand-gradient btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full px-6 text-xs font-black uppercase tracking-wider"
+              className="btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-xs font-black uppercase tracking-wider text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
             >
               {COPY.lugar.cta}
               <ArrowUpRight className="size-4" aria-hidden="true" />

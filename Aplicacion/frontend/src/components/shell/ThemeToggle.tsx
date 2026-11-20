@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/tooltip";
 import { ThemeMenuItems } from "@/features/theme/ThemeMenuItems";
 import {
-  THEME_OPTIONS,
   isThemeValue,
+  THEME_OPTIONS,
   themeLabel,
 } from "@/features/theme/theme.options";
 import { cn } from "@/lib/utils";
@@ -43,10 +43,7 @@ export interface ThemeToggleProps {
  * only painted once the client has read it. Before that, the space is
  * reserved and nothing is announced.
  */
-export function ThemeToggle({
-  className,
-  align = "end",
-}: ThemeToggleProps) {
+export function ThemeToggle({ className, align = "end" }: ThemeToggleProps) {
   const { theme } = useTheme();
   const [montado, setMontado] = useState(false);
 
@@ -55,7 +52,8 @@ export function ThemeToggle({
   }, []);
 
   const valor = isThemeValue(theme) ? theme : "light";
-  const opcion = THEME_OPTIONS.find((item) => item.value === valor) ?? THEME_OPTIONS[0];
+  const opcion =
+    THEME_OPTIONS.find((item) => item.value === valor) ?? THEME_OPTIONS[0];
   const Icono = opcion.icon;
   const nombreEstado = `Tema: ${themeLabel(montado ? theme : "light")}`;
 

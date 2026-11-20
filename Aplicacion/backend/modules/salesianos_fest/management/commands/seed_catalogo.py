@@ -95,9 +95,10 @@ from modules.salesianos_fest.domain.models import (
     Promocion,
 )
 
-#: Módulo lógico que este seed SIEMPRE habilita: la siembra ES del catálogo
-#: de inscripción. Los módulos que el operador pase con `--modulo` se suman.
-MODULO_IMPLICITO = "inscripciones"
+#: Módulos lógicos que este seed SIEMPRE habilita. La edición de desarrollo
+#: debe exponer toda funcionalidad implementada y declarada por el dominio.
+#: Los módulos que el operador pase con `--modulo` se suman.
+MODULOS_IMPLICITOS = MODULOS_HABILITABLES
 
 #: Moneda del catálogo sembrado (ISO-4217).
 MONEDA_CATALOGO = "PEN"
@@ -412,7 +413,8 @@ class Command(BaseCommand):
             choices=list(MODULOS_HABILITABLES),
             help=(
                 "Módulo lógico adicional a habilitar en la edición "
-                "(repetible). El módulo `inscripciones` se habilita siempre."
+                "(repetible). Todos los módulos declarados por el dominio "
+                "se habilitan siempre."
             ),
         )
         parser.add_argument(
@@ -713,8 +715,8 @@ class Command(BaseCommand):
     # ── Utilidades ─────────────────────────────────────────────────────────
 
     def _modulos(self, options) -> list[str]:
-        """Los módulos a habilitar: siempre `inscripciones` más los pedidos."""
-        modulos = [MODULO_IMPLICITO]
+        """Los módulos a habilitar: los del catálogo base más los pedidos."""
+        modulos = list(MODULOS_IMPLICITOS)
         for modulo in options["modulo"] or []:
             if modulo not in modulos:
                 modulos.append(modulo)

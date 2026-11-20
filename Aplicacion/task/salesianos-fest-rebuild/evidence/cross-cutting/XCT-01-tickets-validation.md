@@ -132,7 +132,7 @@ registry `core/contract_versions.py` ALREADY froze `validaciones` in `1.0.0`:
 
 ## 4. Files and migrations
 
-### 4.1 Created — backend (30 files)
+### 4.1 Created — backend (52 files)
 
 `Aplicacion/backend/modules/validaciones/`: `__init__.py`, `apps.py`,
 `models.py`, `di.py`, `admin.py`, `domain/{constants,exceptions}.py`,
@@ -158,7 +158,7 @@ No existing file of `salesianos_fest` or `marketplace` was modified: the
 adapters are NEW files that only read their own models and call their own
 core services.
 
-### 4.3 Created — frontend (7 files)
+### 4.3 Created — frontend (8 files)
 
 `features/validaciones/services/{validacion.service.ts,index.ts}`,
 `features/validaciones/hooks/{useValidacion.ts,index.ts}`,
@@ -166,7 +166,7 @@ core services.
 `features/validaciones/views/{ValidarPaseRuta.tsx,ValidarEntregaRuta.tsx}`,
 `features/validaciones/__tests__/validacion-contrato.test.ts`.
 
-### 4.4 Modified — frontend (5 files)
+### 4.4 Modified — frontend (4 files)
 
 - `features/validaciones/schemas/validacion.schema.ts` — the real mirrors.
 - `features/validaciones/views/index.ts` — the new containers.
@@ -256,7 +256,7 @@ without its instant, and declares the frozen `SCHEMA_VERSION`.
 
 | # | Command | Workdir | Exit | Result |
 |---:|---|---|---:|---|
-| V1 | `python -c "ast.parse(...)"` over the 45 new/changed Python files | `Aplicacion/backend` | **0** | `AST OK 45` — every new file parses |
+| V1 | `python -c "ast.parse(...)"` over the 54 new/changed Python files | `Aplicacion/backend` | **0** | `AST OK 54` — every new file parses (re-run at the CLOSE of the packet, after the tests were added) |
 | V2 | `python manage.py makemigrations --check --dry-run --settings=modules.validaciones.tests.settings_overlay` | `Aplicacion/backend` | **0** | `No changes detected` — the hand-written migration matches the models exactly |
 | V3 | `python manage.py check --settings=modules.validaciones.tests.settings_overlay` | `Aplicacion/backend` | **0** | `System check identified no issues (0 silenced)` |
 | V4 | `python -c "django.setup(); import modules.validaciones.tests.conftest; RegistroVerificadoresDerecho()"` | `Aplicacion/backend` | **0** | `IMPORTS OK` — the conftest, the fixtures and BOTH owner adapters import |

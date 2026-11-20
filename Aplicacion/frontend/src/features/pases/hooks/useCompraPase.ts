@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { invalidateDatasets } from "@/shared/utils/cache-policy";
-import { comprarPase } from "../services/pase.service";
+import { useApiCreate } from "@/hooks";
+import { datosDelEnvelope } from "@/shared/utils/api-envelope";
+import { compraPaseCreadaEnvelope } from "../schemas/pase.schema";
+import { rutaCompras } from "../services/pase.service";
 import { paseClaves } from "../utils/pase.claves.utils";
 import {
   aPayloadComprarPase,
@@ -25,15 +26,15 @@ import {
  * the availability or the state of the batch.
  */
 export function useCompraPase() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (solicitud: SolicitudCompraPase) => {
-      try {
-        return await comprarPase(aPayloadComprarPase(solicitud));
-      } finally {
-        await invalidateDatasets(queryClient, [paseClaves.compras()]);
-      }
-    },
+  const mutacion = useApiCreate({
+    url: rutaCompras(),
+    schema: datosDelEnvelope(compraPaseCreadaEnvelope),
+    invalidateKeys: [paseClaves.compras()],
   });
+
+  return {
+    ...mutacion,
+    mutateAsync: (solicitud: SolicitudCompraPase) =>
+      mutacion.mutateAsync(aPayloadComprarPase(solicitud)),
+  };
 }

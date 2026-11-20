@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RUTAS } from "@/lib/routes";
-import { cn } from "@/lib/utils";
+import { cn, resolveImageUrl } from "@/lib/utils";
 import type { ProductoListItem } from "../types/marketplace.types";
 import { formatearMonto } from "../utils/monto";
 
@@ -49,7 +49,7 @@ export function TarjetaProducto({
 }: TarjetaProductoProps) {
   const [imagenRota, setImagenRota] = useState(false);
   const bloqueado = Boolean(motivoBloqueo);
-  const url = producto.imagen_principal_url;
+  const url = resolveImageUrl(producto.imagen_principal_url);
   const alt = producto.nombre;
 
   return (

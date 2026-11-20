@@ -59,7 +59,10 @@ export function BarraFiltros({ definiciones, className }: BarraFiltrosProps) {
   function escribir(clave: string, valor: string) {
     const params = new URLSearchParams(searchParams.toString());
 
-    if (!valor || valor === (definiciones.find((d) => d.clave === clave)?.valorTodos ?? "")) {
+    if (
+      !valor ||
+      valor === (definiciones.find((d) => d.clave === clave)?.valorTodos ?? "")
+    ) {
       params.delete(clave);
     } else {
       params.set(clave, valor);
@@ -120,7 +123,10 @@ export function BarraFiltros({ definiciones, className }: BarraFiltrosProps) {
                 value={valorActual}
                 onValueChange={(valor) => escribir(definicion.clave, valor)}
               >
-                <SelectTrigger id={`filtro-${definicion.clave}`} className="min-h-11">
+                <SelectTrigger
+                  id={`filtro-${definicion.clave}`}
+                  className="min-h-11"
+                >
                   <SelectValue
                     placeholder={definicion.etiqueta}
                     className="text-foreground"

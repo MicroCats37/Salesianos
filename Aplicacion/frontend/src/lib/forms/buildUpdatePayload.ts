@@ -87,7 +87,7 @@ export function buildUpdatePayload<T extends Record<string, unknown>>(
     if (
       strict &&
       initialData &&
-      Object.prototype.hasOwnProperty.call(initialData, key) &&
+      Object.hasOwn(initialData, key) &&
       isSameFormValue(value, initialData[key])
     ) {
       continue;

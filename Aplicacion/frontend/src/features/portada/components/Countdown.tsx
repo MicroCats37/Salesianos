@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FESTIVAL } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { FESTIVAL } from "@/features/portada/fixtures/festival";
 import { cn } from "@/lib/utils";
 
 interface Restante {

@@ -1,10 +1,13 @@
 "use client";
 
-import { AlertCircle, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Plus, Tag, Trash2, Trophy } from "lucide-react";
+import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { FormField } from "@/components/forms/FormField";
+import { FormGrid } from "@/components/forms/FormGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { AltaInscripcionFormData } from "../schemas/alta-inscripcion.schema";
 import type { DisciplinaCatalogo } from "../types/inscripcion.types";
 
@@ -25,9 +28,7 @@ interface ErroresEquipo {
   nombre?: { message?: string };
 }
 
-function erroresDeEquipo(
-  errores: Record<string, unknown>,
-): ErroresEquipo[] {
+function erroresDeEquipo(errores: Record<string, unknown>): ErroresEquipo[] {
   const lista = errores.equipos;
   if (!Array.isArray(lista)) return [];
   return lista as unknown as ErroresEquipo[];
@@ -73,12 +74,63 @@ export function PasoEquipos(props: PasoEquiposProps) {
   const erroresEquipo = erroresDeEquipo(errores);
   const errorLista = mensajeDeLista(errores);
 
-  function agregarEquipo() {
-    setValue(
-      "equipos",
-      [...equipos, { disciplina_id: "", nombre: "" }],
-      { shouldDirty: true },
+  /**
+   * The disciplines are PRE-FILLED.
+   *
+   * It is COPIED from the previous frontend
+   * (`frontend/src/features/inscripciones/components/smart-fields/
+   * SmartEquipoField.tsx`): the package opens a set of disciplines and the
+   * slots that the visitor has not touched yet take them, one by one and
+   * without repeating. The visitor arrives at the step with the sports
+   * already chosen and only has to name the teams.
+   *
+   * It is idempotent on purpose: the rows of the form and the data of the
+   * catalogue can arrive in different renders, and a one-shot guard would
+   * leave the last rows empty.
+   */
+  useEffect(() => {
+    if (disciplinas.length === 0) return;
+    if (equipos.length === 0) return;
+
+    const usadas = new Set(
+      equipos.map((equipo) => equipo.disciplina_id).filter(Boolean),
     );
+
+    let cursor = 0;
+
+    const siguiente = equipos.map((equipo) => {
+      if (equipo.disciplina_id) return equipo;
+
+      while (
+        cursor < disciplinas.length &&
+        usadas.has(disciplinas[cursor].id)
+      ) {
+        cursor += 1;
+      }
+
+      const encontrada = disciplinas[cursor];
+      if (!encontrada) return equipo;
+
+      usadas.add(encontrada.id);
+      cursor += 1;
+
+      return { ...equipo, disciplina_id: encontrada.id };
+    });
+
+    const cambio = siguiente.some(
+      (equipo, indice) =>
+        equipo.disciplina_id !== (equipos[indice]?.disciplina_id ?? ""),
+    );
+
+    if (cambio) {
+      setValue("equipos", siguiente, { shouldDirty: true });
+    }
+  }, [disciplinas, equipos, setValue]);
+
+  function agregarEquipo() {
+    setValue("equipos", [...equipos, { disciplina_id: "", nombre: "" }], {
+      shouldDirty: true,
+    });
   }
 
   function quitarEquipo(indice: number) {
@@ -102,29 +154,31 @@ export function PasoEquipos(props: PasoEquiposProps) {
 
       <div className="flex flex-col gap-3">
         {equipos.map((equipo, indice) => {
-          const idDisciplina = "equipo-" + indice + "-disciplina";
-          const idNombre = "equipo-" + indice + "-nombre";
-          const idErrorDisciplina = idDisciplina + "-error";
-          const idErrorNombre = idNombre + "-error";
+          const idDisciplina = `equipo-${indice}-disciplina`;
+          const idNombre = `equipo-${indice}-nombre`;
 
-          const errorDisciplina = erroresEquipo[indice]?.disciplina_id
-            ?.message;
+          const errorDisciplina = erroresEquipo[indice]?.disciplina_id?.message;
           const errorNombre = erroresEquipo[indice]?.nombre?.message;
 
-          const campoDisciplina = ("equipos." + indice + ".disciplina_id") as CampoEquipo;
-          const campoNombre = ("equipos." + indice + ".nombre") as CampoEquipo;
+          const campoDisciplina =
+            `equipos.${indice}.disciplina_id` as CampoEquipo;
+          const campoNombre = `equipos.${indice}.nombre` as CampoEquipo;
 
-          const registroDisciplina = registro(campoDisciplina);
           const registroNombre = registro(campoNombre);
 
           return (
             <div
               key={indice}
-              className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4"
+              className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4 transition-colors duration-(--motion-duration-fast) hover:border-border-strong"
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-foreground">
-                  Equipo {indice + 1}
+                <span className="flex items-center gap-2">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    {indice + 1}
+                  </span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Equipo {indice + 1}
+                  </span>
                 </span>
 
                 {equipos.length > 1 ? (
@@ -140,79 +194,67 @@ export function PasoEquipos(props: PasoEquiposProps) {
                 ) : null}
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor={idDisciplina}
-                  className="text-sm font-semibold text-foreground"
-                >
-                  Disciplina
-                </Label>
-                <select
+              <FormGrid>
+                <FormField
                   id={idDisciplina}
-                  name={registroDisciplina.name}
-                  onChange={registroDisciplina.onChange}
-                  onBlur={registroDisciplina.onBlur}
-                  ref={registroDisciplina.ref}
-                  aria-invalid={Boolean(errorDisciplina)}
-                  aria-describedby={
-                    errorDisciplina ? idErrorDisciplina : undefined
-                  }
-                  className="min-h-11 w-full rounded-[var(--radius-md)] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20"
+                  label="Disciplina"
+                  required
+                  icon={Trophy}
+                  span={6}
+                  error={errorDisciplina}
                 >
-                  <option value="">Elige la disciplina</option>
-                  {disciplinas.map((disciplina) => (
-                    <option key={disciplina.id} value={disciplina.id}>
-                      {disciplina.nombre}
-                    </option>
-                  ))}
-                </select>
-                {errorDisciplina ? (
-                  <p
-                    id={idErrorDisciplina}
-                    className="flex items-center gap-1.5 text-xs text-destructive"
-                  >
-                    <AlertCircle
-                      className="size-3.5 shrink-0"
-                      aria-hidden="true"
+                  {() => (
+                    /*
+                     * The searchable select of the project, as the previous
+                     * frontend had it: the discipline list grows and the
+                     * keyboard reaches it. The ICON belongs to the field
+                     * (`FormField`), so the control draws it once.
+                     */
+                    <SearchableSelect
+                      id={idDisciplina}
+                      label="Disciplina"
+                      value={equipo?.disciplina_id || null}
+                      onValueChange={(valor) =>
+                        setValue(campoDisciplina, valor ?? "", {
+                          shouldDirty: true,
+                        })
+                      }
+                      options={disciplinas.map((disciplina) => ({
+                        value: disciplina.id,
+                        label: disciplina.nombre,
+                      }))}
+                      placeholder="Elige la disciplina"
+                      error={Boolean(errorDisciplina)}
+                      errorMessage={errorDisciplina}
+                      showLabel={false}
+                      hideErrorMessage
+                      className="w-full [&_button]:w-full"
                     />
-                    {errorDisciplina}
-                  </p>
-                ) : null}
-              </div>
+                  )}
+                </FormField>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor={idNombre}
-                  className="text-sm font-semibold text-foreground"
-                >
-                  Nombre del equipo
-                </Label>
-                <Input
+                <FormField
                   id={idNombre}
-                  type="text"
-                  name={registroNombre.name}
-                  onChange={registroNombre.onChange}
-                  onBlur={registroNombre.onBlur}
-                  ref={registroNombre.ref}
-                  autoComplete="off"
-                  placeholder="Por ejemplo, Halcones"
-                  aria-invalid={Boolean(errorNombre)}
-                  aria-describedby={errorNombre ? idErrorNombre : undefined}
-                  className="min-h-11"
-                />
-                {errorNombre ? (
-                  <p
-                    id={idErrorNombre}
-                    className="flex items-center gap-1.5 text-xs text-destructive"
-                  >
-                    <AlertCircle
-                      className="size-3.5 shrink-0"
-                      aria-hidden="true"
+                  label="Nombre del equipo"
+                  required
+                  icon={Tag}
+                  span={6}
+                  error={errorNombre}
+                >
+                  {(control) => (
+                    <Input
+                      {...control}
+                      type="text"
+                      name={registroNombre.name}
+                      onChange={registroNombre.onChange}
+                      onBlur={registroNombre.onBlur}
+                      ref={registroNombre.ref}
+                      autoComplete="off"
+                      placeholder="Por ejemplo, Halcones"
                     />
-                    {errorNombre}
-                  </p>
-                ) : null}
-              </div>
+                  )}
+                </FormField>
+              </FormGrid>
             </div>
           );
         })}

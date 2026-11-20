@@ -1,5 +1,8 @@
 import type { QueryKey } from "@tanstack/react-query";
-import { buildQueryKey, createDatasetQueryKeys } from "@/shared/utils/query-keys";
+import {
+  buildQueryKey,
+  createDatasetQueryKeys,
+} from "@/shared/utils/query-keys";
 
 /**
  * The query keys of the administration area.
@@ -57,6 +60,26 @@ export type ParamsListaAdmin = {
   desde?: string;
   /** The end of the range of dates. */
   hasta?: string;
+  /**
+   * The commercial balance of the inscription (`PENDIENTE` | `PAGADO`).
+   *
+   * Declared by the transversal summary (`XCT-02`): it is the drilldown that
+   * takes an issue of the summary to the filtered records.
+   */
+  estado_pago?: string;
+  /**
+   * The completeness of the roster of the team (`INCOMPLETA` | `COMPLETA`).
+   *
+   * Declared by the transversal summary (`XCT-02`), for the same reason.
+   */
+  plantilla?: string;
+  /**
+   * The code of the audited action that scopes the acta.
+   *
+   * Declared by the transversal acta (`XCT-02`): it is the filter that
+   * narrows the trail to one kind of sensitive action.
+   */
+  accion?: string;
   /** The page, 1-based. */
   page?: number;
   /** The size of the page. */
@@ -68,7 +91,10 @@ export type DatasetAdmin =
   | "inscripciones"
   | "equipos"
   | "participantes"
-  | "pagos";
+  | "pagos"
+  | "personas"
+  | "resumen"
+  | "auditoria";
 
 export const adminClaves = {
   /** The root of the WHOLE area: the invalidation target of every dataset. */
@@ -89,6 +115,25 @@ export const adminClaves = {
 
   /** The payments of the area. */
   pagos: createDatasetQueryKeys<ParamsListaAdmin>("admin.pagos"),
+
+  /**
+   * The administrative search of PEOPLE (`RT-ID-07` · `RT-ID-08`).
+   *
+   * It is ONE dataset with ONE namespace: the invalidation target of the
+   * search is `admin.personas` and of nothing else.
+   */
+  personas: createDatasetQueryKeys<ParamsListaAdmin>("admin.personas"),
+
+  /**
+   * The transversal summary of the edition (`ADM-01`).
+   *
+   * It is ONE dataset with ONE namespace: the invalidation target of the
+   * summary is `admin.resumen` and of nothing else.
+   */
+  resumen: createDatasetQueryKeys<ParamsListaAdmin>("admin.resumen"),
+
+  /** The audit trail of the sensitive actions. */
+  auditoria: createDatasetQueryKeys<ParamsListaAdmin>("admin.auditoria"),
 
   /**
    * The key of ONE sensitive action.

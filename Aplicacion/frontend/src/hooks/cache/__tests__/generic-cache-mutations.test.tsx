@@ -93,7 +93,9 @@ describe("the optimistic update", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(client.getQueryState(["catalogo", "list"])?.isInvalidated).toBe(true);
+    expect(client.getQueryState(["catalogo", "list"])?.isInvalidated).toBe(
+      true,
+    );
   });
 });
 
@@ -113,7 +115,7 @@ describe("the update of a dataset", () => {
       () =>
         useGenericUpdateMutation<Item, void>({
           queryKey: ["catalogo", "list"],
-          mutationFn: async () => ({ id: 2 } as Item),
+          mutationFn: async () => ({ id: 2 }) as Item,
         }),
       { wrapper: createWrapper(client) },
     );
@@ -134,7 +136,7 @@ describe("the update of a dataset", () => {
       () =>
         useGenericUpdateMutation<Item, void>({
           queryKey: ["catalogo", "list"],
-          mutationFn: async () => ({ id: 2 } as Item),
+          mutationFn: async () => ({ id: 2 }) as Item,
           detailKey: (item) => ["catalogo", "detail", item.id],
         }),
       { wrapper: createWrapper(client) },

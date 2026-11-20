@@ -28,6 +28,7 @@ from simple_history.models import HistoricalRecords
 
 from core.models import BaseModel
 from modules.pagos.domain.constants import (
+    EstadoAprobacionPagoManual,
     EstadoOrdenPago,
     EstadoTransaccionPago,
 )
@@ -239,6 +240,47 @@ class TransaccionPago(BaseModel):
 
     def __str__(self) -> str:
         return f"Intento {self.intento} - {self.estado}"
+
+
+class AprobacionPagoManual(BaseModel):
+    """Evidencia auditada de un pago confirmado fuera del proveedor."""
+
+    orden_pago = models.ForeignKey(
+        OrdenPago, on_delete=models.PROTECT, related_name="aprobaciones_manuales"
+    )
+    actor = models.ForeignKey(
+        "usuarios.Usuario",
+        on_delete=models.PROTECT,
+        related_name="aprobaciones_manuales_pago",
+    )
+    canal = models.CharField(max_length=32)
+    referencia = models.CharField(max_length=100)
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    moneda = models.CharField(max_length=3)
+    motivo = models.TextField(max_length=1000)
+    estado = models.CharField(
+        max_length=20,
+        choices=EstadoAprobacionPagoManual.choices,
+        default=EstadoAprobacionPagoManual.APROBADA,
+    )
+
+    class Meta:
+        db_table = "pagos_aprobacionpagomanual"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["orden_pago"],
+                condition=models.Q(estado=EstadoAprobacionPagoManual.APROBADA),
+                name="aprobacion_manual_activa_unica_por_orden",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["orden_pago", "estado"], name="ix_aprobmanual_orden_estado"),
+            models.Index(fields=["actor", "created_at"], name="ix_aprobmanual_actor_fecha"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Aprobacion manual {self.orden_pago_id} - {self.estado}"
 
 
 class RegistroIdempotencia(BaseModel):

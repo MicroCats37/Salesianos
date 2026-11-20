@@ -1,5 +1,11 @@
+"use client";
+
 import { Package } from "lucide-react";
 import Link from "next/link";
+import {
+  ShellErrorState,
+  ShellPendingState,
+} from "@/components/shell/ShellState";
 import { Button } from "@/components/ui/button";
 import {
   AdminDataTable,
@@ -7,61 +13,137 @@ import {
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
+import { useProductoDetalle } from "@/features/marketplace/hooks/useProductoDetalle";
 import { RUTAS } from "@/lib/routes";
+import { resolveImageUrl } from "@/lib/utils";
 
-/**
- * ADM-18 - the editor of a product.
- *
- * A product is three things that must stay together: the images that sell
- * it, the offer that prices it and the stock that promises it.
- */
-export function AdminProductoDetalleView({ id }: { id: string }) {
+const formatoMoneda = new Intl.NumberFormat("es-PE", {
+  style: "currency",
+  currency: "PEN",
+  minimumFractionDigits: 2,
+});
+
+/** ADM-18 - the real read-only product detail published by the marketplace. */
+export function AdminProductoDetalleView({ id: slug }: { id: string }) {
+  const producto = useProductoDetalle(slug);
+
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader
         pageId="ADM-18"
-        title="Editar la galería y la oferta de un producto"
-        description="La ficha completa de un producto del catálogo: sus imágenes, su precio, su categoría y su disponibilidad."
-        meta={[{ etiqueta: "Producto", valor: id }]}
+        title={producto.data?.nombre ?? "Detalle de producto"}
+        description="Consulta la ficha comercial, el precio vigente y la galería publicada por el servidor."
+        meta={[{ etiqueta: "Referencia", valor: slug }]}
         actions={
           <Button variant="outline" asChild className="min-h-11">
             <Link href={RUTAS.administracion.marketplace}>
-              Volver a la tienda
+              Volver a productos
             </Link>
           </Button>
         }
       />
 
-      <AdminPanel
-        title="Galería"
-        description="Las imágenes del producto y su orden de publicación."
-      >
-        <AdminEmptyState
-          icon={Package}
-          title="Todavía no hay imágenes cargadas"
-          description="La galería se lee del servicio de administración. Cuando la integración esté disponible, aquí se verán las imágenes del producto con su orden y con la acción de quitarlas."
+      {producto.isPending ? (
+        <ShellPendingState
+          title="Cargando el producto"
+          description="Estamos leyendo su ficha y galería."
         />
-      </AdminPanel>
-
-      <AdminPanel
-        title="Oferta"
-        description="Precio, categoría, disponibilidad y estado de publicación del producto."
-      >
-        <AdminDataTable
-          caption="Datos de la oferta del producto"
-          columns={[
-            { key: "campo", label: "Dato" },
-            { key: "valor", label: "Valor" },
-          ]}
-          vacio={
-            <AdminEmptyState
-              icon={Package}
-              title="Todavía no hay oferta cargada"
-              description="El precio y la disponibilidad del producto los fija el backend: el formulario se los pedirá al servidor y nunca los escribirá por su cuenta."
+      ) : null}
+      {producto.isError ? (
+        <ShellErrorState
+          title="No pudimos cargar este producto"
+          description={producto.error.message}
+          accion={{ label: "Reintentar", onClick: () => producto.refetch() }}
+        />
+      ) : null}
+      {producto.isSuccess ? (
+        <>
+          <AdminPanel
+            title="Oferta"
+            description="Importes y estado publicados por el backend."
+          >
+            <AdminDataTable
+              caption="Datos comerciales del producto"
+              columns={[
+                { key: "dato", label: "Dato" },
+                { key: "valor", label: "Valor" },
+              ]}
+              filas={[
+                {
+                  cells: {
+                    dato: "Categoría",
+                    valor: producto.data.categoria_nombre ?? "Sin categoría",
+                  },
+                },
+                {
+                  cells: {
+                    dato: "Precio regular",
+                    valor: formatoMoneda.format(producto.data.precio),
+                  },
+                },
+                {
+                  cells: {
+                    dato: "Precio vigente",
+                    valor: formatoMoneda.format(producto.data.precio_efectivo),
+                  },
+                },
+                {
+                  cells: {
+                    dato: "Oferta",
+                    valor: producto.data.oferta_activa
+                      ? "Vigente"
+                      : "Sin oferta vigente",
+                  },
+                },
+                {
+                  cells: {
+                    dato: "Estado",
+                    valor:
+                      producto.data.estado === "ACTIVO" ? "Activo" : "Inactivo",
+                  },
+                },
+              ]}
             />
-          }
-        />
-      </AdminPanel>
+          </AdminPanel>
+
+          <AdminPanel
+            title="Galería"
+            description="Imágenes publicadas para este producto."
+          >
+            {producto.data.imagenes.length > 0 ? (
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {producto.data.imagenes.map((imagen) => (
+                  <li
+                    key={imagen.id}
+                    className="overflow-hidden rounded-[var(--radius-md)] border border-border bg-surface-recessed"
+                  >
+                    {imagen.url && imagen.disponible ? (
+                      <img
+                        src={resolveImageUrl(imagen.url)}
+                        alt={imagen.texto_alternativo}
+                        className="aspect-square w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center text-sm text-muted-foreground">
+                        Imagen no disponible
+                      </div>
+                    )}
+                    <p className="p-3 text-sm text-muted-foreground">
+                      {imagen.texto_alternativo || "Imagen de producto"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <AdminEmptyState
+                icon={Package}
+                title="Este producto no tiene imágenes"
+                description="La ficha está publicada, pero todavía no se cargó una imagen para su galería."
+              />
+            )}
+          </AdminPanel>
+        </>
+      ) : null}
     </div>
   );
 }

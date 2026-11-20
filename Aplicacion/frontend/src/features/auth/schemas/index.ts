@@ -25,23 +25,6 @@ export interface MeResponse {
   persona_id?: string | null;
 }
 
-export type {
-  LoginDniFormData,
-  LoginEmailFormData,
-  LoginUsernameFormData,
-} from "./login.schema";
-export {
-  LoginDniFormSchema,
-  LoginEmailFormSchema,
-  LoginUsernameFormSchema,
-} from "./login.schema";
-
-export {
-  type RegisterFormData,
-  RegisterFormSchema,
-  type RegisterResponse,
-} from "./register.schema";
-
 /**
  * The Zod mirrors of the identity dataset (`RT-ID-01`…`RT-ID-03`).
  *
@@ -56,11 +39,26 @@ export {
   PersonaConfirmarInSchema,
   PersonaDatosSchema,
   PersonaIdentidadSchema,
+  PersonaResolverInSchema,
   type PersonaResuelta,
   PersonaResueltaSchema,
-  PersonaResolverInSchema,
   PersonaSchema,
 } from "./identidad.schema";
+export type {
+  LoginDniFormData,
+  LoginEmailFormData,
+  LoginUsernameFormData,
+} from "./login.schema";
+export {
+  LoginDniFormSchema,
+  LoginEmailFormSchema,
+  LoginUsernameFormSchema,
+} from "./login.schema";
+export {
+  type RegisterFormData,
+  RegisterFormSchema,
+  type RegisterResponse,
+} from "./register.schema";
 
 /**
  * The Zod mirror of the session (`GET /auth/me`).

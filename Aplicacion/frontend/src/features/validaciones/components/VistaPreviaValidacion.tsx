@@ -1,8 +1,8 @@
 import { Eye } from "lucide-react";
-import { ChipVeredictoValidacion } from "./ChipVeredictoValidacion";
+import type { VistaPreviaValidacion } from "../types/validacion.types";
 import { estadoDerecho } from "../utils/validaciones.estados.utils";
 import { formatearInstante } from "../utils/validaciones.fecha.utils";
-import type { VistaPreviaValidacion } from "../types/validacion.types";
+import { ChipVeredictoValidacion } from "./ChipVeredictoValidacion";
 
 /**
  * VistaPreviaValidacion - the reusable preview of the validation area.
@@ -33,7 +33,10 @@ export function VistaPreviaValidacion({
     ? formatearInstante(vistaPrevia.consumo_previo.instante)
     : null;
 
-  const nombreTitular = [vistaPrevia.titular.nombres, vistaPrevia.titular.apellidos]
+  const nombreTitular = [
+    vistaPrevia.titular.nombres,
+    vistaPrevia.titular.apellidos,
+  ]
     .filter(Boolean)
     .join(" ");
 

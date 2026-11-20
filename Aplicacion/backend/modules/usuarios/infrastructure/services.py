@@ -22,6 +22,8 @@ RECUPERABLE (`contratos/03` §7).
 
 import logging
 import os
+import hashlib
+import random
 
 import httpx
 
@@ -34,8 +36,56 @@ logger = logging.getLogger(__name__)
 #: Variable de entorno con la URL base de la fuente de documentos.
 ENV_BASE_URL = "SCRAPER_URL"
 
-#: Timeout por defecto de la consulta externa (segundos).
-TIMEOUT_DEFAULT = 10.0
+#: Base y timeout del cliente legado del worker de documentos.
+DEFAULT_BASE_URL = "http://scraper:8001"
+TIMEOUT_DEFAULT = httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=5.0)
+
+
+class ConsultaDocumentoSimulator(IConsultaDocumentoClient):
+    """Emulador determinístico del cliente legacy para desarrollo."""
+
+    _RENIEC_SIMULADOS = {
+        "45406196": "ZARATE TORRES, DENNIS JOEL",
+        "12345678": "PEREZ GOMEZ, CARLOS MANUEL",
+        "87654321": "LOPEZ SANCHEZ, MARIA ELENA",
+    }
+    _SUNAT_SIMULADOS = {
+        "20492913151": "MUNICIPALIDAD PROVINCIAL DE LIMA",
+        "20131312957": "COLEGIO DE INGENIEROS DEL PERU",
+        "20600099773": "CONSORCIO CAM LIMA NORTE",
+    }
+    _NOMBRES = ["JUAN", "CARLOS", "MIGUEL", "LUIS", "MARIA", "ELENA", "ANA", "PATRICIA"]
+    _APELLIDOS = ["GARCIA", "PEREZ", "LOPEZ", "SANCHEZ", "TORRES", "RAMIREZ", "FLORES", "VARGAS"]
+    _RAZONES = ["EMPRESA CONSTRUCTORA", "SERVICIOS GENERALES", "COMERCIO AL POR MENOR", "TRANSPORTES Y LOGISTICA"]
+
+    async def consultar(self, numero_documento: str) -> ConsultaDocumentoResultado:
+        documento = str(numero_documento or "")
+        if len(documento) == 8:
+            nombre = self._RENIEC_SIMULADOS.get(documento)
+            if not nombre:
+                rng = random.Random(int(hashlib.md5(documento.encode()).hexdigest(), 16))
+                nombre = f"{rng.choice(self._APELLIDOS)} {rng.choice(self._APELLIDOS)}, {rng.choice(self._NOMBRES)} {rng.choice(self._NOMBRES)}"
+            return ConsultaDocumentoResultado(
+                estado=EstadoConsultaDocumentoChoices.ENCONTRADO,
+                tipo_documento="DNI",
+                numero_documento=documento,
+                nombre_completo=nombre,
+            )
+        if len(documento) == 11:
+            nombre = self._SUNAT_SIMULADOS.get(documento)
+            if not nombre:
+                rng = random.Random(int(hashlib.md5(documento.encode()).hexdigest(), 16))
+                nombre = f"{rng.choice(self._RAZONES)} S.A.C."
+            return ConsultaDocumentoResultado(
+                estado=EstadoConsultaDocumentoChoices.ENCONTRADO,
+                tipo_documento="RUC",
+                numero_documento=documento,
+                nombre_completo=nombre,
+            )
+        return ConsultaDocumentoResultado(
+            estado=EstadoConsultaDocumentoChoices.DATOS_INCOMPLETOS,
+            numero_documento=documento,
+        )
 
 
 class ConsultaDocumentoClient(IConsultaDocumentoClient):
@@ -44,7 +94,7 @@ class ConsultaDocumentoClient(IConsultaDocumentoClient):
     def __init__(
         self,
         base_url: str | None = None,
-        timeout: float | None = None,
+        timeout: httpx.Timeout | float | None = None,
     ):
         self._base_url = base_url
         self._timeout = timeout if timeout is not None else TIMEOUT_DEFAULT
@@ -55,9 +105,8 @@ class ConsultaDocumentoClient(IConsultaDocumentoClient):
         """URL base de la fuente externa, o cadena vacía si no hay ninguna.
 
         Se lee de `settings.SCRAPER_URL` cuando existe y, si no, de la
-        variable de entorno. NO hay valor por defecto: sin fuente
-        configurada el resolver informa `FUENTE_NO_DISPONIBLE` en vez de
-        adivinar una dirección.
+        variable de entorno. Sin configuración explícita conserva la base
+        interna del cliente legado para el servicio `scraper` de Docker.
         """
         if self._base_url:
             return self._base_url.rstrip("/")
@@ -67,7 +116,7 @@ class ConsultaDocumentoClient(IConsultaDocumentoClient):
             desde_settings = getattr(settings, "SCRAPER_URL", "")
         except Exception:  # pragma: no cover - settings no configurados
             desde_settings = ""
-        base = desde_settings or os.environ.get(ENV_BASE_URL, "")
+        base = desde_settings or os.environ.get(ENV_BASE_URL, DEFAULT_BASE_URL)
         return str(base).rstrip("/")
 
     # ── Consulta ───────────────────────────────────────────────────────────
@@ -86,11 +135,11 @@ class ConsultaDocumentoClient(IConsultaDocumentoClient):
             )
 
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as cliente:
-                respuesta = await cliente.get(
-                    f"/consultar/{numero_documento}",
-                    headers={"Accept": "application/json"},
-                )
+            async with httpx.AsyncClient(
+                base_url=base_url,
+                timeout=self._timeout,
+            ) as cliente:
+                respuesta = await cliente.get(f"/consultar/{numero_documento}")
         except httpx.TimeoutException:
             return ConsultaDocumentoResultado(
                 estado=EstadoConsultaDocumentoChoices.TIMEOUT,
@@ -172,4 +221,9 @@ class ConsultaDocumentoClient(IConsultaDocumentoClient):
         )
 
 
-__all__ = ["ENV_BASE_URL", "TIMEOUT_DEFAULT", "ConsultaDocumentoClient"]
+__all__ = [
+    "DEFAULT_BASE_URL",
+    "ENV_BASE_URL",
+    "TIMEOUT_DEFAULT",
+    "ConsultaDocumentoClient",
+]

@@ -1,16 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  catalogoCategoriasSchema,
   catalogoDisciplinasSchema,
   catalogoPaquetesSchema,
+  catalogoPromocionesSchema,
 } from "../schemas/catalogo.schema";
 import { compraCreadaSchema } from "../schemas/compra-cupos.schema";
+import { cotizacionOutSchema } from "../schemas/cotizacion.schema";
 import {
   inscripcionDetalleSchema,
   inscripcionInicialInSchema,
   inscripcionInicialSchema,
 } from "../schemas/inscripcion.schema";
-import { participanteAsignarInSchema, poolSchema } from "../schemas/pool.schema";
+import {
+  participanteAsignarInSchema,
+  poolSchema,
+} from "../schemas/pool.schema";
 import { leerRespuesta } from "../services/respuesta.service";
 import {
   construirPayloadAlta,
@@ -65,11 +71,38 @@ const PAQUETE = {
   descripcion: "Paquete de ejemplo.",
   estado: "VIGENTE",
   cupos_incluidos: 10,
+  minimo_compra_inicial: 7,
   precio: PRECIO,
   beneficios: [
-    { codigo: "FIJO", nombre: "Beneficio fijo", tipo: "FIJO_INICIAL", cantidad: 1 },
+    {
+      codigo: "FIJO",
+      nombre: "Beneficio fijo",
+      tipo: "FIJO_INICIAL",
+      cantidad: 1,
+    },
   ],
   disciplinas: [DISCIPLINA],
+};
+
+const PROMOCION = {
+  id: "3f0c1c1e-0000-4000-8000-0000000000p1",
+  created_at: "2026-11-19T10:00:00+00:00",
+  updated_at: "2026-11-19T10:00:00+00:00",
+  anio: 2012,
+  nombre: "PROMOCIÓN 2012",
+  estado: "ACTIVA",
+};
+
+const CATEGORIA = {
+  id: "3f0c1c1e-0000-4000-8000-0000000000g1",
+  created_at: "2026-11-19T10:00:00+00:00",
+  updated_at: "2026-11-19T10:00:00+00:00",
+  edicion_id: "3f0c1c1e-0000-4000-8000-0000000000e1",
+  edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+  nombre: "JUNIOR",
+  promocion_desde: 2012,
+  promocion_hasta: 2025,
+  estado: "ACTIVA",
 };
 
 const INSCRIPCION = {
@@ -81,6 +114,12 @@ const INSCRIPCION = {
   responsable_id: "3f0c1c1e-0000-4000-8000-0000000000b2",
   paquete_id: PAQUETE.id,
   paquete_nombre: PAQUETE.nombre,
+  promocion: {
+    id: PROMOCION.id,
+    nombre: PROMOCION.nombre,
+    anio: PROMOCION.anio,
+  },
+  fusion_promocion: null,
   estado: "CREADA",
   referencia: "INSCRIPCION:3f0c1c1e-0000-4000-8000-0000000000a1:INICIAL",
   cupos_solicitados: 10,
@@ -95,6 +134,7 @@ const INSCRIPCION = {
       disciplina_id: DISCIPLINA.id,
       disciplina_nombre: DISCIPLINA.nombre,
       nombre: "EQUIPO DE EJEMPLO",
+      categoria: { id: CATEGORIA.id, nombre: CATEGORIA.nombre },
       estado: "ACTIVO",
     },
   ],
@@ -148,6 +188,37 @@ describe("API-02 — el espejo del catálogo del backend objetivo", () => {
     expect(resultado.disciplinas[0].minimo_por_equipo).toBe(7);
   });
 
+  it("acepta la forma exacta de CatalogoPromocionesOut", () => {
+    const resultado = catalogoPromocionesSchema.parse({
+      edicion_id: "3f0c1c1e-0000-4000-8000-0000000000e1",
+      edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+      promociones: [PROMOCION],
+    });
+
+    expect(resultado.promociones[0].anio).toBe(2012);
+  });
+
+  it("acepta la forma exacta de CatalogoCategoriasOut", () => {
+    const resultado = catalogoCategoriasSchema.parse({
+      edicion_id: "3f0c1c1e-0000-4000-8000-0000000000e1",
+      edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+      categorias: [CATEGORIA],
+    });
+
+    expect(resultado.categorias[0].promocion_desde).toBe(2012);
+    expect(resultado.categorias[0].promocion_hasta).toBe(2025);
+  });
+
+  it("el mínimo de compra del paquete lo DECLARA el catálogo", () => {
+    const resultado = catalogoPaquetesSchema.parse({
+      edicion_id: "e",
+      edicion_nombre: "E",
+      paquetes: [PAQUETE],
+    });
+
+    expect(resultado.paquetes[0].minimo_compra_inicial).toBe(7);
+  });
+
   it("RECHAZA la forma del backend congelado (evento_id, sigla, precios[])", () => {
     const congelado = {
       id: PAQUETE.id,
@@ -162,7 +233,9 @@ describe("API-02 — el espejo del catálogo del backend objetivo", () => {
       precios: [{ etapa: "REGULAR", precio_unitario: 750 }],
     };
 
-    expect(() => catalogoPaquetesSchema.parse({ paquetes: [congelado] })).toThrow();
+    expect(() =>
+      catalogoPaquetesSchema.parse({ paquetes: [congelado] }),
+    ).toThrow();
   });
 
   it("el importe es una cadena: el backend serializa el Decimal así", () => {
@@ -176,12 +249,57 @@ describe("API-02 — el espejo del catálogo del backend objetivo", () => {
   });
 });
 
+describe("API-02 — el espejo de la cotización", () => {
+  it("acepta la forma exacta de CotizacionOut", () => {
+    const resultado = cotizacionOutSchema.parse({
+      paquete_id: PAQUETE.id,
+      paquete_nombre: PAQUETE.nombre,
+      minimo_cantidad: 7,
+      cantidad_cotizada: 10,
+      precio_unitario: "750.00",
+      total: "7500.00",
+      moneda: "PEN",
+      version: 2,
+      estado: "ACTIVA",
+      validez_hasta: "2026-11-21T10:00:00+00:00",
+    });
+
+    expect(resultado.cantidad_cotizada).toBe(10);
+    expect(resultado.version).toBe(2);
+  });
+
+  it("el importe de la cotización también es una cadena", () => {
+    expect(() =>
+      cotizacionOutSchema.parse({
+        paquete_id: PAQUETE.id,
+        paquete_nombre: PAQUETE.nombre,
+        minimo_cantidad: 7,
+        cantidad_cotizada: 10,
+        precio_unitario: 750,
+        total: 7500,
+        moneda: "PEN",
+        version: 2,
+        estado: "ACTIVA",
+        validez_hasta: "2026-11-21T10:00:00+00:00",
+      }),
+    ).toThrow();
+  });
+});
+
 describe("API-02 — el espejo de la inscripción y del pool", () => {
   it("acepta la forma exacta de InscripcionDetalleOut", () => {
     const resultado = inscripcionDetalleSchema.parse(INSCRIPCION);
 
     expect(resultado.cupos_pagados).toBe(0);
     expect(resultado.equipos[0].nombre).toBe("EQUIPO DE EJEMPLO");
+  });
+
+  it("la promoción y la categoría DERIVADA viajan en el detalle", () => {
+    const resultado = inscripcionDetalleSchema.parse(INSCRIPCION);
+
+    expect(resultado.promocion.anio).toBe(2012);
+    expect(resultado.fusion_promocion).toBeNull();
+    expect(resultado.equipos[0].categoria.nombre).toBe("JUNIOR");
   });
 
   it("acepta la forma exacta de InscripcionInicialOut", () => {
@@ -257,7 +375,12 @@ describe("API-02 — el envelope se abre con ruido", () => {
     expect(() =>
       leerRespuesta(
         catalogoPaquetesSchema,
-        { success: false, data: null, error: null, message: "No se pudo leer." },
+        {
+          success: false,
+          data: null,
+          error: null,
+          message: "No se pudo leer.",
+        },
         "sin catálogo",
       ),
     ).toThrow("No se pudo leer.");
@@ -271,31 +394,102 @@ describe("API-02 — el envelope se abre con ruido", () => {
 });
 
 describe("API-02 — los payloads que viajan", () => {
-  it("el alta viaja sin responsable, sin precio y sin cantidad", () => {
+  it("el alta viaja sin responsable y sin precio", () => {
     const payload = construirPayloadAlta({
       edicion_id: "e",
       paquete_id: "p",
+      promocion_id: "pro",
+      cantidad: 8,
       equipos: [{ disciplina_id: "d", nombre: "Halcones" }],
     });
 
     expect(payload).toEqual({
       edicion_id: "e",
       paquete_id: "p",
+      promocion_id: "pro",
+      cantidad: 8,
       equipos: [{ disciplina_id: "d", nombre: "Halcones" }],
     });
     expect(Object.keys(payload)).not.toContain("responsable_id");
     expect(Object.keys(payload)).not.toContain("precio");
-    expect(Object.keys(payload)).not.toContain("cantidad");
+    expect(Object.keys(payload)).not.toContain("precio_unitario");
+    expect(Object.keys(payload)).not.toContain("total");
+  });
+
+  it("el alta NO envía la categoría: la deriva el servidor", () => {
+    const payload = construirPayloadAlta({
+      edicion_id: "e",
+      paquete_id: "p",
+      promocion_id: "pro",
+      cantidad: 8,
+      equipos: [{ disciplina_id: "d", nombre: "Halcones" }],
+    });
+
+    expect(Object.keys(payload)).not.toContain("categoria_id");
+    expect(payload.equipos[0]).not.toHaveProperty("categoria_id");
+  });
+
+  it("la promoción fusionada viaja sólo cuando se eligió", () => {
+    const sinFusion = construirPayloadAlta({
+      edicion_id: "e",
+      paquete_id: "p",
+      promocion_id: "pro",
+      cantidad: 8,
+      equipos: [{ disciplina_id: "d", nombre: "Halcones" }],
+    });
+    expect(Object.keys(sinFusion)).not.toContain("fusion_promocion_id");
+
+    const conFusion = construirPayloadAlta({
+      edicion_id: "e",
+      paquete_id: "p",
+      promocion_id: "pro",
+      cantidad: 8,
+      fusion_promocion_id: "pro-2",
+      equipos: [{ disciplina_id: "d", nombre: "Halcones" }],
+    });
+    expect(conFusion.fusion_promocion_id).toBe("pro-2");
+  });
+
+  it("la promoción fusionada VACÍA viaja como null, nunca como cadena vacía", () => {
+    const payload = construirPayloadAlta({
+      edicion_id: "e",
+      paquete_id: "p",
+      promocion_id: "pro",
+      cantidad: 8,
+      fusion_promocion_id: "",
+      equipos: [{ disciplina_id: "d", nombre: "Halcones" }],
+    });
+
+    expect(payload.fusion_promocion_id).toBeNull();
+  });
+
+  it("el token de la cotización viaja, y el precio NUNCA", () => {
+    const payload = construirPayloadAlta({
+      edicion_id: "e",
+      paquete_id: "p",
+      promocion_id: "pro",
+      cantidad: 8,
+      cotizacion_version: 3,
+      equipos: [{ disciplina_id: "d", nombre: "Halcones" }],
+    });
+
+    expect(payload.cotizacion_version).toBe(3);
+    expect(Object.keys(payload)).not.toContain("precio_unitario_cotizado");
+    expect(Object.keys(payload)).not.toContain("total");
   });
 
   it("el alta acepta el payload del servidor", () => {
     const payload = inscripcionInicialInSchema.parse({
       edicion_id: "e",
       paquete_id: "p",
+      promocion_id: "pro",
+      cantidad: 8,
       equipos: [{ disciplina_id: "d", nombre: "Halcones" }],
     });
 
     expect(payload.equipos).toHaveLength(1);
+    expect(payload.promocion_id).toBe("pro");
+    expect(payload.cantidad).toBe(8);
   });
 
   it("el alta NO acota el número de equipos: el límite es del servidor", () => {
@@ -308,6 +502,8 @@ describe("API-02 — los payloads que viajan", () => {
       inscripcionInicialInSchema.parse({
         edicion_id: "e",
         paquete_id: "p",
+        promocion_id: "pro",
+        cantidad: 8,
         equipos,
       }),
     ).not.toThrow();

@@ -73,6 +73,7 @@ export const SECCIONES = {
   fiesta: "fiesta",
   paquetes: "paquetes",
   enVivo: "en-vivo",
+  tienda: "tienda",
   lugar: "lugar",
   auspiciadores: "auspiciadores",
   preguntas: "preguntas",
@@ -86,5 +87,7 @@ export const NAV_LINKS = [
   { href: `#${SECCIONES.familia}`, label: "En familia" },
   { href: `#${SECCIONES.fiesta}`, label: "La fiesta" },
   { href: `#${SECCIONES.paquetes}`, label: "Paquetes" },
+  { href: `#${SECCIONES.enVivo}`, label: "En vivo" },
+  { href: `#${SECCIONES.tienda}`, label: "Tienda" },
   { href: `#${SECCIONES.auspiciadores}`, label: "Auspiciadores" },
 ] as const;

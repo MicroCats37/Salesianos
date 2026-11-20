@@ -11,7 +11,7 @@ Las consultas son de lectura y no modifican el alcance: el filtro por edición
 es siempre explícito (`edicion_id`), nunca implícito.
 """
 
-from modules.marketplace.domain.models import Pedido, PedidoDetalle
+from modules.marketplace.domain.models import EntregaPedido, Pedido, PedidoDetalle
 
 
 class PedidoSelector:
@@ -80,6 +80,14 @@ class PedidoSelector:
             )
             .select_related("edicion", "comprador", "compra")
             .order_by("-created_at")
+        )
+
+    def listar_entregadas(self, edicion_id) -> list[EntregaPedido]:
+        """Las actas de entrega de la edición, desde la más reciente."""
+        return list(
+            EntregaPedido.objects.filter(pedido__edicion_id=edicion_id)
+            .select_related("pedido", "pedido__comprador")
+            .order_by("-created_at", "-id")
         )
 
     def listar_detalles(self, pedido_id) -> list[PedidoDetalle]:

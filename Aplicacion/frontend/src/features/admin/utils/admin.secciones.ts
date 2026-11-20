@@ -3,7 +3,6 @@ import { ADMIN_CAPACIDADES, type AdminCapacidad } from "./admin.capacidades";
 
 export type AdminIcono =
   | "resumen"
-  | "ediciones"
   | "inscripciones"
   | "equipos"
   | "participantes"
@@ -12,11 +11,11 @@ export type AdminIcono =
   | "pases"
   | "ingreso"
   | "tienda"
-  | "entregas"
   | "patrocinadores"
   | "personas"
   | "usuarios"
-  | "validaciones";
+  | "validaciones"
+  | "videos";
 
 /**
  * A destination of the administration area.
@@ -91,14 +90,6 @@ export const ADMIN_GRUPOS: AdminGrupo[] = [
     title: "Deportivo",
     destinos: [
       {
-        id: "ediciones",
-        title: "Ediciones",
-        icon: "ediciones",
-        href: RUTAS.administracion.ediciones,
-        description: "Módulos habilitados y fechas",
-        capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
-      },
-      {
         id: "inscripciones",
         title: "Inscripciones",
         icon: "inscripciones",
@@ -171,19 +162,25 @@ export const ADMIN_GRUPOS: AdminGrupo[] = [
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
       {
-        id: "entregas",
-        title: "Entregas",
-        icon: "entregas",
-        href: RUTAS.administracion.marketplaceEntregas,
-        description: "Recogidas por confirmar",
-        capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
-      },
-      {
         id: "patrocinadores",
         title: "Patrocinadores",
         icon: "patrocinadores",
         href: RUTAS.administracion.patrocinadores,
         description: "Aliados y sus piezas",
+        capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
+      },
+    ],
+  },
+  {
+    id: "contenido",
+    title: "Contenido",
+    destinos: [
+      {
+        id: "videos",
+        title: "Videos",
+        icon: "videos",
+        href: RUTAS.administracion.videos,
+        description: "Galería pública de videos",
         capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
       },
     ],

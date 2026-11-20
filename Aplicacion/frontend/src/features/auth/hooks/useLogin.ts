@@ -6,9 +6,9 @@ import { api } from "@/lib/api";
 import { AUTH_COOKIES } from "@/lib/auth";
 import type { ApiResponse } from "@/types/api.types";
 import type {
-  LoginUsernameFormData,
   LoginDniFormData,
   LoginEmailFormData,
+  LoginUsernameFormData,
   MeResponse,
 } from "../schemas";
 

@@ -34,11 +34,7 @@ export interface AdminSubnavProps {
  * stored: a hard reload and the browser back button always mark the right
  * section.
  */
-export function AdminSubnav({
-  ariaLabel,
-  items,
-  className,
-}: AdminSubnavProps) {
+export function AdminSubnav({ ariaLabel, items, className }: AdminSubnavProps) {
   const pathname = usePathname();
 
   /**
@@ -47,8 +43,7 @@ export function AdminSubnav({
    */
   const activoHref = items
     .filter(
-      (item) =>
-        pathname === item.href || pathname.startsWith(`${item.href}/`),
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
     )
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 

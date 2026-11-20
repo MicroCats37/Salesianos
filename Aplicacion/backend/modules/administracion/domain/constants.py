@@ -97,6 +97,8 @@ class EntidadAuditada(models.TextChoices):
     PERSONA = "PERSONA", "Persona"
     EQUIPO = "EQUIPO", "Equipo"
     PAGO = "PAGO", "Pago"
+    COMPRA = "COMPRA", "Compra"
+    PEDIDO = "PEDIDO", "Pedido"
 
 
 class CodigoAccionAdmin(models.TextChoices):
@@ -108,6 +110,18 @@ class CodigoAccionAdmin(models.TextChoices):
 
     RETIRAR_PARTICIPANTE = "RETIRAR_PARTICIPANTE", "Retirar participante"
     APROBAR_PAGO_MANUAL = "APROBAR_PAGO_MANUAL", "Aprobar pago manual"
+    AGREGAR_PARTICIPANTE_EQUIPO = (
+        "AGREGAR_PARTICIPANTE_EQUIPO",
+        "Agregar participante a un equipo",
+    )
+    COMPRAR_PASE_PARA_CLIENTE = (
+        "COMPRAR_PASE_PARA_CLIENTE",
+        "Comprar pases para un cliente",
+    )
+    COMPRAR_PEDIDO_PARA_CLIENTE = (
+        "COMPRAR_PEDIDO_PARA_CLIENTE",
+        "Comprar un pedido de tienda para un cliente",
+    )
 
 
 class CodigoAlertaAdmin(models.TextChoices):

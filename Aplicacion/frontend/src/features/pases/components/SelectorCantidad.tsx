@@ -4,6 +4,7 @@ import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export interface SelectorCantidadProps {
   /** The identifier of the field, so the label and the hint can meet it. */
@@ -59,10 +60,15 @@ export function SelectorCantidad({
   }
 
   return (
-    <div className={className}>
+    <div
+      className={cn(
+        "flex flex-col rounded-[var(--radius-lg)] border border-border bg-surface-recessed p-4",
+        className,
+      )}
+    >
       <Label htmlFor={id}>{`Cuántos ${sustantivo} quieres`}</Label>
 
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-3 flex items-center gap-3">
         <Button
           type="button"
           variant="outline"

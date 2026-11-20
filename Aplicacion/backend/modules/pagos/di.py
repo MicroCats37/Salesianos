@@ -46,11 +46,15 @@ from modules.pagos.domain.services.core.verificacion_pago_service import (
 from modules.pagos.domain.services.flujos.pago_confirmacion_flujo import (
     PagoConfirmacionFlujo,
 )
+from modules.pagos.domain.services.flujos.aprobar_pago_manual_flujo import (
+    AprobarPagoManualFlujo,
+)
 from modules.pagos.domain.services.flujos.pago_intento_flujo import PagoIntentoFlujo
 from modules.pagos.domain.services.orchestrators.pagos_orchestrator import (
     PagosOrchestrator,
 )
 from modules.pagos.infrastructure.services import ProveedorPagoIzipayAdapter
+from modules.pagos.infrastructure.izipay_session_service import IzipaySessionService
 
 
 def _estado_compra_service_factory() -> IEstadoCompraOrdenPagoService:
@@ -118,6 +122,7 @@ class PagosModule(Module):
         binder.bind(
             ProveedorPagoIzipayAdapter, to=ProveedorPagoIzipayAdapter, scope=singleton
         )
+        binder.bind(IzipaySessionService, to=IzipaySessionService, scope=singleton)
         binder.bind(
             IProveedorPagoService, to=ProveedorPagoIzipayAdapter, scope=singleton
         )
@@ -148,6 +153,7 @@ class PagosModule(Module):
             ReconciliacionPagoService, to=ReconciliacionPagoService, scope=singleton
         )
         binder.bind(PagoConfirmacionFlujo, to=PagoConfirmacionFlujo, scope=singleton)
+        binder.bind(AprobarPagoManualFlujo, to=AprobarPagoManualFlujo, scope=singleton)
         binder.bind(PagoIntentoFlujo, to=PagoIntentoFlujo, scope=singleton)
         binder.bind(PagosOrchestrator, to=PagosOrchestrator, scope=singleton)
 

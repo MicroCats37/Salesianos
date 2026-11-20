@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, resolveImageUrl } from "@/lib/utils";
 import type { ImagenProducto } from "../types/marketplace.types";
 
 export interface GaleriaProductoProps {
@@ -55,7 +55,7 @@ export function GaleriaProducto({ imagenes, className }: GaleriaProductoProps) {
           </span>
         ) : (
           <img
-            src={actual.url ?? ""}
+            src={resolveImageUrl(actual.url)}
             alt={actual.texto_alternativo}
             className="size-full object-cover"
           />

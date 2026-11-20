@@ -16,12 +16,10 @@
  * presentation decorations (the state, the role) and they never carry a
  * field that the presenter does not publish.
  *
- * `CompetenciasController` is NOT registered in
- * `Aplicacion/backend/config/api.py` and `modules.competencias` is NOT in
- * `LOCAL_APPS`, so its SIXTEEN routes DO NOT EXIST at runtime (`A0-RTV-01` /
- * `A0-RTV-02`) and this area is not bound. The mirror exists anyway: it is
- * the frozen contract of the area, so that the day A0 registers the
- * controller the binding is a client and zero rewrites of the views.
+ * `CompetenciasController` IS registered in
+ * `Aplicacion/backend/config/api.py` and `modules.competencias` IS in
+ * `LOCAL_APPS`, so its SIXTEEN routes EXIST at runtime: the area is BOUND and
+ * `GET /competencias` is the read of the list of the edition.
  *
  * No business rule lives here. A winner, a bye, an advance, a correction, an
  * eligibility verdict and a schedule are DECLARED by the presenter and never
@@ -158,6 +156,14 @@ export interface CompetenciaListado {
   edicion_id: string;
   disciplina_id: string;
   disciplina_nombre: string;
+  /**
+   * The competitive band of the bracket.
+   *
+   * It is part of the IDENTITY of a competition: the browser prints it and
+   * never derives it from the discipline or from the roster.
+   */
+  categoria_id: string;
+  categoria_nombre: string;
   nombre: string;
   /** The state of the competition, as a code of `EstadoCompetencia`. */
   estado: string;
@@ -178,6 +184,9 @@ export interface CompetenciaDetalle {
   edicion_nombre: string;
   disciplina_id: string;
   disciplina_nombre: string;
+  /** The competitive band of the bracket. */
+  categoria_id: string;
+  categoria_nombre: string;
   nombre: string;
   estado: string;
   fecha: string;
@@ -202,6 +211,9 @@ export interface AgendaCompetencias {
  *
  * The verdict is the OWNER of the registration: this module publishes its
  * reason code and never guesses it (`QA-K01`).
+ *
+ * The band of the candidate travels WITH the verdict, so the interface can
+ * name WHY a team is not eligible without comparing bands on its own.
  */
 export interface EquipoElegible {
   equipo_id: string;
@@ -209,6 +221,9 @@ export interface EquipoElegible {
   edicion_id: string;
   disciplina_id: string;
   disciplina_nombre: string;
+  /** The competitive band of the candidate team. */
+  categoria_id: string;
+  categoria_nombre: string;
   /** The state of the team in its registration. */
   estado: string;
   /** Whether the team can compete. */
@@ -219,6 +234,19 @@ export interface EquipoElegible {
   participantes_activos: number;
   /** The minimum the discipline requires. */
   minimo_requerido: number;
+}
+
+/**
+ * A competitive band of the edition, as the catalogue of the registration
+ * publishes it.
+ *
+ * The competitions area does not OWN the catalogue: it borrows the shape so
+ * that the filter of the band can offer the options that the server
+ * declares.
+ */
+export interface CategoriaDeEdicion {
+  id: string;
+  nombre: string;
 }
 
 /**
@@ -283,10 +311,30 @@ export interface VistaPreviaCorreccion {
 }
 
 /**
+ * The parameters of the read of the list of competitions.
+ *
+ * They are the filters that `GET /competencias` ACCEPTS: `disciplina_id`,
+ * `categoria_id` and `estado`. The EDITION is NOT one of them: the server
+ * resolves it with the frozen resolution order (`FR-02` §2.2) and the client
+ * never chooses it. There is no `page` either: the route publishes the WHOLE
+ * list of the edition, so a page in the key would create a SECOND cache entry
+ * for the SAME answer.
+ */
+export type ConsultaCompetenciasParams = {
+  /** The discipline of the bracket. */
+  disciplina_id?: string;
+  /** The competitive band of the bracket. */
+  categoria_id?: string;
+  /** The state of the bracket, as a code of `EstadoCompetencia`. */
+  estado?: string;
+};
+
+/**
  * The state a route is in.
  *
- * The default of every view is `sin-datos`: the module is not connected yet
- * and the view says so instead of drawing a bracket that does not exist.
+ * `sin-datos` is the state of a surface whose route is not connected; the
+ * list of competitions IS connected, so its states are `cargando`, `listo`,
+ * `sin-permiso` and `error`.
  */
 export type EstadoVistaCompetencias =
   | "sin-datos"

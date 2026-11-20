@@ -41,7 +41,11 @@ export function AdminInscripcionesView() {
             { key: "estado", label: "Estado" },
             { key: "equipos", label: "Equipos", numerico: true },
             { key: "personas", label: "Personas", numerico: true },
-            { key: "participaciones", label: "Participaciones", numerico: true },
+            {
+              key: "participaciones",
+              label: "Participaciones",
+              numerico: true,
+            },
             { key: "cupos", label: "Cupos pagados", numerico: true },
             { key: "monto", label: "Monto pagado", numerico: true },
             { key: "creada", label: "Creada", numerico: true },

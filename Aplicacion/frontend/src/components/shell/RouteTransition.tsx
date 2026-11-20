@@ -2,8 +2,8 @@
 
 import { gsap } from "gsap";
 import { usePathname } from "next/navigation";
-import { useRef } from "react";
 import type { ReactNode } from "react";
+import { useRef } from "react";
 import { useGSAP } from "@/hooks/system/use-gsap";
 import { cn } from "@/lib/utils";
 

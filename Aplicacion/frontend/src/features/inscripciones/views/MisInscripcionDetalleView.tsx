@@ -8,14 +8,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RUTAS } from "@/lib/routes";
-import { useInscripcionDetalle, useInscripcionPool } from "../hooks";
-import { statusDeError } from "../utils/inscripcion.errores.utils";
 import { PanelBeneficios } from "../components/PanelBeneficios";
 import { PanelCompras } from "../components/PanelCompras";
 import { PanelEquipos } from "../components/PanelEquipos";
 import { PanelPool } from "../components/PanelPool";
 import { SeccionParticipantes } from "../components/SeccionParticipantes";
+import { useInscripcionDetalle, useInscripcionPool } from "../hooks";
 import type { EstadoInscripcion } from "../types/inscripcion.types";
+import { statusDeError } from "../utils/inscripcion.errores.utils";
 
 export interface MisInscripcionDetalleViewProps {
   /** The identifier of the registration, from the URL. */
@@ -37,11 +37,20 @@ export interface MisInscripcionDetalleViewProps {
  * The two reads are REAL (`RT-IN-02` and `RT-IN-03`) and the page shows the
  * message of the server verbatim when one of them fails.
  */
-export function MisInscripcionDetalleView(props: MisInscripcionDetalleViewProps) {
+export function MisInscripcionDetalleView(
+  props: MisInscripcionDetalleViewProps,
+) {
   const detalle = useInscripcionDetalle(props.id);
   const pool = useInscripcionPool(props.id);
 
-  const errorDetalle = detalle.error;
+  /**
+   * The message of the server survives the automatic retry.
+   *
+   * `failureReason` is the LAST failure of the read: while the client retries
+   * in the background, the surface already shows the words of the server
+   * instead of hiding them behind a skeleton (`SH-03` S-04).
+   */
+  const errorDetalle = detalle.failureReason ?? detalle.error;
 
   /**
    * The state of the route.
@@ -140,6 +149,18 @@ export function MisInscripcionDetalleView(props: MisInscripcionDetalleViewProps)
         facts={[
           { label: "Estado", value: inscripcion.estado },
           { label: "Referencia", value: inscripcion.referencia },
+          {
+            label: "Promoción",
+            value: inscripcion.promocion.nombre,
+          },
+          ...(inscripcion.fusion_promocion
+            ? [
+                {
+                  label: "Promoción fusionada",
+                  value: inscripcion.fusion_promocion.nombre,
+                },
+              ]
+            : []),
         ]}
         actions={
           <Button variant="outline" asChild className="min-h-11">

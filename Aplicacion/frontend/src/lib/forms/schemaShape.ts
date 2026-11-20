@@ -74,9 +74,7 @@ function unwrapSchema(schema: unknown): unknown {
  * treat that as "the schema does not declare anything", never as "the payload
  * must be empty".
  */
-export function getTopLevelShape(
-  schema: unknown,
-): Record<string, ZodTypeAny> {
+export function getTopLevelShape(schema: unknown): Record<string, ZodTypeAny> {
   const resolved = unwrapSchema(schema);
   if (!resolved || typeof resolved !== "object") return {};
 
@@ -121,7 +119,7 @@ export function isDeclaredField(
 ): boolean {
   const declaredKeys = Object.keys(shape);
   if (declaredKeys.length === 0) return true;
-  return Object.prototype.hasOwnProperty.call(shape, key);
+  return Object.hasOwn(shape, key);
 }
 
 /**
@@ -131,6 +129,6 @@ export function getFieldSchema(
   shape: Record<string, ZodTypeAny>,
   key: string,
 ): ZodTypeAny | undefined {
-  if (!Object.prototype.hasOwnProperty.call(shape, key)) return undefined;
+  if (!Object.hasOwn(shape, key)) return undefined;
   return shape[key];
 }

@@ -33,9 +33,10 @@ from modules.administracion.domain.constants import (
     ValorEstadoPago,
     ValorPlantilla,
 )
+from modules.commerce.domain.constants import OrigenCompra
+from modules.commerce.domain.models import Compra
 from modules.salesianos_fest.domain.constants import EstadoParticipacion
 from modules.salesianos_fest.domain.models import (
-    CompraPase,
     Equipo,
     Inscripcion,
     Participacion,
@@ -60,9 +61,9 @@ ORDENES_EQUIPOS = {
 
 #: Los ORDENES permitidos de la lista de pagos.
 ORDENES_PAGOS = {
-    "created_at": "compra__created_at",
-    "estado": "compra__estado",
-    "monto": "compra__total",
+    "created_at": "created_at",
+    "estado": "estado",
+    "monto": "total",
 }
 
 
@@ -300,9 +301,10 @@ class AdminParticipanteSelector:
 class AdminPagoSelector:
     """Lectura de los pagos de UNA edición.
 
-    El alcance de la edición es el del DUEÑO: la cadena real es
-    `Edicion -> CompraPase -> Compra -> OrdenPago`. No se inventa una
-    relación que el objetivo no tiene.
+    El alcance llega a `commerce.Compra` por sus dos composiciones reales:
+    `CompraPase.edicion` para pases y la referencia canónica de inscripción
+    para compras de cupos. La inscripción no tiene una FK de compra: su
+    referencia es el vínculo que consume también su activador de derechos.
     """
 
     def listar(
@@ -317,40 +319,31 @@ class AdminPagoSelector:
         desde=None,
         hasta=None,
     ):
-        """El queryset de los lotes de pases comprados en la edición."""
-        queryset = (
-            CompraPase.objects.filter(edicion_id=edicion_id)
-            .select_related(
-                "compra",
-                "compra__orden_pago",
-                "compra__persona",
-                "pase",
-                "comprador",
-            )
-        )
+        """Las compras de pases e inscripciones de la edición."""
+        queryset = self._de_edicion(edicion_id)
 
         if q:
             queryset = queryset.filter(
-                Q(compra__referencia__icontains=q)
-                | Q(referencia__icontains=q)
-                | Q(compra__persona__nombres__icontains=q)
-                | Q(compra__persona__apellidos__icontains=q)
+                Q(referencia__icontains=q)
+                | Q(persona__nombres__icontains=q)
+                | Q(persona__apellidos__icontains=q)
+                | Q(compra_de_pases__pase__nombre__icontains=q)
             )
 
         if estado_compra:
-            queryset = queryset.filter(compra__estado=estado_compra)
+            queryset = queryset.filter(estado=estado_compra)
 
         if estado_orden:
-            queryset = queryset.filter(compra__orden_pago__estado=estado_orden)
+            queryset = queryset.filter(orden_pago__estado=estado_orden)
 
         if tipo:
-            queryset = queryset.filter(compra__origen=tipo)
+            queryset = queryset.filter(origen=tipo)
 
         if desde:
-            queryset = queryset.filter(compra__created_at__gte=desde)
+            queryset = queryset.filter(created_at__gte=desde)
 
         if hasta:
-            queryset = queryset.filter(compra__created_at__lte=hasta)
+            queryset = queryset.filter(created_at__lte=hasta)
 
         return queryset.order_by(*self._orden(queryset, ordering))
 
@@ -360,18 +353,66 @@ class AdminPagoSelector:
         if ordering in ORDENES_PAGOS:
             return [ORDENES_PAGOS[ordering]]
 
-        return ["-compra__created_at"]
+        return ["-created_at"]
+
+    @staticmethod
+    def _de_edicion(edicion_id):
+        """Compras comerciales que pertenecen a la edición solicitada.
+
+        Las compras de inscripción no conservan una FK directa. La referencia
+        `INSCRIPCION:{id}:...` es el contrato estable que enlaza compra,
+        activación y la inscripción; se construye el alcance desde las
+        inscripciones de la edición antes de consultar `commerce.Compra`.
+        """
+        referencias_inscripcion = Q()
+        for inscripcion_id in Inscripcion.objects.filter(
+            edicion_id=edicion_id
+        ).values_list("id", flat=True):
+            referencias_inscripcion |= Q(
+                referencia__startswith=f"INSCRIPCION:{inscripcion_id}:"
+            )
+
+        alcance = Q(
+            origen=OrigenCompra.PASE,
+            compra_de_pases__edicion_id=edicion_id,
+        )
+        if referencias_inscripcion:
+            alcance |= Q(
+                origen=OrigenCompra.INSCRIPCION,
+            ) & referencias_inscripcion
+
+        return Compra.objects.filter(alcance).select_related(
+            "orden_pago",
+            "persona",
+            "compra_de_pases__pase",
+        )
 
     def obtener(self, compra_id):
-        """El lote de pases que lleva una compra, o `None`."""
+        """La compra comercial publicada por el panel, o `None`."""
         return (
-            CompraPase.objects.filter(compra_id=compra_id)
+            Compra.objects.filter(
+                id=compra_id,
+                origen__in=[OrigenCompra.INSCRIPCION, OrigenCompra.PASE],
+            )
             .select_related(
-                "compra",
-                "compra__orden_pago",
-                "compra__persona",
-                "pase",
-                "comprador",
+                "orden_pago",
+                "persona",
+                "compra_de_pases__pase",
+            )
+            .first()
+        )
+
+    def obtener_por_orden(self, orden_pago_id):
+        """La compra que financia una orden de pago, o ``None``."""
+        return (
+            Compra.objects.filter(
+                orden_pago_id=orden_pago_id,
+                origen__in=[OrigenCompra.INSCRIPCION, OrigenCompra.PASE],
+            )
+            .select_related(
+                "orden_pago",
+                "persona",
+                "compra_de_pases__pase",
             )
             .first()
         )

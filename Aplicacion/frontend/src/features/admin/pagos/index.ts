@@ -1,3 +1,8 @@
+export {
+  useAprobarPagoManualAdmin,
+  useDetallePagoAdmin,
+  useListaPagosAdmin,
+} from "./hooks/usePagosAdmin";
 export type {
   AdminPagoDetalleOut,
   AdminPagoListItemOut,
@@ -8,9 +13,4 @@ export type {
   OperacionManualAdminOut,
   PagoOperativoOut,
 } from "./types/pagos-admin.types";
-export {
-  useAprobarPagoManualAdmin,
-  useDetallePagoAdmin,
-  useListaPagosAdmin,
-} from "./hooks/usePagosAdmin";
 export { PagosAdminRuta, PagosAdminView } from "./views";

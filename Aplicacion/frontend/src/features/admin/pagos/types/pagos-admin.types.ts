@@ -36,6 +36,8 @@ import type {
 export interface PagoOperativoOut {
   compra_id: string;
   orden_pago_id: string | null;
+  /** The linked registration when the purchase originated in Inscripciones. */
+  inscripcion_id: string | null;
   /** `INSCRIPCION`, `PASE` or `MARKETPLACE`. */
   tipo_compra: string;
   resumen_concepto: string;
@@ -90,8 +92,6 @@ export interface CompraAdminOut {
   estado: string;
   total: string;
   moneda: string;
-  /** Whether the pending purchase already existed and was reused. */
-  reutilizada: boolean;
 }
 
 /** A manual operation of an administrator over a payment. */
@@ -108,8 +108,8 @@ export interface OperacionManualAdminOut {
 
 /** The detail of a payment: the commercial level and the diagnosis. */
 export interface AdminPagoDetalleOut extends PagoOperativoOut {
-  /** The purchase behind the payment. */
-  compra: CompraAdminOut;
+  /** The purchase behind the payment. It is NULLABLE: the backend may not have it. */
+  compra: CompraAdminOut | null;
   /** `IZIPAY`, `MANUAL` or `SIN_PAGO`. */
   origen_pago: string;
   /** The attempts of the provider. Only visible under the diagnosis. */
@@ -121,7 +121,9 @@ export interface AdminPagoDetalleOut extends PagoOperativoOut {
 }
 
 /** The state of the administrative list of payments. */
-export type EstadoPagosAdmin = EstadoSuperficie<readonly AdminPagoListItemOut[]>;
+export type EstadoPagosAdmin = EstadoSuperficie<
+  readonly AdminPagoListItemOut[]
+>;
 
 /** The state of the administrative detail of a payment. */
 export type EstadoDetallePagoAdmin = EstadoSuperficie<AdminPagoDetalleOut>;

@@ -4,13 +4,10 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CalendarPlus, ChevronDown, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
+import { useCatalogoCategorias } from "@/features/inscripciones/hooks/useCatalogo";
 import { PortadaSection } from "@/features/portada/components/PortadaSection";
-import { ENLACES } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
-import {
-  CATEGORIAS_FALLBACK,
-  useCategorias,
-} from "@/features/portada/fixtures/useCatalogo";
+import { ENLACES } from "@/features/portada/fixtures/festival";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -27,16 +24,23 @@ const CRONOGRAMA_FACEBOOK =
  *
  * Timeline del día, acceso al cronograma oficial, descarga del calendario y
  * el desplegable con las categorías que expone el catálogo.
+ *
+ * ## Las categorías son una LECTURA REAL
+ *
+ * La sección ya no pinta un fixture: las categorías del desplegable son las
+ * que publica el catálogo de la edición, leídas por el ÚNICO cliente del
+ * catálogo (`useCatalogoCategorias`). Cuando el servidor no publica
+ * categorías —o no se puede leer el catálogo— la sección lo dice, y no
+ * inventa cuatro bandas que ningún backend declara.
  */
 export function ScheduleSection() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const { data: categorias } = useCategorias();
+  const categorias = useCatalogoCategorias();
 
   const listaCategorias = useMemo(() => {
-    const lista =
-      categorias && categorias.length > 0 ? categorias : CATEGORIAS_FALLBACK;
+    const lista = categorias.data?.categorias ?? [];
     return [...lista].sort((a, b) => b.promocion_desde - a.promocion_desde);
-  }, [categorias]);
+  }, [categorias.data]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -120,7 +124,7 @@ export function ScheduleSection() {
           <a
             href={ENLACES.calendario}
             download="Salesianos_FEST_2026.ics"
-            className="btn-brand-gradient btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full px-6 text-sm font-black uppercase tracking-widest"
+            className="btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-black uppercase tracking-widest text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
           >
             <CalendarPlus className="size-4" aria-hidden="true" />
             {COPY.programa.accionCalendario}
@@ -148,6 +152,13 @@ export function ScheduleSection() {
               </div>
             ))}
           </div>
+          {listaCategorias.length === 0 ? (
+            <p className="mt-6 text-sm text-muted-foreground">
+              {categorias.isError
+                ? "No pudimos leer las categorías de la edición. Vuelve a intentarlo en unos segundos."
+                : "Las categorías de la edición se publican cuando el comité las declara."}
+            </p>
+          ) : null}
           <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
             {COPY.programa.categorias.nota}
           </p>

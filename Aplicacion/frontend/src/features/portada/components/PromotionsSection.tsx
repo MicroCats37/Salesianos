@@ -8,12 +8,12 @@ import {
   type PromotionDialogMode,
   SharePromotionDialog,
 } from "@/features/portada/components/SharePromotionDialog";
+import { COPY } from "@/features/portada/fixtures/copy";
 import { ENLACES, SECCIONES } from "@/features/portada/fixtures/festival";
 import {
   PROMOCIONES,
   type Promocion,
 } from "@/features/portada/fixtures/promotions";
-import { COPY } from "@/features/portada/fixtures/copy";
 
 interface Seleccion {
   promocion: Promocion;
@@ -124,7 +124,7 @@ export function PromotionsSection() {
           </p>
           <a
             href={`#${SECCIONES.paquetes}`}
-            className="btn-brand-gradient btn-shine mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full px-6 text-xs font-black uppercase tracking-widest"
+            className="btn-shine mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-xs font-black uppercase tracking-widest text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
           >
             {COPY.promociones.invitacion.cta}
             <ArrowUpRight className="size-4" aria-hidden="true" />

@@ -1,6 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import { type LucideIcon, TriangleAlert } from "lucide-react";
 import type { ComponentType, FC, KeyboardEvent, ReactNode } from "react";
 import type {
   Control,
@@ -8,7 +8,7 @@ import type {
   FieldValues,
   UseFormRegister,
 } from "react-hook-form";
-import { Label } from "@/components/ui/label";
+import { FieldIcon } from "@/components/forms/field-control";
 import { cn } from "@/lib/utils";
 import { getInputComponent } from "./inputs";
 
@@ -55,31 +55,59 @@ export const DefaultFieldWrapper: FC<FieldWrapperProps> = ({
   // The error is programmatically associated with the control through this
   // id: the input announces it through `aria-describedby`.
   const errorId = `${labelId}-error`;
+  const helperId = `${labelId}-helper`;
 
   return (
-    <div className={`space-y-2 ${field.containerClassName || "col-span-12"}`}>
+    <div
+      className={cn(
+        "flex flex-col gap-1.5",
+        field.containerClassName || "col-span-12",
+      )}
+    >
       {!field.hidden && (
-        <Label
+        <label
           htmlFor={labelId}
-          className={cn("text-sm font-medium", field.labelClassName)}
+          className={cn(
+            "label-brand inline-flex items-center gap-1.5",
+            field.labelClassName,
+          )}
         >
           {field.label}
-          {field.required && <span className="text-destructive ml-1">*</span>}
-        </Label>
+          {field.required && (
+            <span aria-hidden="true" className="text-destructive">
+              *
+            </span>
+          )}
+        </label>
       )}
-      {children}
+      <div
+        className={cn(
+          "relative [&_button]:min-h-11 [&_input]:min-h-11 [&_textarea]:min-h-11",
+          field.icon && "[&_button]:pl-10 [&_input]:pl-10 [&_textarea]:pl-10",
+        )}
+      >
+        {field.icon ? (
+          <FieldIcon icon={field.icon} invalid={Boolean(error)} />
+        ) : null}
+        {children}
+      </div>
       {error && !field.hidden && (
-        <p id={errorId} className="text-sm text-destructive font-medium">
+        <p
+          id={errorId}
+          role="alert"
+          className="text-caption flex items-center gap-1.5 text-destructive"
+        >
+          <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
           {error.message}
         </p>
       )}
       {field.helperText && !field.hidden && !error && (
-        <p className="text-xs text-muted-foreground font-medium px-1">
+        <p id={helperId} className="text-caption text-muted-foreground">
           {field.helperText}
         </p>
       )}
       {field.description && !field.hidden && field.type !== "checkbox" && (
-        <p className="text-xs text-muted-foreground px-1">
+        <p className="text-caption text-muted-foreground">
           {field.description}
         </p>
       )}

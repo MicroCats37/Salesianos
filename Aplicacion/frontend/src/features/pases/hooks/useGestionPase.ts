@@ -1,13 +1,21 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { invalidateDatasets } from "@/shared/utils/cache-policy";
-import { datasetQueryOptions } from "@/shared/utils/query-options";
+import { useApiCreate, useApiDelete, useApiQuery } from "@/hooks";
+import { datosDelEnvelope } from "@/shared/utils/api-envelope";
+import { gcTimeFor, STALE_TIME } from "@/shared/utils/query-options";
 import type { AsignacionPaseData } from "../schemas/comprador-pase.schema";
 import {
-  asignarBeneficiario,
-  obtenerCompra,
-  revocarBeneficiario,
+  type BeneficiarioRevocado,
+  type BeneficiariosPase,
+  beneficiarioRevocadoEnvelope,
+  beneficiariosPaseEnvelope,
+  CABECERA_TOKEN_PASE,
+  compraPasesEnvelope,
+} from "../schemas/pase.schema";
+import {
+  rutaBeneficiario,
+  rutaBeneficiarios,
+  rutaCompraDetalle,
 } from "../services/pase.service";
 import { paseClaves } from "../utils/pase.claves.utils";
 import { aPayloadAsignarBeneficiario } from "../utils/pase.payload.utils";
@@ -27,13 +35,16 @@ export function useCompraPaseDetalle(
   compraPaseId: string | undefined,
   token: string | undefined,
 ) {
-  return useQuery({
-    ...datasetQueryOptions({
-      queryKey: paseClaves.compra(compraPaseId ?? ""),
-      queryFn: () => obtenerCompra(compraPaseId as string, token as string),
-      kind: "comercial",
-    }),
-    enabled: Boolean(compraPaseId) && Boolean(token),
+  return useApiQuery({
+    queryKey: paseClaves.compra(compraPaseId ?? ""),
+    url: compraPaseId ? rutaCompraDetalle(compraPaseId) : null,
+    schema: datosDelEnvelope(compraPasesEnvelope),
+    config: token ? { headers: { [CABECERA_TOKEN_PASE]: token } } : undefined,
+    queryOptions: {
+      enabled: Boolean(compraPaseId) && Boolean(token),
+      staleTime: STALE_TIME.comercial,
+      gcTime: gcTimeFor(STALE_TIME.comercial),
+    },
   });
 }
 
@@ -47,25 +58,19 @@ export function useCompraPaseDetalle(
  * and nothing else. The answer of the server is the truth about the batch:
  * the browser never writes the new right into the cache by itself.
  */
-export function useAsignarBeneficiario(
-  compraPaseId: string,
-  token: string,
-) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (datos: AsignacionPaseData) => {
-      try {
-        return await asignarBeneficiario(
-          compraPaseId,
-          token,
-          aPayloadAsignarBeneficiario(datos),
-        );
-      } finally {
-        await invalidateDatasets(queryClient, [paseClaves.compra(compraPaseId)]);
-      }
-    },
+export function useAsignarBeneficiario(compraPaseId: string, token: string) {
+  const mutacion = useApiCreate({
+    url: rutaBeneficiarios(compraPaseId),
+    schema: datosDelEnvelope(beneficiariosPaseEnvelope),
+    config: { headers: { [CABECERA_TOKEN_PASE]: token } },
+    invalidateKeys: [paseClaves.compra(compraPaseId)],
   });
+
+  return {
+    ...mutacion,
+    mutateAsync: (datos: AsignacionPaseData) =>
+      mutacion.mutateAsync(aPayloadAsignarBeneficiario(datos)),
+  };
 }
 
 /**
@@ -74,24 +79,27 @@ export function useAsignarBeneficiario(
  * The revocation is IRREVERSIBLE and IDEMPOTENT: a right already revoked
  * answers 200 with `ya_revocado = true`, never an error.
  */
-export function useRevocarBeneficiario(
-  compraPaseId: string,
-  token: string,
-) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (datos: { persona_id: string; motivo?: string }) => {
-      try {
-        return await revocarBeneficiario(
-          compraPaseId,
-          token,
-          datos.persona_id,
-          datos.motivo,
-        );
-      } finally {
-        await invalidateDatasets(queryClient, [paseClaves.compra(compraPaseId)]);
-      }
-    },
+export function useRevocarBeneficiario(compraPaseId: string, token: string) {
+  const mutacion = useApiDelete<
+    BeneficiarioRevocado,
+    { persona_id: string; motivo?: string }
+  >({
+    getUrl: (variables) =>
+      `${rutaBeneficiario(compraPaseId, variables.persona_id)}${
+        variables.motivo
+          ? `?motivo=${encodeURIComponent(variables.motivo)}`
+          : ""
+      }`,
+    schema: datosDelEnvelope(beneficiarioRevocadoEnvelope),
+    config: { headers: { [CABECERA_TOKEN_PASE]: token } },
+    invalidateKeys: [paseClaves.compra(compraPaseId)],
   });
+
+  return {
+    ...mutacion,
+    mutateAsync: (datos: { persona_id: string; motivo?: string }) =>
+      mutacion.mutateAsync(datos),
+  };
 }
+
+export type { BeneficiariosPase };

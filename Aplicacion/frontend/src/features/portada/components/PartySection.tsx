@@ -6,8 +6,8 @@ import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { PortadaSection } from "@/features/portada/components/PortadaSection";
-import { SECCIONES } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { SECCIONES } from "@/features/portada/fixtures/festival";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -161,7 +161,7 @@ export function PartySection() {
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <a
                 href={`#${SECCIONES.paquetes}`}
-                className="btn-brand-gradient btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full px-6 text-sm font-black uppercase tracking-widest"
+                className="btn-shine inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-black uppercase tracking-widest text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
               >
                 {COPY.fiesta.ctaPrimario.label}
                 <ArrowRight className="size-4" aria-hidden="true" />

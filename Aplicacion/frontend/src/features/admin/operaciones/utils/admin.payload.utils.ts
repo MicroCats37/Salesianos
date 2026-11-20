@@ -67,41 +67,33 @@ export function payloadRetirarParticipanteAdmin(entrada: {
 
 /** The command of the manual approval of a payment. */
 export interface PayloadAprobarPagoManualAdmin {
-  /** The payment order that is confirmed. */
+  /** The payment order that is confirmed. It travels in the URL, not in the body. */
   orden_pago_id: string;
-  /** The amount, EXACTLY as the backend published it. A string, never a number. */
-  monto: string;
-  /** The ISO-4217 code of the currency. */
-  moneda: string;
+  /** The auditable channel of the external payment. */
+  canal: string;
+  /** The receipt, operation, or bank reference supplied by the operator. */
+  referencia: string;
   /** The audited reason. It is REQUIRED: the action enables rights. */
   motivo: string;
-  /** The version of the record, when the backend publishes one. */
-  version?: string;
 }
 
 /**
  * Builds the command of the manual approval of a payment.
  *
- * The amount is NOT calculated: the browser sends the amount the server
- * published (`FR-08` §2.4) and the backend freezes the one it accepts.
+ * The amount is NOT sent and NOT calculated: the backend freezes the amount
+ * of the order it approves (`FR-08` §2.4). The operator only declares HOW the
+ * payment happened and WHICH reference proves it.
  */
 export function payloadAprobarPagoManualAdmin(entrada: {
   orden_pago_id: string;
-  monto: string;
-  moneda: string;
+  canal: string;
+  referencia: string;
   motivo: string;
-  version?: string;
 }): PayloadAprobarPagoManualAdmin {
-  const payload: PayloadAprobarPagoManualAdmin = {
+  return {
     orden_pago_id: entrada.orden_pago_id,
-    monto: entrada.monto,
-    moneda: entrada.moneda,
+    canal: entrada.canal,
+    referencia: entrada.referencia.trim(),
     motivo: entrada.motivo.trim(),
   };
-
-  if (entrada.version !== undefined) {
-    payload.version = entrada.version;
-  }
-
-  return payload;
 }

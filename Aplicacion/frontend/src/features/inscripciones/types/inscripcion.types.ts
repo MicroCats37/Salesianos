@@ -1,23 +1,25 @@
 import type {
   Beneficio,
+  CatalogoCategorias as CatalogoCategoriasWrapper,
   CatalogoDisciplinas as CatalogoDisciplinasWrapper,
   CatalogoPaquetes as CatalogoPaquetesWrapper,
+  CatalogoPromociones as CatalogoPromocionesWrapper,
+  Categoria,
   Disciplina,
   Paquete,
   Precio,
+  Promocion,
 } from "../schemas/catalogo.schema";
 import type { CompraCreada } from "../schemas/compra-cupos.schema";
+import type { Cotizacion } from "../schemas/cotizacion.schema";
 import type {
   Compra,
   Equipo,
   InscripcionDetalle as InscripcionDetalleWrapper,
   InscripcionInicial,
+  PromocionInscripcion,
 } from "../schemas/inscripcion.schema";
-import type {
-  Impedimento,
-  Participacion,
-  Pool,
-} from "../schemas/pool.schema";
+import type { Impedimento, Participacion, Pool } from "../schemas/pool.schema";
 
 /**
  * The view models of the registration area (SPORT-01 and ACCOUNT-03).
@@ -44,6 +46,12 @@ export type CatalogoPaquetes = CatalogoPaquetesWrapper;
 /** The catalogue of disciplines of ONE edition (mirrors `CatalogoDisciplinasOut`). */
 export type CatalogoDisciplinas = CatalogoDisciplinasWrapper;
 
+/** The catalogue of cohorts of ONE edition (mirrors `CatalogoPromocionesOut`). */
+export type CatalogoPromociones = CatalogoPromocionesWrapper;
+
+/** The catalogue of competitive bands of ONE edition (mirrors `CatalogoCategoriasOut`). */
+export type CatalogoCategorias = CatalogoCategoriasWrapper;
+
 /** A package of the catalogue (mirrors `PaqueteOut`). */
 export type PaqueteCatalogo = Paquete;
 
@@ -52,6 +60,23 @@ export type BeneficioCatalogo = Beneficio;
 
 /** The price of the catalogue (mirrors `PrecioOut`). */
 export type PrecioCatalogo = Precio;
+
+/** A cohort of the catalogue (mirrors `PromocionOut`). */
+export type PromocionCatalogo = Promocion;
+
+/** A competitive band of the catalogue (mirrors `CategoriaOut`). */
+export type CategoriaCatalogo = Categoria;
+
+/**
+ * The quotation of a package and a quantity (mirrors `CotizacionOut`).
+ *
+ * It is EPHEMERAL: it belongs to the wizard session and it is not a dataset
+ * of the server.
+ */
+export type CotizacionPaquete = Cotizacion;
+
+/** The cohort of a registration (mirrors the `promocion` of the detail). */
+export type PromocionDeInscripcion = PromocionInscripcion;
 
 // ── Inscripción ──────────────────────────────────────────────────────────────
 

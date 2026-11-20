@@ -25,10 +25,10 @@ export function AdminPagosView() {
       />
 
       <AdminNotice title="Acciones sensibles, nivel de break-glass">
-        Registrar un pago manual, anular una aprobación y cancelar una
-        compra de pases exigen un motivo auditado y la capacidad de
-        aprobación de pagos. El personal de staff lee esta lista; el personal
-        con capacidad de aprobación ve además los botones.
+        Registrar un pago manual, anular una aprobación y cancelar una compra de
+        pases exigen un motivo auditado y la capacidad de aprobación de pagos.
+        El personal de staff lee esta lista; el personal con capacidad de
+        aprobación ve además los botones.
       </AdminNotice>
 
       <AdminPanel

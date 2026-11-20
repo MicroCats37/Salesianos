@@ -1,11 +1,8 @@
 import { Swords } from "lucide-react";
-import {
-  AdminDataTable,
-  AdminEmptyState,
-} from "@/features/admin/components";
-import { ChipEstadoCompetencia } from "./ChipEstadoCompetencia";
-import { estadoEquipoCompetencia } from "../utils/competencias.estados.utils";
+import { AdminDataTable, AdminEmptyState } from "@/features/admin/components";
 import type { CompetenciaEquipo } from "../types/competencia.types";
+import { estadoEquipoCompetencia } from "../utils/competencias.estados.utils";
+import { ChipEstadoCompetencia } from "./ChipEstadoCompetencia";
 
 /**
  * ListaEquiposCompetencia - the teams of a competition (`ADM-11`).
@@ -23,7 +20,7 @@ export function ListaEquiposCompetencia({
       <AdminEmptyState
         icon={Swords}
         title="Todavía no hay equipos en esta competencia"
-        description="El alta de equipos es manual: el sistema nunca siembra un cuadro por su cuenta. Añade un equipo elegible de la misma disciplina y dale su semilla."
+        description="El alta de equipos es manual: añade un equipo elegible y define su orden dentro del cuadro."
       />
     );
   }
@@ -33,7 +30,7 @@ export function ListaEquiposCompetencia({
       caption="Equipos de la competencia"
       columns={[
         { key: "equipo", label: "Equipo" },
-        { key: "orden", label: "Semilla", numerico: true },
+        { key: "orden", label: "Orden del cuadro", numerico: true },
         { key: "estado", label: "Estado" },
         { key: "version", label: "Versión", numerico: true },
       ]}

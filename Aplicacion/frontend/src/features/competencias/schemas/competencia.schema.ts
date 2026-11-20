@@ -26,19 +26,13 @@ import { apiResponseSchema } from "@/types/api.types";
  * - **The previews NEVER write.** They are separate schemas from the
  *   confirmations, and the separation is visible in the names.
  *
- * ## THIS MIRROR IS NOT BOUND
+ * ## THIS MIRROR IS BOUND
  *
- * `CompetenciasController` is **NOT registered** in
- * `Aplicacion/backend/config/api.py` and `modules.competencias` is **NOT** in
- * `LOCAL_APPS`, so its SIXTEEN routes DO NOT EXIST at runtime (`A0-RTV-01` /
- * `A0-RTV-02`). A client that called them would be calling a route that the
- * API does not serve, so **this package binds none of them** (`FR-07` §3.1
- * regla 2).
- *
- * What this file IS is the frozen contract of the area, written down so that
- * the day A0 registers the controller the binding is a client and ZERO
- * rewrites of the views. The mirrors are the seam, not a lie: they describe
- * presenters that EXIST and are versioned (`SCHEMA_VERSION = "1.0.0"`).
+ * `CompetenciasController` IS registered in
+ * `Aplicacion/backend/config/api.py` and `modules.competencias` IS in
+ * `LOCAL_APPS`, so its SIXTEEN routes EXIST at runtime. The list of the
+ * edition is bound by `features/competencias/services/competencia.service.ts`
+ * and the mirror below is what parses its answer.
  *
  * The `*In` schemas are mirrored for the same reason and with the same
  * honesty: they are the exact wire shapes of the writes, including the
@@ -161,6 +155,16 @@ export const competenciaListadoSchema = z.object({
   edicion_id: id,
   disciplina_id: id,
   disciplina_nombre: z.string(),
+  /**
+   * The competitive band of the bracket.
+   *
+   * The band is part of the IDENTITY of a competition: two brackets of the
+   * same discipline and the same day are two competitions when their bands
+   * differ. The client never derives it: it prints the band that the server
+   * published.
+   */
+  categoria_id: id,
+  categoria_nombre: z.string(),
   nombre: z.string(),
   /** The state of the competition, as a code of `EstadoCompetencia`. */
   estado: codigo,
@@ -181,6 +185,9 @@ export const competenciaDetalleSchema = z.object({
   edicion_nombre: z.string(),
   disciplina_id: id,
   disciplina_nombre: z.string(),
+  /** The competitive band of the bracket. */
+  categoria_id: id,
+  categoria_nombre: z.string(),
   nombre: z.string(),
   estado: codigo,
   fecha,
@@ -208,6 +215,11 @@ export const agendaSchema = z.object({
  * The verdict is the OWNER of the registration: the module publishes the
  * reason code of `MotivoNoElegibilidad` and the client NEVER derives it
  * (`QA-K01`).
+ *
+ * The band of the candidate travels WITH the verdict, so the interface can
+ * say WHY a team is not eligible without comparing bands on its own: the
+ * reason code already carries the answer (`CATEGORIA_DISTINTA`,
+ * `CATEGORIA_NO_ASIGNADA`).
  */
 export const equipoElegibleSchema = z.object({
   equipo_id: id,
@@ -215,6 +227,9 @@ export const equipoElegibleSchema = z.object({
   edicion_id: id,
   disciplina_id: id,
   disciplina_nombre: z.string(),
+  /** The competitive band of the candidate team. */
+  categoria_id: id,
+  categoria_nombre: z.string(),
   /** The state of the team in its registration. */
   estado: codigo,
   /** Whether the team can compete. */
@@ -331,10 +346,15 @@ export const correccionSchema = z.object({
 
 // ── Entradas ─────────────────────────────────────────────────────────────────
 
-/** The creation of a competition (`CompetenciaCrearIn`). */
+/**
+ * The creation of a competition (`CompetenciaCrearIn`).
+ *
+ * `categoria_id` is REQUIRED: the band is part of the identity of a
+ * competition, so a bracket without a band is not a bracket.
+ */
 export const competenciaCrearSchema = z.object({
-  edicion_id: id,
   disciplina_id: id,
+  categoria_id: id,
   nombre: z.string().min(1).max(200),
   fecha,
 });
@@ -450,6 +470,10 @@ export const competenciaDetalleEnvelope = apiResponseSchema(
   competenciaDetalleSchema,
 );
 
+export const competenciaEquipoEnvelope = apiResponseSchema(
+  competenciaEquipoSchema,
+);
+
 /** The bracket of a competition (`GET /competencias/{id}/cuadro`). */
 export const cuadroEnvelope = apiResponseSchema(z.array(rondaSchema));
 
@@ -468,7 +492,9 @@ export const avancePreviewEnvelope = apiResponseSchema(avancePreviewSchema);
 export const avanceEnvelope = apiResponseSchema(avanceSchema);
 
 /** The preview of the correction (`POST …/correccion/preview`). */
-export const correccionPreviewEnvelope = apiResponseSchema(correccionPreviewSchema);
+export const correccionPreviewEnvelope = apiResponseSchema(
+  correccionPreviewSchema,
+);
 
 /** The applied correction (`POST …/correccion`). */
 export const correccionEnvelope = apiResponseSchema(correccionSchema);

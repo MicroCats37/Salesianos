@@ -27,6 +27,26 @@ import type { ParticipanteAsignarIn } from "../schemas/pool.schema";
 export interface SolicitudAlta {
   edicion_id: string;
   paquete_id: string;
+  /** The cohort that the visitor selected explicitly. */
+  promocion_id: string;
+  /** The number of cupos that the registration buys. */
+  cantidad: number;
+  /**
+   * The secondary cohort of a fused registration.
+   *
+   * It is OPTIONAL and it is DESCRIPTIVE: it names the visible label of a
+   * fused cohort and it never changes the band, the cupos, the payment, the
+   * team or the eligibility.
+   */
+  fusion_promocion_id?: string | null;
+  /**
+   * The version of the price that the quotation resolved.
+   *
+   * It travels ONLY when a quotation exists: it is the CONCURRENCY TOKEN
+   * that lets the server detect a price that moved in between. It is NOT a
+   * price and NOT a total: those belong to the server (`RN-C02`).
+   */
+  cotizacion_version?: number | null;
   equipos: readonly { disciplina_id: string; nombre: string }[];
 }
 
@@ -36,6 +56,20 @@ export interface SolicitudAlta {
  * The responsible does NOT travel: the server resolves it from the
  * authenticated account (`RN-U04`). The price does NOT travel either: the
  * server resolves it against the catalogue in force (`RN-C02`).
+ *
+ * ## What travels about the money
+ *
+ * ONLY the quantity (the decision of the visitor) and, when a quotation
+ * exists, its version (the token of the concurrency check). The unit price
+ * and the total NEVER travel as the truth of the purchase: the server
+ * resolves them again against the catalogue in force, and it answers 409
+ * when the price moved after the quotation.
+ *
+ * ## What travels about the band
+ *
+ * NOTHING: the client does not send the competitive band of the teams. The
+ * band is DERIVED by the server from the cohort that the visitor selected
+ * (`RN-C02`, `QA-K01`).
  */
 export function construirPayloadAlta(
   solicitud: SolicitudAlta,
@@ -45,11 +79,31 @@ export function construirPayloadAlta(
     nombre: equipo.nombre,
   }));
 
-  return {
+  const payload: InscripcionInicialIn = {
     edicion_id: solicitud.edicion_id,
     paquete_id: solicitud.paquete_id,
+    promocion_id: solicitud.promocion_id,
+    cantidad: solicitud.cantidad,
     equipos,
   };
+
+  /**
+   * `undefined` means "not sent" and `null` clears a nullable field. The
+   * secondary cohort is nullable, so an EMPTY selection travels as `null`
+   * and a selection that was never touched travels as nothing.
+   *
+   * An EMPTY STRING is the "Sin fusión" option of the select, so it is
+   * normalized to `null`: an empty identifier never travels.
+   */
+  if (solicitud.fusion_promocion_id !== undefined) {
+    payload.fusion_promocion_id = solicitud.fusion_promocion_id || null;
+  }
+
+  if (solicitud.cotizacion_version !== undefined) {
+    payload.cotizacion_version = solicitud.cotizacion_version;
+  }
+
+  return payload;
 }
 
 /** The arguments of the assignment of a participant (`RT-IN-05`). */

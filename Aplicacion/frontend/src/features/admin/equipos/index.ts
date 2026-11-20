@@ -1,17 +1,17 @@
+export {
+  useDetalleEquipoAdmin,
+  useListaEquiposAdmin,
+} from "./hooks/useEquiposAdmin";
 export type {
   AdminEquipoDetalleOut,
   AdminEquipoListItemOut,
   CandidatoAEquipoOut,
   EquipoOperativoOut,
-  ParticipanteDeEquipoOut,
-  PlantillaEquipoOut,
   EstadoDetalleEquipoAdmin,
   EstadoListaEquiposAdmin,
+  ParticipanteDeEquipoOut,
+  PlantillaEquipoOut,
 } from "./types/equipos-admin.types";
-export {
-  useDetalleEquipoAdmin,
-  useListaEquiposAdmin,
-} from "./hooks/useEquiposAdmin";
 export {
   EquipoAdminDetalleRuta,
   EquipoAdminDetalleView,

@@ -22,22 +22,71 @@ import { RUTAS } from "../routes";
  * legitimate exception is a path that is NOT a page of this application: the
  * endpoints of the backend, which the transport prefixes with its base URL.
  */
-const EXCEPCIONES: { archivo: string; motivo: string }[] = [
+const EXCEPCIONES: { archivo: string; motivos: string[] }[] = [
   {
     archivo: "features/auth/hooks/useLogin.ts",
-    motivo: "/auth/login/username",
-  },
-  {
-    archivo: "features/auth/hooks/useLogin.ts",
-    motivo: "/auth/login/dni",
-  },
-  {
-    archivo: "features/auth/hooks/useLogin.ts",
-    motivo: "/auth/login/email",
+    motivos: ["/auth/login/username", "/auth/login/dni", "/auth/login/email"],
   },
   {
     archivo: "features/auth/services/register.service.ts",
-    motivo: "/auth/register",
+    motivos: ["/auth/register"],
+  },
+  {
+    archivo: "features/auth/services/sesion.service.ts",
+    motivos: ["/auth/me"],
+  },
+  {
+    archivo: "features/auth/services/identidad.service.ts",
+    motivos: [
+      "/personas/busqueda",
+      "/personas/resolver",
+      "/personas/confirmar",
+    ],
+  },
+  {
+    archivo: "features/public/services/edicion.service.ts",
+    motivos: ["/ediciones/actual"],
+  },
+  {
+    archivo: "features/inscripciones/services/catalogo.service.ts",
+    motivos: [
+      "/catalogo/paquetes",
+      "/catalogo/disciplinas",
+      "/catalogo/categorias",
+      "/catalogo/promociones",
+    ],
+  },
+  {
+    archivo: "features/inscripciones/services/cotizacion.service.ts",
+    motivos: ["/cotizaciones"],
+  },
+  {
+    archivo: "features/inscripciones/services/inscripcion.service.ts",
+    motivos: ["/inscripciones"],
+  },
+  {
+    archivo: "features/competencias/services/competencia.service.ts",
+    motivos: ["/competencias"],
+  },
+  {
+    archivo: "features/marketplace/services/marketplace.service.ts",
+    motivos: ["/marketplace"],
+  },
+  {
+    archivo: "features/validaciones/services/validacion.service.ts",
+    motivos: ["/validaciones"],
+  },
+  {
+    archivo: "features/admin/operaciones/services/admin.service.ts",
+    motivos: [
+      "/administracion/resumen",
+      "/administracion/auditoria",
+      "/administracion/inscripciones",
+      "/administracion/equipos",
+      "/administracion/pagos",
+      "/administracion/participantes",
+      "/administracion/personas",
+    ],
   },
 ];
 
@@ -100,6 +149,12 @@ describe("routes — el mapa es el único dueño de las rutas", () => {
         // A test may assert a literal path: that is the point of a test.
         return false;
       }
+      if (nombre.includes("/__tests__/")) {
+        // The same rationale, extended to the DATA files of a test: they hold
+        // the literal paths the server publishes (a drilldown `href`, an
+        // example id) and they are not components.
+        return false;
+      }
 
       return !EXCLUIDAS.some((excluida) => nombre.startsWith(excluida));
     }),
@@ -109,35 +164,43 @@ describe("routes — el mapa es el único dueño de las rutas", () => {
     expect(archivos.length).toBeGreaterThan(20);
   });
 
-  it.each(archivos.map((archivo) => [relative(RAIZ, archivo), archivo]))(
-    "%s no escribe una ruta de página",
-    (_nombre, archivo) => {
-      const fuente = readFileSync(archivo, "utf8");
+  it.each(
+    archivos.map((archivo) => [
+      relative(RAIZ, archivo).replace(/\\/g, "/"),
+      archivo,
+    ]),
+  )("%s no escribe una ruta de página", (nombre, archivo) => {
+    const fuente = readFileSync(archivo, "utf8");
 
-      // The allowed paths are hidden from the analysis so that the exception
-      // is real and not an excuse of the analyser.
-      let analizable = fuente;
-      for (const excepcion of EXCEPCIONES) {
-        if (!relative(RAIZ, archivo).endsWith(excepcion.archivo)) continue;
-        analizable = analizable.replaceAll(excepcion.motivo, "");
+    // The allowed paths are hidden from the analysis so that the exception
+    // is real and not an excuse of the analyser.
+    //
+    // `nombre` is the NORMALISED relative path (forward slashes on every
+    // platform): the raw `relative()` returns backslashes on Windows and
+    // the declared exceptions would never match there.
+    let analizable = fuente;
+    for (const excepcion of EXCEPCIONES) {
+      if (!nombre.endsWith(excepcion.archivo)) continue;
+      for (const motivo of excepcion.motivos) {
+        analizable = analizable.replaceAll(motivo, "");
       }
+    }
 
-      const sospechosas: string[] = [];
+    const sospechosas: string[] = [];
 
-      for (const coincidencia of analizable.matchAll(RUTA)) {
-        const ruta = coincidencia[1];
+    for (const coincidencia of analizable.matchAll(RUTA)) {
+      const ruta = coincidencia[1];
 
-        // A file name: an image, a font, a calendar.
-        if (ruta.includes(".")) continue;
-        // A route handler of the product (`/api/...`).
-        if (ruta.startsWith("/api/")) continue;
+      // A file name: an image, a font, a calendar.
+      if (ruta.includes(".")) continue;
+      // A route handler of the product (`/api/...`).
+      if (ruta.startsWith("/api/")) continue;
 
-        if (!DECLARADAS.has(ruta)) sospechosas.push(ruta);
-      }
+      if (!DECLARADAS.has(ruta)) sospechosas.push(ruta);
+    }
 
-      expect([...new Set(sospechosas)].join(", ")).toBe("");
-    },
-  );
+    expect([...new Set(sospechosas)].join(", ")).toBe("");
+  });
 
   it("no vuelve a publicar las rutas que el mapa retiró", () => {
     // `/register`, `/dashboard` and `/admin/dashboard` belonged to the

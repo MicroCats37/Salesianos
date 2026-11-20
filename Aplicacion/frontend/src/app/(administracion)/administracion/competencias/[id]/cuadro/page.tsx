@@ -1,4 +1,4 @@
-import { CompetenciaCuadroView } from "@/features/competencias/views";
+import { CompetenciaCuadroRuta } from "@/features/competencias/views";
 
 /**
  * ADM-12 - Operar el cuadro de encuentros
@@ -10,5 +10,5 @@ export default async function Page({
 }) {
   const { id } = await params;
 
-  return <CompetenciaCuadroView id={id} />;
+  return <CompetenciaCuadroRuta id={id} />;
 }

@@ -1,8 +1,8 @@
+export { AdminResumenView } from "@/features/admin/resumen/views/AdminResumenView";
 export { AdminAgendaView } from "./AdminAgendaView";
 export { AdminCompetenciaDetalleView } from "./AdminCompetenciaDetalleView";
 export { AdminCompetenciasView } from "./AdminCompetenciasView";
 export { AdminCuadroView } from "./AdminCuadroView";
-export { AdminEdicionesView } from "./AdminEdicionesView";
 export { AdminEntregasView } from "./AdminEntregasView";
 export { AdminEquipoDetalleView } from "./AdminEquipoDetalleView";
 export { AdminEquiposView } from "./AdminEquiposView";
@@ -17,6 +17,5 @@ export { AdminPasesView } from "./AdminPasesView";
 export { AdminPatrocinadoresView } from "./AdminPatrocinadoresView";
 export { AdminPersonasView } from "./AdminPersonasView";
 export { AdminProductoDetalleView } from "./AdminProductoDetalleView";
-export { AdminResumenView } from "./AdminResumenView";
 export { AdminUsuariosView } from "./AdminUsuariosView";
 export { AdminValidacionesView } from "./AdminValidacionesView";

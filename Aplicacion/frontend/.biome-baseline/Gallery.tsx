@@ -129,10 +129,9 @@ export function Gallery() {
               <span className="text-gradient-brand">Salesianas 2026</span>
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[#17214b]/80">
-              Tres dias de competencia entre promociones con siete
-              disciplinas oficiales, finales el sabado 21 de noviembre y
-              premiacion en la cena de gala del domingo. Sede: Av. Asturias
-              588, Ate.
+              Tres dias de competencia entre promociones con siete disciplinas
+              oficiales, finales el sabado 21 de noviembre y premiacion en la
+              cena de gala del domingo. Sede: Av. Asturias 588, Ate.
             </p>
           </div>
           <div className="hidden gap-2 sm:flex sm:justify-end">

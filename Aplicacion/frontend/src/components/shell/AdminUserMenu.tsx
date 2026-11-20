@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ChevronDown,
-  Globe,
-  LogOut,
-  Ticket,
-  UserRound,
-} from "lucide-react";
+import { ChevronDown, Globe, LogOut, Ticket, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -117,9 +111,7 @@ export function AdminUserMenu({
               <span
                 className={cn(
                   "truncate text-xs font-bold uppercase tracking-wider",
-                  esSidebar
-                    ? "text-sidebar-foreground"
-                    : "text-foreground",
+                  esSidebar ? "text-sidebar-foreground" : "text-foreground",
                 )}
               >
                 {usuario ?? "Operador"}
@@ -154,10 +146,7 @@ export function AdminUserMenu({
         side="top"
         sideOffset={8}
         style={esSidebar ? TONO_SIDEBAR : undefined}
-        className={cn(
-          "w-64",
-          esSidebar && "ring-sidebar-border",
-        )}
+        className={cn("w-64", esSidebar && "ring-sidebar-border")}
       >
         <DropdownMenuLabel>Sesión</DropdownMenuLabel>
         <DropdownMenuSeparator />

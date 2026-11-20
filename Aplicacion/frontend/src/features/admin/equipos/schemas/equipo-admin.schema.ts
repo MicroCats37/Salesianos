@@ -79,7 +79,18 @@ export const equipoOperativoSchema = z.object({
   id: z.string().min(1),
   nombre: z.string(),
   disciplina: referenciaEquipoSchema,
-  categoria: referenciaEquipoSchema,
+  /**
+   * The competitive band of the team.
+   *
+   * The band is DERIVED by the server from the cohort of the registration of
+   * the team, so the browser never computes it and never sends it.
+   *
+   * It is NULLABLE (and optional) because `AdminEquipoController` is NOT
+   * registered: the presenter does not exist yet and a required field would
+   * be a mirror that no real answer could ever satisfy. It becomes required
+   * again the day the presenter publishes the band.
+   */
+  categoria: referenciaEquipoSchema.nullable().optional(),
   plantilla: plantillaEquipoSchema,
   estado_operativo: estadoOperativoSchema,
   acciones_disponibles: z.array(z.string().min(1)),
@@ -109,7 +120,9 @@ export const listaEquiposAdminEnvelope = envelopeAdminPaginado(
 );
 
 /** The envelope of the administrative detail of a team. */
-export const equipoAdminDetalleEnvelope = envelopeAdmin(equipoAdminDetalleSchema);
+export const equipoAdminDetalleEnvelope = envelopeAdmin(
+  equipoAdminDetalleSchema,
+);
 
 // ── La proyección del wire al modelo de la vista ─────────────────────────────
 

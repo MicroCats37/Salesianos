@@ -7,6 +7,11 @@ import {
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
+import type {
+  ColumnaOperativa,
+  FilaOperativa,
+  FiltroOperativo,
+} from "@/features/admin/operaciones";
 import {
   BarraFiltros,
   BusquedaOperativa,
@@ -14,11 +19,6 @@ import {
   ListaOperativa,
   MarcoOperativo,
   VeredictoConCausa,
-} from "@/features/admin/operaciones";
-import type {
-  ColumnaOperativa,
-  FilaOperativa,
-  FiltroOperativo,
 } from "@/features/admin/operaciones";
 import { RUTAS } from "@/lib/routes";
 import { PlantillaEquipo } from "../components/PlantillaEquipo";
@@ -92,7 +92,7 @@ function filaDe(equipo: AdminEquipoListItemOut): FilaOperativa {
       estado: <VeredictoConCausa veredicto={equipo.estado_operativo} />,
       plantilla: <PlantillaEquipo plantilla={equipo.plantilla} />,
       disciplina: equipo.disciplina.nombre,
-      categoria: equipo.categoria.nombre,
+      categoria: equipo.categoria?.nombre ?? "—",
       responsable: equipo.responsable.nombre,
       inscripcion: equipo.inscripcion.nombre,
       accion: (
@@ -137,10 +137,9 @@ export function EquiposAdminView({
       />
 
       <AdminNotice title="Dos hechos, no una fracción">
-        El mínimo y el máximo deportivo son dos hechos independientes: el
-        mínimo es lo que el equipo necesita para competir y el máximo es el
-        tope duro de la disciplina. La capacidad y la completitud los deriva
-        el servidor.
+        El mínimo y el máximo deportivo son dos hechos independientes: el mínimo
+        es lo que el equipo necesita para competir y el máximo es el tope duro
+        de la disciplina. La capacidad y la completitud los deriva el servidor.
       </AdminNotice>
 
       <BusquedaOperativa

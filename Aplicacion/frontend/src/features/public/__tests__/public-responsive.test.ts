@@ -21,6 +21,32 @@ const FUENTE = Object.fromEntries(
   FUENTES.map((ruta) => [ruta, readFileSync(join(RAIZ, ruta), "utf8")]),
 );
 
+/**
+ * The primitives that own the rules of a field.
+ *
+ * The form does NOT draw its own label, its own error and its own touch
+ * target anymore: it delegates them, and the audit checks the owner.
+ */
+const CAMPO = readFileSync(
+  join(process.cwd(), "src", "components", "forms", "FormField.tsx"),
+  "utf8",
+);
+const PIE = readFileSync(
+  join(process.cwd(), "src", "components", "forms", "FormFooter.tsx"),
+  "utf8",
+);
+const RESUMEN = readFileSync(
+  join(
+    process.cwd(),
+    "src",
+    "features",
+    "pases",
+    "components",
+    "ResumenErrores.tsx",
+  ),
+  "utf8",
+);
+
 describe("UI-01 — el índice de anclas es real", () => {
   it("cada sección que el índice anuncia tiene su ancla en la página", () => {
     const vista = FUENTE["views/InformacionView.tsx"];
@@ -46,7 +72,9 @@ describe("UI-01 — la zona pública no inventa colores literales (T-01)", () =>
 
     expect(fuente).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(fuente).not.toMatch(/\b(rgb|rgba|hsl|hsla)\(/);
-    expect(fuente).not.toMatch(/\b(text|bg|border)-(red|blue|green|yellow|amber|emerald|slate|gray|zinc|neutral|stone)-[0-9]{2,3}\b/);
+    expect(fuente).not.toMatch(
+      /\b(text|bg|border)-(red|blue|green|yellow|amber|emerald|slate|gray|zinc|neutral|stone)-[0-9]{2,3}\b/,
+    );
   });
 });
 
@@ -54,8 +82,13 @@ describe("UI-01 — el formulario de recuperación", () => {
   it("asocia el error a su campo y declara el tipo del correo", () => {
     const fuente = FUENTE["components/RecuperarCompraForm.tsx"];
 
-    expect(fuente).toContain('aria-invalid={Boolean(error)}');
-    expect(fuente).toContain('aria-describedby={error ? "correo-error" : undefined}');
+    // El error lo dibuja la PRIMITIVA: el campo declara su id y su error, y
+    // la primitiva compone el control con `aria-invalid` y `aria-describedby`.
+    expect(fuente).toContain('id="correo"');
+    expect(fuente).toContain("error={formState.errors.correo?.message}");
+    expect(CAMPO).toContain("aria-invalid");
+    expect(CAMPO).toContain("aria-describedby");
+
     expect(fuente).toContain('type="email"');
     expect(fuente).toContain('autoComplete="email"');
   });
@@ -63,14 +96,21 @@ describe("UI-01 — el formulario de recuperación", () => {
   it("el error tiene un resumen que se anuncia", () => {
     const fuente = FUENTE["components/RecuperarCompraForm.tsx"];
 
-    expect(fuente).toContain('role="alert"');
-    expect(fuente).toContain("tabIndex={-1}");
+    // El resumen es la PRIMITIVA compartida de la zona, y ella es la que
+    // se anuncia y la que toma el foco tras un envío inválido.
+    expect(fuente).toContain("<ResumenErrores methods={methods} />");
+    expect(RESUMEN).toContain('role="alert"');
+    expect(RESUMEN).toContain("tabIndex={-1}");
   });
 
   it("los campos y el botón tienen 44 px de alto", () => {
     const fuente = FUENTE["components/RecuperarCompraForm.tsx"];
 
-    expect(fuente).toContain("min-h-11");
+    // Los 44 px los ponen las primitivas del formulario, no el formulario.
+    expect(fuente).toContain("<FormField");
+    expect(fuente).toContain("<FormFooter");
+    expect(CAMPO).toContain("min-h-11");
+    expect(PIE).toContain("min-h-11");
   });
 
   it("la respuesta nunca depende de que exista una compra", () => {

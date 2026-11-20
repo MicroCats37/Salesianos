@@ -30,10 +30,9 @@ export interface AdminPageHeaderProps {
  * FOR, not what it contains: an operator who lands here must know in one
  * sentence whether this is the place for their task.
  *
- * The band carries the GRADIENT of the brand: the console of the event is
- * the blue of Salesianos, and every route opens on the same institutional
- * surface. The gradient is the identity of the area, not a decoration that
- * repeats itself on every card.
+ * The header borrows the deep festival stage from the landing and video room:
+ * administration opens with a clear sense of place, while the work stays on
+ * calm surfaces below it.
  *
  * The actions live on the right and never move: the header is the only
  * stable landmark of the area, and an action that jumps between rows is an
@@ -51,15 +50,16 @@ export function AdminPageHeader({
     <header
       data-route-block
       className={cn(
-        "relative flex flex-col gap-5 overflow-hidden rounded-[var(--radius-xl)] border border-border bg-brand-band px-5 py-6 text-foreground shadow-[var(--elevation-md)] sm:px-7 sm:py-7",
+        "relative isolate flex flex-col gap-5 overflow-hidden rounded-[var(--radius-xl)] border border-brand-deep-blue-mid bg-hero-gradient px-5 py-6 text-brand-on-gradient shadow-[var(--elevation-lg)] sm:px-7 sm:py-7",
         className,
       )}
     >
+      <div aria-hidden="true" className="bg-hero-overlay" />
       <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
         <div className="flex min-w-0 flex-col gap-2">
-          <p className="text-eyebrow-brand text-primary">{pageId}</p>
-          <h1 className="text-title-page text-foreground">{title}</h1>
-          <p className="max-w-measure text-lead text-muted-foreground">
+          <p className="text-eyebrow-brand text-accent">{pageId}</p>
+          <h1 className="text-title-page text-brand-on-gradient">{title}</h1>
+          <p className="max-w-measure text-lead text-brand-on-gradient-muted">
             {description}
           </p>
         </div>
@@ -72,13 +72,13 @@ export function AdminPageHeader({
       </div>
 
       {meta && meta.length > 0 ? (
-        <dl className="relative flex flex-wrap gap-x-8 gap-y-3 border-t border-border/70 pt-4">
+        <dl className="relative flex flex-wrap gap-x-8 gap-y-3 border-t border-brand-on-gradient-border pt-4">
           {meta.map((dato) => (
             <div key={dato.etiqueta} className="flex flex-col gap-0.5">
-              <dt className="text-eyebrow-brand text-muted-foreground">
+              <dt className="text-eyebrow-brand text-brand-on-gradient-muted">
                 {dato.etiqueta}
               </dt>
-              <dd className="text-sm font-semibold text-foreground">
+              <dd className="text-sm font-semibold text-brand-on-gradient">
                 {dato.valor}
               </dd>
             </div>

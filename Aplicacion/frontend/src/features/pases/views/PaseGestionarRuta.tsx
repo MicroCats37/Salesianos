@@ -7,8 +7,8 @@ import {
   useRevocarBeneficiario,
 } from "../hooks";
 import type {
-  EstadoVistaPases,
   EnviarAsignacionPase,
+  EstadoVistaPases,
   RevocarBeneficiario,
 } from "../types/pase.types";
 import { adaptarCompra } from "../utils/pase.adaptador.utils";
@@ -51,9 +51,7 @@ export function PaseGestionarRuta({
     : consulta.isPending
       ? "cargando"
       : error
-        ? error.status === 401 ||
-            error.status === 403 ||
-            error.status === 404
+        ? error.status === 401 || error.status === 403 || error.status === 404
           ? "sin-permiso"
           : "error"
         : consulta.data

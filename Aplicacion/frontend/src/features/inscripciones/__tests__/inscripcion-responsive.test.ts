@@ -24,6 +24,7 @@ const FUENTES = [
   "components/PasoConfirmacion.tsx",
   "components/PasoEquipos.tsx",
   "components/PasoPaquete.tsx",
+  "components/PasoPromocion.tsx",
   "components/PasoResumen.tsx",
   "components/PaqueteCard.tsx",
   "components/SeccionParticipantes.tsx",
@@ -45,9 +46,11 @@ const FUENTE = Object.fromEntries(
  */
 const FUENTES_NEGOCIO = [
   "hooks/useCatalogo.ts",
+  "hooks/useCotizacion.ts",
   "hooks/useInscripcion.ts",
   "hooks/useInscripcionMutaciones.ts",
   "services/catalogo.service.ts",
+  "services/cotizacion.service.ts",
   "services/inscripcion.service.ts",
   "services/respuesta.service.ts",
   "utils/inscripcion.claves.utils.ts",
@@ -95,9 +98,12 @@ describe("UI-02 — la tabla declara sus cabeceras (SH-02 2.2)", () => {
 });
 
 describe("UI-02 — el ancho de trabajo no desborda", () => {
-  it.each(FUENTES)("%s no empuja la página con un scroll horizontal", (ruta) => {
-    expect(FUENTE[ruta]).not.toMatch(/\boverflow-x-auto/);
-  });
+  it.each(FUENTES)(
+    "%s no empuja la página con un scroll horizontal",
+    (ruta) => {
+      expect(FUENTE[ruta]).not.toMatch(/\boverflow-x-auto/);
+    },
+  );
 });
 
 describe("UI-02 — el área táctil y el foco", () => {
@@ -140,12 +146,36 @@ describe("UI-02 — el navegador no calcula el negocio", () => {
     expect(fuente).not.toMatch(/monto\s*\*/);
   });
 
-  it.each(FUENTES_NEGOCIO)("%s no inventa una ruta del backend congelado", (ruta) => {
-    const fuente = FUENTE_NEGOCIO[ruta];
+  it.each(FUENTES_NEGOCIO)(
+    "%s no inventa una ruta del backend congelado",
+    (ruta) => {
+      const fuente = FUENTE_NEGOCIO[ruta];
 
-    expect(fuente).not.toContain("/inscripciones/completa");
-    expect(fuente).not.toContain("/cotizaciones");
-    expect(fuente).not.toContain("/catalogo/promociones");
-    expect(fuente).not.toContain("/catalogo/categorias");
+      // La inscripción atómica del backend congelado no existe en el objetivo.
+      expect(fuente).not.toContain("/inscripciones/completa");
+
+      // Las rutas RESTAURADAS existen, pero SIN la barra final del árbol
+      // congelado: el estilo del backend objetivo es sin barra.
+      expect(fuente).not.toContain("/cotizaciones/");
+      expect(fuente).not.toContain("/catalogo/promociones/");
+      expect(fuente).not.toContain("/catalogo/categorias/");
+    },
+  );
+
+  it.each(FUENTES)("%s no deriva la categoría de la promoción", (ruta) => {
+    const fuente = FUENTE[ruta];
+
+    // Comparar el año de una promoción con el rango de una categoría en el
+    // navegador sería resolver en el cliente una regla del servidor
+    // (`RN-C02`, `QA-K01`).
+    expect(fuente).not.toMatch(/promocion_desde\s*[<>]=?\s*/);
+    expect(fuente).not.toMatch(/promocion_hasta\s*[<>]=?\s*/);
+    expect(fuente).not.toMatch(/anio\s*[<>]=?\s*.*promocion/);
+  });
+
+  it("el asistente NO envía la categoría de los equipos", () => {
+    const fuente = FUENTE_NEGOCIO["utils/inscripcion.payloads.utils.ts"];
+
+    expect(fuente).not.toContain("categoria_id");
   });
 });

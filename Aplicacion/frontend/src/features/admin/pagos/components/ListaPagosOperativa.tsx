@@ -1,23 +1,33 @@
 "use client";
 
-import { useState } from "react";
 import { BadgeCheck } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import type {
+  ColumnaOperativa,
+  FilaOperativa,
+} from "@/features/admin/operaciones";
 import {
   ListaOperativa,
-  VeredictoConCausa,
+  VeredictoOperativo,
 } from "@/features/admin/operaciones";
-import type { ColumnaOperativa, FilaOperativa } from "@/features/admin/operaciones";
-import { DetalleComercialPago } from "./DetalleComercialPago";
-import { DialogoAprobarPagoManual } from "./DialogoAprobarPagoManual";
 import type {
   AdminPagoDetalleOut,
   AdminPagoListItemOut,
 } from "../types/pagos-admin.types";
+import { DetalleComercialPago } from "./DetalleComercialPago";
+import { DialogoAprobarPagoManual } from "./DialogoAprobarPagoManual";
 
 const COLUMNAS: ColumnaOperativa[] = [
-  { key: "compra", label: "Compra", prioridad: 1, titular: true, identificador: true },
+  {
+    key: "compra",
+    label: "Compra",
+    prioridad: 1,
+    titular: true,
+    identificador: true,
+  },
   { key: "estado", label: "Estado", prioridad: 1 },
+  { key: "causa", label: "Causa", prioridad: 2 },
   { key: "total", label: "Total", prioridad: 1, numerico: true },
   { key: "concepto", label: "Concepto", prioridad: 2 },
   { key: "comprador", label: "Comprador", prioridad: 2 },
@@ -70,7 +80,12 @@ export function ListaPagosOperativa({
     id: pago.compra_id,
     celdas: {
       compra: pago.compra_id,
-      estado: <VeredictoConCausa veredicto={pago.estado_operativo} />,
+      estado: <VeredictoOperativo veredicto={pago.estado_operativo} />,
+      causa: (
+        <p className="max-w-prose text-xs leading-snug text-muted-foreground">
+          {pago.estado_operativo.estado.descripcion}
+        </p>
+      ),
       total: `${pago.monto} ${pago.moneda}`,
       concepto: pago.resumen_concepto,
       comprador: pago.comprador.nombre,

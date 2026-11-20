@@ -3,8 +3,8 @@ import { ApiQueryError } from "@/hooks/callsApi/useApiQuery";
 import { apiSend } from "@/lib/api";
 import { apiResponseSchema } from "@/types/api.types";
 import {
-  SesionUsuarioSchema,
   type SesionUsuario,
+  SesionUsuarioSchema,
 } from "../schemas/sesion.schema";
 
 /**

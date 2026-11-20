@@ -25,8 +25,8 @@ export type {
   RolOperativo,
   Veredicto,
 } from "./types/operaciones.types";
-  export {
-    CODIGOS_ESTADO_OPERATIVO_PAGO,
-    rolOperativoDesdeCodigo,
-    veredictoDesdeEstadoOperativo,
-  } from "./utils/veredicto.adapter";
+export {
+  CODIGOS_ESTADO_OPERATIVO_PAGO,
+  rolOperativoDesdeCodigo,
+  veredictoDesdeEstadoOperativo,
+} from "./utils/veredicto.adapter";

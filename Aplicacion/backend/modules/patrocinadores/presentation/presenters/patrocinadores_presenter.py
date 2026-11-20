@@ -42,6 +42,7 @@ class PatrocinadorPresenter:
             descripcion=result.descripcion,
             sitio_web=result.sitio_web,
             visible=result.visible,
+            orden=result.orden,
             logo=PatrocinadorPresenter.present_logo(result.logo),
             imagenes=[
                 PatrocinadorPresenter.present_imagen(imagen) for imagen in result.imagenes

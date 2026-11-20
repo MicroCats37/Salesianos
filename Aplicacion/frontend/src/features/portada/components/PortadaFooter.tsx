@@ -5,8 +5,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowUpRight, Camera, Music2, Share2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
-import { ENLACES } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { ENLACES } from "@/features/portada/fixtures/festival";
 
 gsap.registerPlugin(ScrollTrigger);
 

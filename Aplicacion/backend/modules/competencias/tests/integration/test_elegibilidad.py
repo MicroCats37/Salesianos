@@ -8,8 +8,8 @@ THEN   el veredicto lo produce el DUEÑO de la inscripción
        (`RN-K01`, `QA-K01`).
 
 Este fichero NO duplica ninguna regla de inscripción: comprueba que el
-veredicto del puerto llega, que el motivo es el correcto y que un equipo no
-elegible NO entra al cuadro.
+veredicto del puerto llega, que el motivo es el correcto y que el cuadro sólo
+rechaza equipos fuera de su alcance competitivo.
 
 **La CATEGORÍA es obligatoria en el veredicto** (`RN-K01`): la elegibilidad
 deportiva es la coincidencia de EDICIÓN + DISCIPLINA + CATEGORÍA. El puerto
@@ -21,7 +21,6 @@ categoría: sin ella no hay contra qué comparar y el motivo sería ambiguo.
 import pytest
 
 from modules.competencias.domain.constants import MotivoNoElegibilidad
-from modules.competencias.domain.exceptions import EquipoNoElegibleError
 from modules.competencias.domain.ports import IEquipoElegibleService
 from modules.competencias.domain.schemas.competencias_schemas import (
     EquipoCompetenciaCreateData,
@@ -129,7 +128,7 @@ def test_el_equipo_de_inscripcion_cancelada_no_es_elegible(
     assert veredicto.motivo == MotivoNoElegibilidad.INSCRIPCION_CANCELADA
 
 
-def test_el_equipo_sin_plantilla_no_es_elegible(
+def test_el_equipo_sin_plantilla_es_elegible_para_el_cuadro(
     elegibilidad,
     equipo_sin_plantilla,
     edicion_publicada,
@@ -144,12 +143,12 @@ def test_el_equipo_sin_plantilla_no_es_elegible(
         str(categoria.id),
     )
 
-    # THEN el motivo es SIN_PLANTILLA.
-    assert veredicto.es_elegible is False
-    assert veredicto.motivo == MotivoNoElegibilidad.SIN_PLANTILLA
+    # THEN la capacidad de plantilla no excluye al equipo del cuadro.
+    assert veredicto.es_elegible is True
+    assert veredicto.motivo == MotivoNoElegibilidad.ELEGIBLE
 
 
-def test_el_equipo_con_plantilla_incompleta_no_es_elegible(
+def test_el_equipo_con_plantilla_incompleta_es_elegible_para_el_cuadro(
     elegibilidad,
     equipo_plantilla_incompleta,
     participacion_plantilla_incompleta,
@@ -165,9 +164,9 @@ def test_el_equipo_con_plantilla_incompleta_no_es_elegible(
         str(categoria.id),
     )
 
-    # THEN el motivo es PLANTILLA_INCOMPLETA.
-    assert veredicto.es_elegible is False
-    assert veredicto.motivo == MotivoNoElegibilidad.PLANTILLA_INCOMPLETA
+    # THEN la capacidad de plantilla no excluye al equipo del cuadro.
+    assert veredicto.es_elegible is True
+    assert veredicto.motivo == MotivoNoElegibilidad.ELEGIBLE
     assert veredicto.participantes_activos == 1
     assert veredicto.minimo_requerido == 3
 
@@ -239,37 +238,30 @@ async def test_el_equipo_elegible_entra_al_cuadro(
     assert participacion_en_cuadro.estado == "ACTIVO"
 
 
-async def test_el_equipo_no_elegible_no_entra_al_cuadro(
+async def test_el_equipo_sin_plantilla_entra_al_cuadro(
     flujo,
     competencia,
     equipo_sin_plantilla,
     edicion_publicada,
     disciplina_exigente,
 ):
-    """GIVEN un equipo que NO cumple la elegibilidad."""
-    from modules.competencias.domain.models import CompetenciaEquipo
+    """GIVEN un equipo sin plantilla pero del alcance de la competencia."""
 
     competencia.disciplina = disciplina_exigente
     competencia.save(update_fields=["disciplina"])
 
-    # WHEN el administrador intenta incorporarlo.
-    with pytest.raises(EquipoNoElegibleError) as error:
-        await flujo.incorporar_equipo(
-            str(competencia.id),
-            EquipoCompetenciaCreateData(
-                competencia_id=str(competencia.id),
-                equipo_id=str(equipo_sin_plantilla.id),
-                orden=1,
-            ),
-        )
+    # WHEN el administrador lo incorpora con una semilla manual.
+    participacion = await flujo.incorporar_equipo(
+        str(competencia.id),
+        EquipoCompetenciaCreateData(
+            competencia_id=str(competencia.id),
+            equipo_id=str(equipo_sin_plantilla.id),
+            orden=1,
+        ),
+    )
 
-    # THEN el dominio rechaza la operación y NO crea la participación.
-    assert error.value.code == "EQUIPO_NO_ELEGIBLE"
-    assert error.value.motivo == MotivoNoElegibilidad.SIN_PLANTILLA
-    assert not CompetenciaEquipo.objects.filter(
-        competencia=competencia,
-        equipo=equipo_sin_plantilla,
-    ).exists()
+    # THEN la falta de plantilla no excluye al equipo del cuadro.
+    assert participacion.equipo_id == str(equipo_sin_plantilla.id)
 
 
 async def test_el_equipo_ya_incorporado_no_se_duplicate(

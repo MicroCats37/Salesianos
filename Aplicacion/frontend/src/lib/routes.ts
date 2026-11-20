@@ -19,6 +19,8 @@ export const RUTAS = {
     tiendaProducto: (slug: string) => `/tienda/${slug}`,
     tiendaPedido: (token: string) => `/tienda/pedidos/${token}`,
     recuperarCompra: "/recuperar-compra",
+    videos: "/videos",
+    videoDetalle: (id: string) => `/videos/${id}`,
   },
   auth: {
     login: "/login",
@@ -34,7 +36,6 @@ export const RUTAS = {
   },
   administracion: {
     resumen: "/administracion",
-    ediciones: "/administracion/ediciones",
     personas: "/administracion/personas",
     usuarios: "/administracion/usuarios",
     inscripciones: "/administracion/inscripciones",
@@ -57,6 +58,7 @@ export const RUTAS = {
     marketplaceEntregas: "/administracion/marketplace/entregas",
     patrocinadores: "/administracion/patrocinadores",
     validaciones: "/administracion/validaciones",
+    videos: "/administracion/videos",
   },
 } as const;
 
@@ -75,6 +77,7 @@ export const DESTINOS_PUBLICOS: DestinoPublico[] = [
   { href: RUTAS.publico.informacion, label: "Información" },
   { href: RUTAS.publico.pases, label: "Pases" },
   { href: RUTAS.publico.tienda, label: "Tienda" },
+  { href: RUTAS.publico.videos, label: "En vivo" },
 ];
 
 /**
@@ -86,6 +89,7 @@ export const RUTAS_PUBLICAS: string[] = [
   RUTAS.publico.pases,
   RUTAS.publico.tienda,
   RUTAS.publico.recuperarCompra,
+  RUTAS.publico.videos,
   RUTAS.auth.login,
   RUTAS.auth.registro,
 ];
@@ -100,6 +104,7 @@ export function esRutaPublica(pathname: string): boolean {
   if (RUTAS_PUBLICAS.includes(pathname)) return true;
   return (
     pathname.startsWith(`${RUTAS.publico.pases}/gestionar/`) ||
-    pathname.startsWith(`${RUTAS.publico.tienda}/pedidos/`)
+    pathname.startsWith(`${RUTAS.publico.tienda}/`) ||
+    pathname.startsWith(`${RUTAS.publico.videos}/`)
   );
 }

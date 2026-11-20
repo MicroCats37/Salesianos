@@ -50,12 +50,18 @@ export interface AdminDataTableProps {
  *
  * The contract is the same for every table of the area: quantities align to
  * the right with tabular figures, identifiers wear the monospace face and
- * the rest is prose.
+ * the rest is prose that WRAPS.
+ *
+ * The wrap matters: a cell that never wraps turns a console into a strip
+ * that is read sideways. The two columns that must not break - a quantity
+ * and an identifier - are the ones that keep their line.
  */
 function claseCelda(columna: AdminColumna): string {
   return cn(
-    columna.numerico && "text-right tabular-nums",
-    columna.identificador && "font-mono text-xs tracking-tight",
+    "whitespace-normal",
+    columna.numerico && "text-right whitespace-nowrap tabular-nums",
+    columna.identificador &&
+      "whitespace-nowrap font-mono text-xs tracking-tight",
   );
 }
 
@@ -68,7 +74,8 @@ function claseCelda(columna: AdminColumna): string {
  * when the rows arrive.
  *
  * The table never overflows the page: the container scrolls sideways, which
- * keeps the meaning of every column on a narrow screen.
+ * keeps the meaning of every column on a narrow screen, and the prose of a
+ * cell wraps instead of stretching the row.
  */
 export function AdminDataTable({
   columns,
@@ -84,9 +91,10 @@ export function AdminDataTable({
           {columns.map((columna) => (
             <TableHead
               key={columna.key}
+              scope="col"
               className={cn(
-                "h-11 bg-muted/50 text-xs font-semibold tracking-[0.04em] text-muted-foreground",
-                columna.numerico && "text-right tabular-nums",
+                "h-11 bg-surface-recessed text-xs font-semibold text-muted-foreground",
+                columna.numerico && "text-right whitespace-nowrap tabular-nums",
                 columna.className,
               )}
             >
@@ -110,7 +118,7 @@ export function AdminDataTable({
           <TableRow className="hover:border-l-transparent hover:bg-transparent">
             <TableCell
               colSpan={columns.length}
-              className="whitespace-normal p-0"
+              className="min-h-32 whitespace-normal p-0"
             >
               {vacio}
             </TableCell>

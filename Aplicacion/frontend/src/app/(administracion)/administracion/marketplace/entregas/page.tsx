@@ -1,11 +1,11 @@
-import { ValidarEntregaRuta } from "@/features/validaciones/views";
+import { redirect } from "next/navigation";
 
 /**
  * ADM-20 - Validar las recogidas
  *
- * La página es SÓLO RUTEO: el contenedor (`ValidarEntregaRuta`) es el que
- * habla con el backend y el que decide el estado de la pantalla.
+ * Las recogidas se gestionan dentro de Tienda; esta ruta se mantiene solo
+ * para redirigir enlaces existentes.
  */
 export default function Page() {
-  return <ValidarEntregaRuta />;
+  redirect("/administracion/marketplace#recogidas");
 }

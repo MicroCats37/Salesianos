@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { UserMinus, UsersRound } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AdminEmptyState } from "@/features/admin/components";
+import type {
+  ColumnaOperativa,
+  FilaOperativa,
+} from "@/features/admin/operaciones";
 import {
   ConfirmacionIrreversible,
   ListaOperativa,
 } from "@/features/admin/operaciones";
-import type { ColumnaOperativa, FilaOperativa } from "@/features/admin/operaciones";
 import type { ParticipanteDeEquipoOut } from "../types/equipos-admin.types";
 
 const COLUMNAS: ColumnaOperativa[] = [
@@ -81,7 +84,8 @@ export function PanelPlantillaEquipo({
         efecto="Retirar a la persona libera su cupo en la inscripción de este equipo; no genera devolución."
         motivo={{
           etiqueta: "Motivo de la retirada",
-          placeholder: "Escribe el motivo que queda registrado en la auditoría.",
+          placeholder:
+            "Escribe el motivo que queda registrado en la auditoría.",
           requerido: true,
         }}
         confirmar={{

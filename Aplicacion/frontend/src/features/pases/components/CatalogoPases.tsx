@@ -30,7 +30,9 @@ export interface CatalogoPasesProps {
  *
  * The layout follows `RB-02` PASS-01: a single column below 1024 with the
  * call to action at the end, and two columns from 1024 with the summary
- * beside the options.
+ * beside the options. From 1024 the summary STICKS: the buyer chooses the
+ * pass and the quantity, and the summary and the call to action stay in
+ * sight while the options are being read.
  */
 export function CatalogoPases({ pases, pago, enviar }: CatalogoPasesProps) {
   const [seleccionado, setSeleccionado] = useState<PaseCatalogo | null>(null);
@@ -38,13 +40,23 @@ export function CatalogoPases({ pases, pago, enviar }: CatalogoPasesProps) {
   const [dialogoAbierto, setDialogoAbierto] = useState(false);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-      <section aria-labelledby="catalogo-pases-titulo" className="flex flex-col gap-3">
-        <h2 id="catalogo-pases-titulo" className="text-section-title text-foreground">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
+      <section
+        aria-labelledby="catalogo-pases-titulo"
+        className="flex flex-col gap-4"
+      >
+        <h2
+          id="catalogo-pases-titulo"
+          className="text-section-title text-foreground"
+        >
           Elige tu pase
         </h2>
 
-        <div role="radiogroup" aria-label="Pases a la venta" className="flex flex-col gap-3">
+        <div
+          role="radiogroup"
+          aria-label="Pases a la venta"
+          className="flex flex-col gap-4"
+        >
           {pases.map((pase) => (
             <TarjetaPase
               key={pase.id}
@@ -56,7 +68,10 @@ export function CatalogoPases({ pases, pago, enviar }: CatalogoPasesProps) {
         </div>
       </section>
 
-      <section aria-labelledby="resumen-pases-titulo" className="flex flex-col gap-4">
+      <section
+        aria-labelledby="resumen-pases-titulo"
+        className="flex flex-col gap-4 lg:sticky lg:top-20"
+      >
         <h2 id="resumen-pases-titulo" className="sr-only">
           Resumen de la compra
         </h2>
@@ -73,14 +88,14 @@ export function CatalogoPases({ pases, pago, enviar }: CatalogoPasesProps) {
 
             <Button
               type="button"
-              className="min-h-11 w-full"
+              className="min-h-11 w-full shadow-[var(--elevation-sm)]"
               onClick={() => setDialogoAbierto(true)}
             >
               Continuar al pago
             </Button>
           </>
         ) : (
-          <p className="text-caption text-muted-foreground">
+          <p className="rounded-[var(--radius-lg)] border border-dashed border-border bg-surface-recessed p-4 text-caption text-muted-foreground">
             Elige un pase para ver el resumen y continuar al pago.
           </p>
         )}

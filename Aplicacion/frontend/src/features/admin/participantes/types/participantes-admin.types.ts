@@ -18,10 +18,17 @@ import type { EstadoSuperficie } from "@/features/admin/operaciones";
  * decides that two participations collide (`GOV-02-RB-04b`).
  */
 
-/** A participation of a person, with its event, team and discipline. */
+/** A participation of a person, with its edition, team and discipline. */
 export interface ParticipacionAdminOut {
   id: string;
-  evento: { id: string; nombre: string };
+  /**
+   * The edition the participation belongs to.
+   *
+   * It is the EDITION and not the "event": the target renamed the concept in
+   * `FND-02` and the wire follows the vocabulary of the backend
+   * (`XCT-02` · reconciliación del espejo).
+   */
+  edicion: { id: string; nombre: string };
   equipo: { id: string; nombre: string };
   disciplina: { id: string; nombre: string };
   /** `JUGADOR`, `CAPITAN` or `DELEGADO`. */

@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   Ban,
   CheckCircle2,
@@ -6,7 +7,6 @@ import {
   TriangleAlert,
   XCircle,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
   RolVeredictoValidacion,

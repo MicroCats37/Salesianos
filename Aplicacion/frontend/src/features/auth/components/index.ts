@@ -1,2 +1,2 @@
-export { RegisterForm } from "./RegisterForm";
 export { AuthVisualPanel } from "./AuthVisualPanel";
+export { RegisterForm } from "./RegisterForm";

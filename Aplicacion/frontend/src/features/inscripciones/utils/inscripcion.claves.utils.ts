@@ -7,13 +7,15 @@ import { createDatasetQueryKeys } from "@/shared/utils/query-keys";
  * component. ONE dataset, ONE namespace: the root of a namespace is the
  * invalidation target of that dataset and of no other.
  *
- * The area owns FOUR datasets, and they do not share the `list`/`detail`
+ * The area owns SIX datasets, and they do not share the `list`/`detail`
  * slots of the generic factory:
  *
  * | Dataset | Namespace | What it holds |
  * |---|---|---|
  * | the catalogue of packages | `inscripcion.catalogo.paquetes` | `CatalogoPaquetesOut` |
  * | the catalogue of disciplines | `inscripcion.catalogo.disciplinas` | `CatalogoDisciplinasOut` |
+ * | the catalogue of cohorts | `inscripcion.catalogo.promociones` | `CatalogoPromocionesOut` |
+ * | the catalogue of bands | `inscripcion.catalogo.categorias` | `CatalogoCategoriasOut` |
  * | the detail of a registration | `inscripcion.detalle` | `InscripcionDetalleOut` |
  * | the pool of a registration | `inscripcion.pool` | `PoolOut` |
  *
@@ -45,8 +47,20 @@ export const clavesCatalogoDisciplinas = createDatasetQueryKeys<{
   edicion_id?: string;
 }>("inscripcion.catalogo.disciplinas");
 
+/** The catalogue of cohorts of ONE edition. */
+export const clavesCatalogoPromociones = createDatasetQueryKeys<{
+  edicion_id?: string;
+}>("inscripcion.catalogo.promociones");
+
+/** The catalogue of competitive bands of ONE edition. */
+export const clavesCatalogoCategorias = createDatasetQueryKeys<{
+  edicion_id?: string;
+}>("inscripcion.catalogo.categorias");
+
 /** The detail of ONE registration. */
-export const clavesInscripcionDetalle = createDatasetQueryKeys("inscripcion.detalle");
+export const clavesInscripcionDetalle = createDatasetQueryKeys(
+  "inscripcion.detalle",
+);
 
 /** The pool of ONE registration. */
 export const clavesInscripcionPool = createDatasetQueryKeys("inscripcion.pool");

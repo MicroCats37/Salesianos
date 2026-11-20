@@ -78,6 +78,15 @@ export const equipoDeInscripcionSchema = z.object({
   id: z.string().min(1),
   nombre: z.string(),
   disciplina: referenciaAdminSchema,
+  /**
+   * The competitive band of the team, DERIVED by the server from the cohort
+   * of the registration.
+   *
+   * It is NULLABLE (and optional) because `AdminInscripcionController` is NOT
+   * registered: the presenter does not exist yet and a required field would
+   * be a mirror that no real answer could ever satisfy.
+   */
+  categoria: referenciaAdminSchema.nullable().optional(),
   estado: z.string().min(1),
   participantes: z.array(participanteDeEquipoSchema),
   estado_operativo: estadoOperativoSchema,
@@ -128,6 +137,20 @@ export const inscripcionAdminListItemSchema = z.object({
   responsable: personaAdminSchema,
   paquete: referenciaAdminSchema,
   edicion: referenciaAdminSchema,
+  /**
+   * The cohort that the visitor selected when the registration was created.
+   *
+   * It is NULLABLE (and optional) because `AdminInscripcionController` is NOT
+   * registered: the presenter does not exist yet.
+   */
+  promocion: referenciaAdminSchema.nullable().optional(),
+  /**
+   * The secondary cohort of a fused registration.
+   *
+   * It is DESCRIPTIVE metadata: it never changes the band, the cupos, the
+   * payment, the team or the eligibility.
+   */
+  fusion_promocion: referenciaAdminSchema.nullable().optional(),
   equipos: z.number().int().nonnegative(),
   personas: z.number().int().nonnegative(),
   estado: estadoOperativoSchema,
@@ -138,12 +161,13 @@ export const inscripcionAdminListItemSchema = z.object({
 });
 
 /** The detail of a registration (`RT-IN-08`). */
-export const inscripcionAdminDetalleSchema = inscripcionAdminListItemSchema.extend({
-  equipos_detalle: z.array(equipoDeInscripcionSchema),
-  pool: poolDeInscripcionSchema,
-  compras: z.array(compraDeCuposSchema),
-  historial: z.array(eventoDeHistorialSchema),
-});
+export const inscripcionAdminDetalleSchema =
+  inscripcionAdminListItemSchema.extend({
+    equipos_detalle: z.array(equipoDeInscripcionSchema),
+    pool: poolDeInscripcionSchema,
+    compras: z.array(compraDeCuposSchema),
+    historial: z.array(eventoDeHistorialSchema),
+  });
 
 /** The envelope of the administrative list of the registrations. */
 export const listaInscripcionesAdminEnvelope = envelopeAdminPaginado(
@@ -202,6 +226,7 @@ export function equipoDeInscripcionDesdeWire(
     id: equipo.id,
     nombre: equipo.nombre,
     disciplina: equipo.disciplina,
+    categoria: equipo.categoria ?? null,
     estado: equipo.estado,
     participantes: equipo.participantes.map(participanteDeEquipoDesdeWire),
     estado_operativo: veredictoDesdeEstadoOperativo(equipo.estado_operativo),
@@ -258,6 +283,8 @@ export function inscripcionAdminListaDesdeWire(
     responsable: fila.responsable,
     paquete: fila.paquete,
     edicion: fila.edicion,
+    promocion: fila.promocion ?? null,
+    fusion_promocion: fila.fusion_promocion ?? null,
     equipos: fila.equipos,
     personas: fila.personas,
     estado: veredictoDesdeEstadoOperativo(fila.estado),

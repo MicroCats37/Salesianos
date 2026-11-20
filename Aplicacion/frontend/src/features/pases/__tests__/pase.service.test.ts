@@ -44,12 +44,39 @@ const CATALOGO = {
   pases: [],
 };
 
+/**
+ * The answer of the read of a purchase (`PaseCompraDetalleOut`).
+ *
+ * It is NOT the catalogue: every read is parsed with the mirror of the
+ * wrapper it publishes, and a body of another shape is a loud failure.
+ */
+const COMPRA = {
+  compra_pase_id: "00000000-0000-4000-8000-0000000000e1",
+  estado: "PENDIENTE",
+  cantidad: 2,
+  asignados: 0,
+  disponibles: 2,
+  beneficiarios: [],
+  compra_id: null,
+  orden_pago_id: null,
+  pase_id: "00000000-0000-4000-8000-0000000000c1",
+  pase_nombre: "Pase general",
+  edicion_nombre: "EDICION DE EJEMPLO",
+  precio_unitario: 0,
+  total: 0,
+  moneda: "PEN",
+  causa_operativa: "COMPRA_CREADA",
+};
+
 beforeEach(() => {
   apiSend.mockReset();
 });
 
 function envelope(data: unknown) {
-  return { status: 200, data: { success: true, data, error: null, message: null } };
+  return {
+    status: 200,
+    data: { success: true, data, error: null, message: null },
+  };
 }
 describe("el cliente del pase", () => {
   it("el catálogo se pide a la ruta registrada y se parsea con el espejo", async () => {
@@ -79,7 +106,7 @@ describe("el cliente del pase", () => {
   });
 
   it("la lectura de la compra viaja con el token en la cabecera", async () => {
-    apiSend.mockResolvedValue(envelope(CATALOGO));
+    apiSend.mockResolvedValue(envelope(COMPRA));
 
     await obtenerCompra("00000000-0000-4000-8000-0000000000e1", "secreto");
 
@@ -90,7 +117,7 @@ describe("el cliente del pase", () => {
   });
 
   it("el token nunca viaja en la query string", async () => {
-    apiSend.mockResolvedValue(envelope(CATALOGO));
+    apiSend.mockResolvedValue(envelope(COMPRA));
 
     await obtenerCompra("00000000-0000-4000-8000-0000000000e1", "secreto");
 
@@ -157,7 +184,11 @@ describe("los errores de campo del servidor", () => {
             code: "CAMPO_INVALIDO",
             message: "Revisa el documento.",
             field_errors: [
-              { field: "numero_documento", code: "INVALIDO", message: "No es válido." },
+              {
+                field: "numero_documento",
+                code: "INVALIDO",
+                message: "No es válido.",
+              },
             ],
           },
         },

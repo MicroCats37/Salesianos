@@ -196,10 +196,9 @@ class EquipoElegibleAdapter(IEquipoElegibleService):
             motivo = MotivoNoElegibilidad.INSCRIPCION_CANCELADA
         elif equipo.estado != EstadoEquipo.ACTIVO:
             motivo = MotivoNoElegibilidad.EQUIPO_NO_ACTIVO
-        elif participantes_activos == 0:
-            motivo = MotivoNoElegibilidad.SIN_PLANTILLA
-        elif participantes_activos < minimo_requerido:
-            motivo = MotivoNoElegibilidad.PLANTILLA_INCOMPLETA
+        # La plantilla describe la capacidad para incorporar jugadores, no la
+        # pertenencia competitiva del equipo. Un equipo de la competencia puede
+        # sembrarse aun cuando su roster esté vacío, incompleto o completo.
 
         return EquipoElegibleData(
             equipo_id=str(equipo.id),

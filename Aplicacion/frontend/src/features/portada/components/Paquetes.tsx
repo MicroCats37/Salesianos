@@ -1,7 +1,7 @@
 "use client";
 
-import { useLandingPaquetes } from "@/features/portada/fixtures/useLandingPaquetes";
 import type { Paquete } from "@/features/portada/fixtures/paquetes.fixture";
+import { useLandingPaquetes } from "@/features/portada/fixtures/useLandingPaquetes";
 import { PaquetesCards } from "./PaquetesCards";
 
 type DisciplinaFallback = Paquete["disciplinas"][number];

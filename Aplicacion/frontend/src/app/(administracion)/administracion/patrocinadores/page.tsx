@@ -1,8 +1,5 @@
-import { PatrocinadoresAdminView } from "@/features/patrocinadores/views";
+import { PatrocinadoresRuta } from "@/features/patrocinadores/views/PatrocinadoresRuta";
 
-/**
- * ADM-21 - Gestionar patrocinadores y sus piezas
- */
 export default function Page() {
-  return <PatrocinadoresAdminView />;
+  return <PatrocinadoresRuta />;
 }

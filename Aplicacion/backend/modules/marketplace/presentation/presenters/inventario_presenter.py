@@ -13,14 +13,18 @@ para trabajar (`FL-09`).
 """
 
 from modules.marketplace.domain.results.inventario_result import (
+    EntregaEntregadaResult,
     EntregaConfirmadaResult,
     EntregaPendienteResult,
+    EntregasResult,
     InventarioProductoResult,
     MovimientoInventarioResult,
 )
 from modules.marketplace.presentation.schemas.inventario_schemas import (
+    EntregaEntregadaOut,
     EntregaConfirmadaOut,
     EntregaPendienteOut,
+    EntregasOut,
     InventarioProductoOut,
     MovimientoInventarioOut,
 )
@@ -93,6 +97,9 @@ class EntregaPresenter:
         """Proyecta un pedido pendiente de entrega a su wrapper HTTP."""
         return EntregaPendienteOut(
             pedido_id=result.pedido_id,
+            comprador_nombres=result.comprador_nombres,
+            comprador_apellidos=result.comprador_apellidos,
+            comprador_documento=result.comprador_documento,
             estado=result.estado,
             estado_entrega=result.estado_entrega,
             total=result.total,
@@ -107,6 +114,31 @@ class EntregaPresenter:
     ) -> list[EntregaPendienteOut]:
         """Proyecta la cola de entregas a sus wrappers HTTP."""
         return [EntregaPresenter.present_pendiente(resultado) for resultado in resultados]
+
+    @staticmethod
+    def present_entregada(result: EntregaEntregadaResult) -> EntregaEntregadaOut:
+        """Proyecta un acta de entrega al listado administrativo."""
+        return EntregaEntregadaOut(
+            pedido_id=result.pedido_id,
+            comprador_nombres=result.comprador_nombres,
+            comprador_apellidos=result.comprador_apellidos,
+            comprador_documento=result.comprador_documento,
+            total=result.total,
+            moneda=result.moneda,
+            lineas=_present_lineas(result.lineas),
+            entregada_en=result.entregada_en,
+        )
+
+    @staticmethod
+    def present_listado(result: EntregasResult) -> EntregasOut:
+        """Proyecta las dos colas operativas de recogidas."""
+        return EntregasOut(
+            pendientes=EntregaPresenter.present_pendientes(result.pendientes),
+            entregadas=[
+                EntregaPresenter.present_entregada(entrega)
+                for entrega in result.entregadas
+            ],
+        )
 
     @staticmethod
     def present_confirmada(result: EntregaConfirmadaResult) -> EntregaConfirmadaOut:

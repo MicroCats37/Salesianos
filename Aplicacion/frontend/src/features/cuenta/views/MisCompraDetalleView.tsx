@@ -2,7 +2,10 @@ import { ArrowLeft, ArrowRight, QrCode, Receipt } from "lucide-react";
 import Link from "next/link";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
 import { RouteHero } from "@/components/shell/RouteHero";
-import { ShellErrorState, ShellPermissionDenied } from "@/components/shell/ShellState";
+import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
 import { Button } from "@/components/ui/button";
 import { RUTAS } from "@/lib/routes";
 import { EstadoIndeterminado, VeredictoEstado } from "../components";
@@ -25,9 +28,9 @@ export interface MisCompraDetalleViewProps {
  * the payment is confirmed, what was obtained and where to go next.
  *
  * The QR is NOT rendered here: the code is a bearer credential and it is
- * delivered by the module that owns it, never painted in a list. Neither is
- * the provider state: `settlement_status`, `CAPTURED` and the provider
- * tokens never appear (`GOV-02-RB-01d`).
+ * delivered by the module that owns it, never painted in a list. Neither the
+ * provider state nor its machine codes nor the provider tokens appear here
+ * (`GOV-02-RB-01d`).
  */
 export function MisCompraDetalleView({
   id,
@@ -38,6 +41,7 @@ export function MisCompraDetalleView({
     <div className="flex flex-col gap-6">
       <RouteHero
         pageId="ACCOUNT-05"
+        tone="hero"
         title="Tu compra"
         description="El estado del pago, el detalle de la compra y el destino de la recogida, con la evidencia que registra el backend."
         facts={[{ label: "Compra", value: id }]}
@@ -63,7 +67,10 @@ export function MisCompraDetalleView({
         <ShellErrorState
           title="No pudimos cargar esta compra"
           description="No pudimos leer el detalle en este momento. Vuelve a intentarlo en unos segundos."
-          accion={{ label: "Volver a mis compras", href: RUTAS.cuenta.misCompras }}
+          accion={{
+            label: "Volver a mis compras",
+            href: RUTAS.cuenta.misCompras,
+          }}
         />
       ) : null}
 
@@ -96,7 +103,9 @@ export function MisCompraDetalleView({
           ) : null}
 
           <section className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-5 shadow-[var(--elevation-sm)]">
-            <h2 className="text-section-title text-foreground">Qué compraste</h2>
+            <h2 className="text-section-title text-foreground">
+              Qué compraste
+            </h2>
 
             <dl className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-0.5">
@@ -129,15 +138,14 @@ export function MisCompraDetalleView({
               <span className="text-caption text-muted-foreground">
                 Estado del pago
               </span>
-              <VeredictoEstado
-                veredicto={compra.veredicto}
-                conDescripcion
-              />
+              <VeredictoEstado veredicto={compra.veredicto} conDescripcion />
             </div>
           </section>
 
           <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-5 shadow-[var(--elevation-sm)]">
-            <h2 className="text-section-title text-foreground">Qué obtuviste</h2>
+            <h2 className="text-section-title text-foreground">
+              Qué obtuviste
+            </h2>
             {compra.derechos.length > 0 ? (
               <ul className="flex flex-col gap-2">
                 {compra.derechos.map((derecho) => (
@@ -158,7 +166,9 @@ export function MisCompraDetalleView({
 
           {compra.ruta_origen ? (
             <div className="flex flex-col gap-2">
-              <h2 className="text-section-title text-foreground">Siguiente paso</h2>
+              <h2 className="text-section-title text-foreground">
+                Siguiente paso
+              </h2>
               <Button asChild className="min-h-11 w-fit">
                 <Link href={compra.ruta_origen}>
                   Ir a {etiquetaOrigen(compra.origen).toLowerCase()}

@@ -1,9 +1,9 @@
 import { ArrowLeft, Users, Wallet } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
 import { RouteHero } from "@/components/shell/RouteHero";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RUTAS } from "@/lib/routes";
 
 /**
@@ -18,6 +18,7 @@ export function MisInscripcionDetalleView({ id }: { id: string }) {
     <div className="flex flex-col gap-6">
       <RouteHero
         pageId="ACCOUNT-03"
+        tone="hero"
         title="Tu inscripción"
         description="Los equipos de la promoción, las personas que esperan cupo y el estado del pago, con los contadores que calcula el servidor."
         facts={[{ label: "Inscripción", value: id }]}

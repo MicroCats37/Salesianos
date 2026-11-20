@@ -12,6 +12,7 @@ compra por su propio endpoint y su propio flujo (`RN-C01`, `DEC-10`), y todas
 terminan en este flujo compartido.
 """
 
+from asgiref.sync import sync_to_async
 from injector import inject
 
 from modules.commerce.domain.schemas.compra_schemas import CompraCreateData
@@ -35,6 +36,11 @@ class CompraOrchestrator:
         """
         compra, reutilizada = await self.flujo.crear_o_reutilizar_compra(data)
         return self.selector.como_result(compra, reutilizada=reutilizada), reutilizada
+
+    async def listar_por_persona(self, persona_id):
+        """El historial comercial completo de una persona."""
+        compras = await sync_to_async(list)(self.selector.listar_por_persona(persona_id))
+        return [self.selector.como_result(compra) for compra in compras]
 
 
 __all__ = ["CompraOrchestrator"]

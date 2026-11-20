@@ -6,8 +6,8 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  THEME_OPTIONS,
   isThemeValue,
+  THEME_OPTIONS,
   type ThemeValue,
 } from "@/features/theme/theme.options";
 

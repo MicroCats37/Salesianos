@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   CircleAlert,
   CircleCheck,
@@ -7,10 +8,9 @@ import {
   MinusCircle,
   TriangleAlert,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import type { RolOperativo, Veredicto } from "../types/operaciones.types";
 import { cn } from "@/lib/utils";
+import type { RolOperativo, Veredicto } from "../types/operaciones.types";
 
 /**
  * The shape of a bucket: the icon that gives it a SILHOUETTE and the semantic
@@ -93,7 +93,10 @@ export function VeredictoOperativo({
         className,
       )}
     >
-      <Icono className={cn("size-3.5 shrink-0", estilo.claseIcono)} aria-hidden="true" />
+      <Icono
+        className={cn("size-3.5 shrink-0", estilo.claseIcono)}
+        aria-hidden="true"
+      />
       <span className="min-w-0 truncate">{veredicto.estado.etiqueta}</span>
     </span>
   );
@@ -151,13 +154,18 @@ export function ExplicacionVeredicto({
   className,
 }: ExplicacionVeredictoProps) {
   return (
-    <div data-operacion="explicacion" className={cn("flex flex-col gap-2", className)}>
+    <div
+      data-operacion="explicacion"
+      className={cn("flex flex-col gap-2", className)}
+    >
       <VeredictoOperativo veredicto={veredicto} />
       <p className="max-w-measure text-sm leading-relaxed text-muted-foreground">
         {veredicto.estado.descripcion}
       </p>
       {siguienteAccion ? (
-        <div className="flex flex-wrap items-center gap-2">{siguienteAccion}</div>
+        <div className="flex min-h-11 flex-wrap items-center gap-2">
+          {siguienteAccion}
+        </div>
       ) : null}
     </div>
   );

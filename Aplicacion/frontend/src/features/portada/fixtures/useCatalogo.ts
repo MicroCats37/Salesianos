@@ -4,14 +4,22 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
 /**
- * PROVISIONAL_CONTRACT_FIXTURE — el catálogo público de la portada.
+ * PROVISIONAL_CONTRACT_FIXTURE — la presentación del catálogo público de la
+ * portada.
  *
- * La etapa de esqueleto no consume endpoints: los valores vienen del fixture
- * determinista de abajo, con los MISMOS campos que publica el backend
- * (`DisciplinaOut` y `CategoriaOut`). Cuando el contrato esté congelado, este
- * archivo se sustituye por el servicio real y las vistas no cambian.
+ * ## Lo que queda aquí y lo que se fue
  *
- * NO calcula nada: los valores están publicados, no derivados.
+ * Las CATEGORÍAS se fueron de este archivo: la portada las lee del
+ * SERVICIO real (`useCatalogoCategorias`, en
+ * `@/features/inscripciones/hooks/useCatalogo`), que es el único cliente del
+ * catálogo de la edición. El fixture declaraba un `evento_id` y un
+ * `promocion_desde/hasta` que ningún backend publicaba.
+ *
+ * Las DISCIPLINAS siguen provisionales: su fixture replica la forma del
+ * backend CONGELADO (`sigla`, `min_jugadores`), que no es la forma que
+ * publica el backend objetivo (`slug`, `minimo_por_equipo`). Migrarlas es
+ * un trabajo propio, con su propio espejo, y no se mezcla con la
+ * restauración de las categorías.
  */
 
 /** Espejo 1:1 de `DisciplinaOut` (backend). */
@@ -25,18 +33,6 @@ export const DisciplinaOutSchema = z.object({
 });
 
 export type DisciplinaOut = z.infer<typeof DisciplinaOutSchema>;
-
-/** Espejo 1:1 de `CategoriaOut` (backend). */
-export const CategoriaOutSchema = z.object({
-  id: z.string(),
-  evento_id: z.string(),
-  evento_nombre: z.string(),
-  nombre: z.string(),
-  promocion_desde: z.number(),
-  promocion_hasta: z.number(),
-});
-
-export type CategoriaOut = z.infer<typeof CategoriaOutSchema>;
 
 /** Orden editorial de las tabs del campeonato: una por disciplina. */
 export const ORDEN_DISCIPLINAS = ["F7M", "F7F", "VOL", "BAS"] as const;
@@ -147,63 +143,14 @@ export const DISCIPLINAS_FALLBACK: DisciplinaOut[] = [
   },
 ];
 
-/** PROVISIONAL_CONTRACT_FIXTURE — las categorías publicadas en el micrositio. */
-export const CATEGORIAS_FALLBACK: CategoriaOut[] = [
-  {
-    id: "junior",
-    evento_id: "salesianos-fest-2026",
-    evento_nombre: "Salesianos FEST 2026",
-    nombre: "Junior",
-    promocion_desde: 2012,
-    promocion_hasta: 2025,
-  },
-  {
-    id: "senior",
-    evento_id: "salesianos-fest-2026",
-    evento_nombre: "Salesianos FEST 2026",
-    nombre: "Senior",
-    promocion_desde: 1998,
-    promocion_hasta: 2011,
-  },
-  {
-    id: "master",
-    evento_id: "salesianos-fest-2026",
-    evento_nombre: "Salesianos FEST 2026",
-    nombre: "Máster",
-    promocion_desde: 1985,
-    promocion_hasta: 1997,
-  },
-  {
-    id: "super-master",
-    evento_id: "salesianos-fest-2026",
-    evento_nombre: "Salesianos FEST 2026",
-    nombre: "Súper Máster",
-    promocion_desde: 1970,
-    promocion_hasta: 1984,
-  },
-];
-
 /** Alias explicito del fixture. */
 export const DISCIPLINAS_FIXTURE = DISCIPLINAS_FALLBACK;
 
-/** Disciplinas activas del festival (GET /api/catalogo/disciplinas/). */
+/** Disciplinas activas del festival (PROVISIONAL: fixture del backend congelado). */
 export function useDisciplinas() {
   return useQuery({
     queryKey: ["landing", "disciplinas"] as const,
     queryFn: () => DISCIPLINAS_FIXTURE,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-  });
-}
-
-/** Alias explicito del fixture. */
-export const CATEGORIAS_FIXTURE = CATEGORIAS_FALLBACK;
-
-/** Categorías activas del festival (GET /api/catalogo/categorias/). */
-export function useCategorias() {
-  return useQuery({
-    queryKey: ["landing", "categorias"] as const,
-    queryFn: () => CATEGORIAS_FIXTURE,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { ScanLine } from "lucide-react";
+import { useState } from "react";
+import { FormField } from "@/components/forms/FormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 /**
  * ConsolaEscaner - the console of a point of control.
@@ -43,7 +43,6 @@ export function ConsolaEscaner({
 }) {
   const [codigo, setCodigo] = useState("");
 
-  const ayudaId = "consola-escaner-ayuda";
   const sinServicio =
     "El servicio de validación todavía no está conectado en el backend: el código se puede escribir, pero la comprobación no sale de este dispositivo.";
 
@@ -56,24 +55,24 @@ export function ConsolaEscaner({
         onComprobar(codigo.trim());
       }}
     >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="codigo-credencial">{etiquetaCodigo}</Label>
-        <Input
-          id="codigo-credencial"
-          name="codigo"
-          value={codigo}
-          onChange={(evento) => setCodigo(evento.target.value)}
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          disabled={ocupado || disabled}
-          aria-describedby={ayudaId}
-          className="min-h-11"
-        />
-        <p id={ayudaId} className="text-caption text-muted-foreground">
-          {ayuda ?? sinServicio}
-        </p>
-      </div>
+      <FormField
+        id="codigo-credencial"
+        label={etiquetaCodigo}
+        helper={ayuda ?? sinServicio}
+      >
+        {(control) => (
+          <Input
+            {...control}
+            name="codigo"
+            value={codigo}
+            onChange={(evento) => setCodigo(evento.target.value)}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            disabled={ocupado || disabled}
+          />
+        )}
+      </FormField>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Button

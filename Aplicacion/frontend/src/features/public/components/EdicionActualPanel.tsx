@@ -102,15 +102,21 @@ export function EdicionActualPanel() {
           : null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4">
+    <div className="glow-brand flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4">
       <div className="flex flex-col gap-1">
+        <span
+          className="rule-gold block h-0.5 w-8 rounded-full"
+          aria-hidden="true"
+        />
         <span className="text-caption text-muted-foreground">
           La edición vigente
         </span>
         <h3 className="text-section-title text-foreground">
           {data.nombre} · {data.anio}
         </h3>
-        <p className="text-caption text-muted-foreground">{data.evento_nombre}</p>
+        <p className="text-caption text-muted-foreground">
+          {data.evento_nombre}
+        </p>
       </div>
 
       {fechas ? (

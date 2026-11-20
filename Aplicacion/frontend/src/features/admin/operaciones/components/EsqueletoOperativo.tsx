@@ -34,7 +34,10 @@ export function EsqueletoOperativo({
 
   return (
     <div className="flex flex-col gap-4">
-      <ul className="flex list-none flex-col gap-3 md:hidden" aria-hidden="true">
+      <ul
+        className="flex list-none flex-col gap-3 md:hidden"
+        aria-hidden="true"
+      >
         {indices.map((indice) => (
           <li
             key={indice}

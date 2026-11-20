@@ -24,7 +24,9 @@ const IDIOMA = "es";
  * It returns `null` when there is no instant, so the caller shows the real
  * absence instead of a placeholder.
  */
-export function formatearInstante(iso: string | null | undefined): string | null {
+export function formatearInstante(
+  iso: string | null | undefined,
+): string | null {
   if (!iso) return null;
   const fecha = new Date(iso);
   if (Number.isNaN(fecha.getTime())) return null;

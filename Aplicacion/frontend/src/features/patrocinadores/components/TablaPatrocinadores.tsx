@@ -1,10 +1,7 @@
 import { Eye, EyeOff, Handshake } from "lucide-react";
-import {
-  AdminDataTable,
-  AdminEmptyState,
-} from "@/features/admin/components";
-import { LogoPatrocinador } from "./LogoPatrocinador";
+import { AdminDataTable, AdminEmptyState } from "@/features/admin/components";
 import type { Patrocinador } from "../types/patrocinador.types";
+import { LogoPatrocinador } from "./LogoPatrocinador";
 
 /**
  * TablaPatrocinadores - the sponsors of the edition (`ADM-21`).
@@ -46,6 +43,7 @@ export function TablaPatrocinadores({
             <LogoPatrocinador
               logo={patrocinador.logo}
               nombre={patrocinador.nombre}
+              decorativo
             />
           ),
           patrocinador: (

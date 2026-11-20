@@ -83,7 +83,7 @@ export function AppTopbar({
               <>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="truncate text-sm font-semibold text-foreground">
+                  <BreadcrumbPage className="truncate text-sm font-bold text-foreground sm:text-base">
                     {seccion}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
@@ -92,9 +92,13 @@ export function AppTopbar({
           </BreadcrumbList>
         </Breadcrumb>
 
-        <span className="hidden truncate text-xs text-muted-foreground sm:block">
-          {nivel}
-        </span>
+        {/*
+          El nivel de la cuenta es CONTEXTO, no decoración: el operador
+          necesita saber qué permisos tiene sin abrir el menú de la cuenta.
+          Vive en la barra a TODO el ancho, porque en un teléfono la barra
+          es el único sitio donde cabe.
+        */}
+        <span className="truncate text-xs text-muted-foreground">{nivel}</span>
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">

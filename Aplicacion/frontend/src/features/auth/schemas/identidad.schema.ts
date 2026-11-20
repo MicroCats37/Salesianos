@@ -78,7 +78,17 @@ export const PersonaConfirmarInSchema = z.object({
   numero_documento: z.string().min(1).max(20),
   nombres: z.string().min(1).max(255),
   apellidos: z.string().max(255).nullable(),
-  genero: z.string().max(1).nullable(),
+  /**
+   * The género is a CLOSED vocabulary: `M` or `F`, or `null` when it is not
+   * declared.
+   *
+   * The owner of the vocabulary is the DOMAIN (`GeneroChoices` in
+   * `modules/usuarios/domain/constants.py`), exactly like the type of the
+   * document is `DNI`/`CE`/`PAS`. A one-character string that is not a género
+   * (`"X"`) is not a valid input, and the browser refuses it before the
+   * request travels.
+   */
+  genero: z.enum(["M", "F"] as const).nullable(),
 });
 
 export type DocumentoConsulta = z.infer<typeof DocumentoConsultaSchema>;

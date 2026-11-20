@@ -1,7 +1,7 @@
 import { CalendarDays, MapPin, Timer } from "lucide-react";
 import Link from "next/link";
+import { FestivalPublicPage } from "@/components/shell/FestivalPublicPage";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
-import { RouteHero } from "@/components/shell/RouteHero";
 import { Button } from "@/components/ui/button";
 import {
   Item,
@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/item";
 import { FESTIVAL, SEDE, VENTAS } from "@/features/portada/fixtures/festival";
 import { RUTAS } from "@/lib/routes";
-import { IndiceInformacion } from "../components/IndiceInformacion";
 import { EdicionActualPanel } from "../components/EdicionActualPanel";
+import { IndiceInformacion } from "../components/IndiceInformacion";
 
 /**
  * The dates are printed in the local time of the event.
@@ -58,19 +58,12 @@ const SECCIONES = [
  */
 export function InformacionView() {
   return (
-    <div className="flex flex-col gap-8">
-      <RouteHero
-        pageId="PUB-02"
-        title={FESTIVAL.descripcion}
-        description={`${FESTIVAL.claim}. ${FESTIVAL.frase}.`}
-        tone="band"
-        facts={[
-          { label: "Fecha", value: FESTIVAL.fechaEvento },
-          { label: "Sede", value: SEDE.nombre },
-          { label: "Ciudad", value: FESTIVAL.ciudad },
-        ]}
-      />
-
+    <FestivalPublicPage
+      eyebrow="INFORMACIÓN / SALESIANOS FEST"
+      title={["TODO LO QUE", "NECESITAS", "SABER."]}
+      highlighted="SABER."
+      description={`${FESTIVAL.claim}. Encuentra la fecha, sede, programa y ventanas de inscripción de la edición.`}
+    >
       <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
         <IndiceInformacion
           secciones={SECCIONES.map((seccion) => ({ ...seccion }))}
@@ -79,11 +72,15 @@ export function InformacionView() {
 
         <div className="flex flex-col gap-10">
           <section id="lugar" className="flex scroll-mt-24 flex-col gap-4">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
+              <span
+                className="rule-gold block h-0.5 w-10 rounded-full"
+                aria-hidden="true"
+              />
               <h2 className="text-section-title text-foreground">
                 Dónde y cuándo nos vemos
               </h2>
-              <p className="max-w-measure text-caption text-muted-foreground">
+              <p className="max-w-measure text-lead text-muted-foreground">
                 La sede y los horarios de la edición, con la ventana de
                 inscripción de cada etapa.
               </p>
@@ -92,7 +89,10 @@ export function InformacionView() {
             <ItemGroup className="gap-2">
               <Item variant="outline" size="sm">
                 <ItemMedia variant="icon">
-                  <CalendarDays className="size-4 text-primary" aria-hidden="true" />
+                  <CalendarDays
+                    className="size-4 text-primary"
+                    aria-hidden="true"
+                  />
                 </ItemMedia>
                 <ItemContent>
                   <ItemTitle>{FESTIVAL.fechaEvento}</ItemTitle>
@@ -118,15 +118,18 @@ export function InformacionView() {
             <EdicionActualPanel />
           </section>
 
-
           <section id="ventanas" className="flex scroll-mt-24 flex-col gap-4">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
+              <span
+                className="rule-gold block h-0.5 w-10 rounded-full"
+                aria-hidden="true"
+              />
               <h2 className="text-section-title text-foreground">
                 Cuándo se puede inscribir
               </h2>
-              <p className="max-w-measure text-caption text-muted-foreground">
-                Las cuatro ventanas de la edición. Cada una abre y cierra con
-                la fecha que define la organización.
+              <p className="max-w-measure text-lead text-muted-foreground">
+                Las cuatro ventanas de la edición. Cada una abre y cierra con la
+                fecha que define la organización.
               </p>
             </div>
 
@@ -163,8 +166,7 @@ export function InformacionView() {
                 <ItemContent>
                   <ItemTitle>Inscripción extemporánea</ItemTitle>
                   <ItemDescription>
-                    Desde el{" "}
-                    {FECHA.format(new Date(VENTAS.extemporaneaDesde))}.
+                    Desde el {FECHA.format(new Date(VENTAS.extemporaneaDesde))}.
                   </ItemDescription>
                 </ItemContent>
               </Item>
@@ -184,13 +186,19 @@ export function InformacionView() {
 
             <div>
               <Button asChild className="min-h-11">
-                <Link href={RUTAS.cuenta.inscripcion}>Crear una inscripción</Link>
+                <Link href={RUTAS.cuenta.inscripcion}>
+                  Crear una inscripción
+                </Link>
               </Button>
             </div>
           </section>
 
           <section id="programa" className="flex scroll-mt-24 flex-col gap-4">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
+              <span
+                className="rule-gold block h-0.5 w-10 rounded-full"
+                aria-hidden="true"
+              />
               <h2 className="text-section-title text-foreground">
                 El programa y las disciplinas
               </h2>
@@ -203,6 +211,6 @@ export function InformacionView() {
           </section>
         </div>
       </div>
-    </div>
+    </FestivalPublicPage>
   );
 }

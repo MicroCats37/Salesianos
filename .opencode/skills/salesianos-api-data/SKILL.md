@@ -21,6 +21,35 @@ Use for endpoint discovery, services, hooks, Zod wire schemas, payloads, query k
 - Build payloads in mutation hooks. Create and update use distinct mappings; omit untouched `undefined`, send `null` only for nullable clears, send no undeclared field, and never calculate business values in the browser.
 - Invalidate exact affected keys. Optimistic writes must preserve backend shape, snapshot/rollback on error, and invalidate on settle.
 - Use the corrected multipart protocol and endpoint integration requirements in `references/api-data-contract.md`; never hand-build an alternative protocol.
+- Multipart controllers MUST declare `data: Form[DataForm]` and `files: File[list[UploadedFile]]`, then call `parse_form_json(data.data, files, InputSchema)`. Do not read `request.POST`, `request.FILES`, or `request.body` directly, and do not replace this boundary with a per-module request hydrator.
+
+## Mandatory Multipart Controller Shape
+
+Use the established Centro de Esparcimiento controller boundary for every image/file endpoint:
+
+```python
+from ninja import File, Form
+from ninja.files import UploadedFile
+
+from core.types import DataForm, parse_form_json
+
+@route.post("/resource", response={200: ApiResponse[ResourceOut]})
+async def crear_recurso(
+    self,
+    request,
+    data: Form[DataForm],
+    files: File[list[UploadedFile]],
+):
+    payload = parse_form_json(data.data, files, RecursoIn)
+    domain_data = RecursoCreateData(
+        nombre=payload.nombre,
+        imagen=payload.imagen,
+    )
+    result = await self.orchestrator.crear_recurso(domain_data)
+    return success_response(RecursoPresenter.present(result))
+```
+
+`parse_form_json` owns JSON decoding, token-to-file hydration, validation, missing-file rejection, and orphan-file rejection. The controller only maps the validated HTTP schema into the domain DTO and delegates once to its orchestrator.
 
 ## Decision Gates
 

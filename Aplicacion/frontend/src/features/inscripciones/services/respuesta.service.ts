@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from "zod";
 
 import { apiResponseSchema } from "@/types/api.types";
 
@@ -24,6 +24,34 @@ export interface Respuesta<T> {
 }
 
 /**
+ * The Zod mirror of the envelope, as a schema that OPENS it.
+ *
+ * It is the SAME rule that `leerRespuesta` applies, expressed as a schema:
+ * a hook that calls the endpoint through the generic family declares the
+ * mirror as its `schema` and the envelope is opened HERE, in the only house
+ * that owns it.
+ *
+ * The answer that does not match the contract is a FAILURE: `parse` throws
+ * (a `ZodError`), and a body that opens but carries no data throws the
+ * message of the server when it declares one.
+ *
+ * @param dataSchema the mirror of the wrapper the endpoint publishes.
+ * @param sinContenido the message of a body that carries no data.
+ */
+export function respuestaSchema<T>(
+  dataSchema: z.ZodType<T>,
+  sinContenido: string,
+): z.ZodType<Respuesta<T>, unknown> {
+  return apiResponseSchema(dataSchema).transform((envelope) => {
+    if (!envelope.success || envelope.data === null) {
+      throw new Error(envelope.message ?? sinContenido);
+    }
+
+    return { data: envelope.data, message: envelope.message ?? null };
+  });
+}
+
+/**
  * Opens the envelope and returns its payload.
  *
  * @param dataSchema the mirror of the wrapper the endpoint publishes.
@@ -35,11 +63,5 @@ export function leerRespuesta<T>(
   body: unknown,
   sinContenido: string,
 ): Respuesta<T> {
-  const envelope = apiResponseSchema(dataSchema).parse(body);
-
-  if (!envelope.success || envelope.data === null) {
-    throw new Error(envelope.message ?? sinContenido);
-  }
-
-  return { data: envelope.data, message: envelope.message ?? null };
+  return respuestaSchema(dataSchema, sinContenido).parse(body);
 }

@@ -3,11 +3,18 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
 import { RouteHero } from "@/components/shell/RouteHero";
-import { ShellErrorState, ShellPermissionDenied } from "@/components/shell/ShellState";
+import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RUTAS } from "@/lib/routes";
-import { BarraFiltros, ListaInscripciones, SinResultadosConFiltros } from "../components";
+import {
+  BarraFiltros,
+  ListaInscripciones,
+  SinResultadosConFiltros,
+} from "../components";
 import type { EstadoVista, InscripcionResumen } from "../types/cuenta.types";
 
 /** The keys of the filters of the list, in the URL. */
@@ -20,6 +27,8 @@ export interface MisInscripcionesViewProps {
   inscripciones?: InscripcionResumen[];
   /** The filters that are active, read from the URL by the page. */
   filtros?: Record<string, string | undefined>;
+  /** The action that resolves a failed read. */
+  reintentar?: () => void;
 }
 
 /**
@@ -37,6 +46,7 @@ export function MisInscripcionesView({
   estado = "sin-datos",
   inscripciones = [],
   filtros = {},
+  reintentar,
 }: MisInscripcionesViewProps) {
   const hayRegistros = inscripciones.length > 0;
 
@@ -60,7 +70,10 @@ export function MisInscripcionesView({
     new Map(
       inscripciones.map((i) => [
         i.veredicto.estado.codigo,
-        { valor: i.veredicto.estado.codigo, etiqueta: i.veredicto.estado.etiqueta },
+        {
+          valor: i.veredicto.estado.codigo,
+          etiqueta: i.veredicto.estado.etiqueta,
+        },
       ]),
     ).values(),
   );
@@ -69,6 +82,7 @@ export function MisInscripcionesView({
     <div className="flex flex-col gap-6">
       <RouteHero
         pageId="ACCOUNT-02"
+        tone="hero"
         title="Tus inscripciones"
         description="Cada inscripción de la edición con su estado, el paquete que contrataste y las personas y equipos que lleva."
         actions={
@@ -82,16 +96,17 @@ export function MisInscripcionesView({
       />
 
       {estado === "sin-permiso" ? (
-          <ShellPermissionDenied
-            title="No podemos leer tus inscripciones"
-            className="border-border bg-surface-raised"
-          />
+        <ShellPermissionDenied
+          title="No podemos leer tus inscripciones"
+          className="border-border bg-surface-raised"
+        />
       ) : null}
 
       {estado === "error" ? (
         <ShellErrorState
           title="No pudimos cargar tus inscripciones"
           description="No pudimos leer tus registros en este momento. Vuelve a intentarlo en unos segundos."
+          accion={{ label: "Reintentar", onClick: reintentar }}
         />
       ) : null}
 
@@ -127,8 +142,16 @@ export function MisInscripcionesView({
             >
               <BarraFiltros
                 definiciones={[
-                  { clave: "edicion", etiqueta: "Edición", opciones: opcionesEdicion },
-                  { clave: "estado", etiqueta: "Estado", opciones: opcionesEstado },
+                  {
+                    clave: "edicion",
+                    etiqueta: "Edición",
+                    opciones: opcionesEdicion,
+                  },
+                  {
+                    clave: "estado",
+                    etiqueta: "Estado",
+                    opciones: opcionesEstado,
+                  },
                 ]}
               />
             </Suspense>
@@ -149,4 +172,3 @@ export function MisInscripcionesView({
     </div>
   );
 }
-

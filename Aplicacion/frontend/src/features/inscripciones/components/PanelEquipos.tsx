@@ -12,10 +12,14 @@ export interface PanelEquiposProps {
 /**
  * PanelEquipos - the teams of a registration.
  *
- * A team is a name, the discipline it competes in and the state the server
- * gave it. The minimum and the maximum of the roster are NOT computed here:
- * the discipline publishes them and the state of the team is the verdict of
- * the server.
+ * A team is a name, the discipline it competes in, the competitive band that
+ * the server derived and the state the server gave it. The minimum and the
+ * maximum of the roster are NOT computed here: the discipline publishes them
+ * and the state of the team is the verdict of the server.
+ *
+ * The band is printed as it arrives: it was derived by the server from the
+ * cohort of the registration (`RN-C02`, `QA-K01`), and the browser never
+ * derives it nor guesses it.
  */
 export function PanelEquipos(props: PanelEquiposProps) {
   const equipos = props.equipos;
@@ -42,6 +46,9 @@ export function PanelEquipos(props: PanelEquiposProps) {
           </span>
           <span className="text-caption text-muted-foreground">
             {equipo.disciplina_nombre}
+          </span>
+          <span className="text-caption text-muted-foreground">
+            Categoría: {equipo.categoria.nombre}
           </span>
           <span className="text-caption text-muted-foreground">
             Estado: {equipo.estado}

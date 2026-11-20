@@ -442,7 +442,12 @@ export const GenericForm = <T extends FieldValues>({
   if (children) {
     return (
       <Form {...methods}>
-        <form id={formId} onSubmit={onSubmitFn} className={formClassName}>
+        <form
+          id={formId}
+          onSubmit={onSubmitFn}
+          className={formClassName}
+          noValidate
+        >
           {children({
             methods,
             isSubmitting: isLocked,
@@ -490,6 +495,7 @@ export const GenericForm = <T extends FieldValues>({
             id={formId}
             onSubmit={onSubmitFn}
             className={`space-y-4 ${formClassName || ""}`}
+            noValidate
           >
             <fieldset disabled={isLocked} className="space-y-4">
               {normalizedSections.map((section, idx) => {

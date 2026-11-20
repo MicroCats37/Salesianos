@@ -42,8 +42,8 @@ export function AdminAgendaView() {
 
       <AdminNotice title="Un día sin encuentros no es un error">
         La agenda es de solo lectura: no se reordena ni se edita desde aquí. Si
-        no se indica un día, el backend resuelve el día actual y lo devuelve
-        en la respuesta.
+        no se indica un día, el backend resuelve el día actual y lo devuelve en
+        la respuesta.
       </AdminNotice>
 
       <AdminPanel

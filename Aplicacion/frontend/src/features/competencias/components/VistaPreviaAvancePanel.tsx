@@ -1,6 +1,6 @@
 import { Eye } from "lucide-react";
-import { ChipBloqueo } from "./ChipEstadoCompetencia";
 import type { VistaPreviaAvance } from "../types/competencia.types";
+import { ChipBloqueo } from "./ChipEstadoCompetencia";
 
 /**
  * VistaPreviaAvancePanel - what the advance WOULD do.
@@ -38,14 +38,20 @@ export function VistaPreviaAvancePanel({
 
       <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div>
-          <dt className="text-caption text-muted-foreground">Equipo que avanzaría</dt>
+          <dt className="text-caption text-muted-foreground">
+            Equipo que avanzaría
+          </dt>
           <dd className="text-sm font-semibold text-foreground">
             {vistaPrevia.ganador_equipo_nombre}
           </dd>
         </div>
         <div>
-          <dt className="text-caption text-muted-foreground">Slot de destino</dt>
-          <dd className="text-sm text-foreground">{vistaPrevia.slot_destino}</dd>
+          <dt className="text-caption text-muted-foreground">
+            Slot de destino
+          </dt>
+          <dd className="text-sm text-foreground">
+            {vistaPrevia.slot_destino}
+          </dd>
         </div>
         <div>
           <dt className="text-caption text-muted-foreground">
@@ -56,7 +62,9 @@ export function VistaPreviaAvancePanel({
           </dd>
         </div>
         <div>
-          <dt className="text-caption text-muted-foreground">Estado del avance</dt>
+          <dt className="text-caption text-muted-foreground">
+            Estado del avance
+          </dt>
           <dd className="text-sm text-foreground">
             {vistaPrevia.ya_propagado
               ? "Ya estaba propagado"

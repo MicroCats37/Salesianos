@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@/errors";
-import type { EstadoSuperficie } from "../types/operaciones.types";
 import { ErrorAdmin } from "../services/admin.service";
+import type { EstadoSuperficie } from "../types/operaciones.types";
 
 /**
  * How a failure becomes a STATE of the administration area.
@@ -52,9 +52,7 @@ export function mensajeDeError(error: unknown): string {
  * channels of `@/errors` belong to the endpoints that still answer in the old
  * format and the administration area answers in the frozen one.
  */
-export function erroresDeCampoDeError(
-  error: unknown,
-): Record<string, string> {
+export function erroresDeCampoDeError(error: unknown): Record<string, string> {
   if (!(error instanceof ErrorAdmin)) return {};
 
   const errores: Record<string, string> = {};

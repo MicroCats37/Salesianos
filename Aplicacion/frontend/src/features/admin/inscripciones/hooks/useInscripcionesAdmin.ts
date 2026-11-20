@@ -1,18 +1,24 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { datasetQueryOptions } from "@/shared/utils/query-options";
-import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
-import { invalidarAdmin } from "@/features/admin/operaciones/utils/admin.cache.utils";
+import { useAdminQuery } from "@/features/admin/operaciones/hooks/useAdminQuery";
+import { envelopeAdmin } from "@/features/admin/operaciones/schemas/operaciones.schema";
+import {
+  RUTAS_ADMIN,
+  urlDeRutaAdmin,
+} from "@/features/admin/operaciones/services/admin.service";
 import { adminClaves } from "@/features/admin/operaciones/utils/admin.claves.utils";
 import { estadoDesdeConsulta } from "@/features/admin/operaciones/utils/admin.estado.utils";
 import { parametrosListaAdminDesdeUrl } from "@/features/admin/operaciones/utils/admin.filtros.utils";
 import type { PayloadRetirarParticipanteAdmin } from "@/features/admin/operaciones/utils/admin.payload.utils";
+import { useApiDelete } from "@/hooks";
+import { datosDelEnvelope } from "@/shared/utils/api-envelope";
 import {
-  obtenerInscripcionAdmin,
-  listarInscripcionesAdmin,
-  retirarParticipanteAdmin,
-} from "../services/inscripcion-admin.service";
+  inscripcionAdminDetalleDesdeWire,
+  inscripcionAdminDetalleEnvelope,
+  inscripcionAdminListaDesdeWire,
+  listaInscripcionesAdminEnvelope,
+  poolDeInscripcionSchema,
+} from "../schemas/inscripcion-admin.schema";
 import type {
   EstadoDetalleInscripcionAdmin,
   EstadoListaInscripcionesAdmin,
@@ -44,22 +50,17 @@ import type {
 export function useListaInscripcionesAdmin(
   parametros: Record<string, string> | undefined,
 ): EstadoListaInscripcionesAdmin {
-  const consulta = useQuery({
-    ...datasetQueryOptions({
-      queryKey: adminClaves.inscripciones.listPage(
-        parametrosListaAdminDesdeUrl(parametros),
-      ),
-      queryFn: () =>
-        listarInscripcionesAdmin(parametrosListaAdminDesdeUrl(parametros)),
-      kind: "listadoAdministrativo",
-    }),
-    enabled: RUTAS_ADMIN.inscripcionesLista.registrado,
+  const consulta = useAdminQuery({
+    queryKey: adminClaves.inscripciones.list,
+    ruta: RUTAS_ADMIN.inscripcionesLista,
+    envelope: listaInscripcionesAdminEnvelope,
+    filtros: parametrosListaAdminDesdeUrl(parametros),
+    select: (pagina) => pagina.items.map(inscripcionAdminListaDesdeWire),
   });
 
   return estadoDesdeConsulta(
     consulta,
     RUTAS_ADMIN.inscripcionesLista.registrado,
-    (pagina) => pagina.items,
   );
 }
 
@@ -67,13 +68,13 @@ export function useListaInscripcionesAdmin(
 export function useDetalleInscripcionAdmin(
   inscripcionId: string | undefined,
 ): EstadoDetalleInscripcionAdmin {
-  const consulta = useQuery({
-    ...datasetQueryOptions({
-      queryKey: adminClaves.inscripciones.detail(inscripcionId ?? ""),
-      queryFn: () => obtenerInscripcionAdmin(inscripcionId ?? ""),
-      kind: "listadoAdministrativo",
-    }),
-    enabled: Boolean(inscripcionId) && RUTAS_ADMIN.inscripcionDetalle.registrado,
+  const consulta = useAdminQuery({
+    queryKey: adminClaves.inscripciones.detail(inscripcionId ?? ""),
+    ruta: RUTAS_ADMIN.inscripcionDetalle,
+    envelope: inscripcionAdminDetalleEnvelope,
+    parametros: inscripcionId ? { inscripcion_id: inscripcionId } : undefined,
+    enabled: Boolean(inscripcionId),
+    select: (detalle) => inscripcionAdminDetalleDesdeWire(detalle),
   });
 
   return estadoDesdeConsulta(
@@ -86,23 +87,18 @@ export function useDetalleInscripcionAdmin(
  * The administrative withdrawal of a participant (the S-10 of `ADM-06`).
  *
  * The command is audited: it carries the reason. The invalidation lives
- * INSIDE the `mutationFn` (`FND-08` §3 regla 5): a component that unmounts
- * while the command is in flight would never run `onSettled` and the cache
- * would keep an answer the server never gave.
- *
- * The route does NOT exist: the command is rejected by the guard of the
- * service before the transport and the action stays DISABLED in the interface.
+ * INSIDE the mutation (`FND-08` §3 regla 5): a component that unmounts
+ * while the command is in flight would never invalidate and the cache would
+ * keep an answer the server never gave.
  */
 export function useRetirarParticipanteAdmin() {
-  const cliente = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (payload: PayloadRetirarParticipanteAdmin) => {
-      const resultado = await retirarParticipanteAdmin(payload);
-
-      await invalidarAdmin(cliente, "inscripciones");
-
-      return resultado;
-    },
+  return useApiDelete({
+    getUrl: (variables: PayloadRetirarParticipanteAdmin) =>
+      urlDeRutaAdmin(RUTAS_ADMIN.retirarParticipante, {
+        inscripcion_id: variables.inscripcion_id,
+        participacion_id: variables.participacion_id,
+      }),
+    schema: datosDelEnvelope(envelopeAdmin(poolDeInscripcionSchema)),
+    invalidateKeys: [adminClaves.inscripciones.all],
   });
 }

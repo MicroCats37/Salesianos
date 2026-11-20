@@ -123,6 +123,7 @@ class PedidoFlujo:
                 edicion.id,
                 persona_id,
                 total,
+                data.contacto_email,
                 huella,
                 lineas,
             )
@@ -171,7 +172,9 @@ class PedidoFlujo:
         )
 
     @transaction.atomic()
-    def _crear_pedido_sync(self, edicion_id, persona_id, total, huella, lineas):
+    def _crear_pedido_sync(
+        self, edicion_id, persona_id, total, contacto_email, huella, lineas
+    ):
         """Alta atómica del pedido, de su detalle y de su RESERVA de stock.
 
         La reserva va DENTRO de la misma transacción que el alta (`RN-M06`):
@@ -184,6 +187,7 @@ class PedidoFlujo:
             comprador_id=persona_id,
             total=total,
             moneda=MONEDA_PEDIDO,
+            contacto_email=contacto_email,
             token=self.core_service.generar_token(),
             huella=huella,
         )

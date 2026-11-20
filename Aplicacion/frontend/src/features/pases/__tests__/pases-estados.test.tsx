@@ -3,11 +3,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import {
-  catalogoPasesSchema,
-  compraPasesSchema,
-} from "../schemas/pase.schema";
+import { CatalogoPases } from "../components/CatalogoPases";
+import { TarjetaPase } from "../components/TarjetaPase";
+import { catalogoPasesSchema, compraPasesSchema } from "../schemas/pase.schema";
 import type { VeredictoPago } from "../types/pase.types";
 import { adaptarCompra } from "../utils/pase.adaptador.utils";
 import { PaseGestionarView } from "../views/PaseGestionarView";
@@ -150,9 +150,7 @@ describe("PASS-02 - la gestión de los beneficiarios", () => {
 });
 describe("PASS-02 - la compra y sus titulares", () => {
   it("con datos muestra los tres contadores y la lista de personas", () => {
-    render(
-      <PaseGestionarView token="abc123" estado="listo" compra={COMPRA} />,
-    );
+    render(<PaseGestionarView token="abc123" estado="listo" compra={COMPRA} />);
 
     expect(screen.getByText("Adquiridos")).toBeDefined();
     expect(screen.getByText("Asignados")).toBeDefined();
@@ -161,9 +159,7 @@ describe("PASS-02 - la compra y sus titulares", () => {
   });
 
   it("el estado del lote y el de cada derecho son etiquetas, no códigos", () => {
-    render(
-      <PaseGestionarView token="abc123" estado="listo" compra={COMPRA} />,
-    );
+    render(<PaseGestionarView token="abc123" estado="listo" compra={COMPRA} />);
 
     expect(screen.getByText("Compra pagada")).toBeDefined();
     expect(screen.getByText("Entrada activa")).toBeDefined();
@@ -172,9 +168,7 @@ describe("PASS-02 - la compra y sus titulares", () => {
   });
 
   it("el formulario de asignación está disponible mientras hay cupo", () => {
-    render(
-      <PaseGestionarView token="abc123" estado="listo" compra={COMPRA} />,
-    );
+    render(<PaseGestionarView token="abc123" estado="listo" compra={COMPRA} />);
 
     expect(screen.getByText("Asignar una entrada")).toBeDefined();
     expect(
@@ -200,7 +194,8 @@ describe("los estados presentables del pago", () => {
         estado: {
           codigo: "PAGADA",
           etiqueta: "Pagada",
-          descripcion: "El pago está confirmado y la compra consta como pagada.",
+          descripcion:
+            "El pago está confirmado y la compra consta como pagada.",
         },
         rol: "confirmado",
       },
@@ -258,22 +253,71 @@ describe("los estados presentables del pago", () => {
     });
   }
 });
+/**
+ * The files of the two zones that this change touched.
+ *
+ * The scan is a SOURCE scan on purpose: a colour literal is not a runtime
+ * behaviour that a render could catch, and the rule of `SH-01` T-01 is that
+ * NO touched file carries a literal colour.
+ */
 const FUENTES = [
-  "components/EstadoPagoPase.tsx",
-  "components/TarjetaPase.tsx",
-  "components/ResumenCompra.tsx",
-  "components/FormularioComprador.tsx",
-  "components/FormularioBeneficiario.tsx",
-  "views/PasesView.tsx",
-  "views/PaseGestionarView.tsx",
+  "pases/components/CatalogoPases.tsx",
+  "pases/components/ContadoresPases.tsx",
+  "pases/components/DialogoCheckout.tsx",
+  "pases/components/DialogoRevocar.tsx",
+  "pases/components/EstadoPagoPase.tsx",
+  "pases/components/FormularioBeneficiario.tsx",
+  "pases/components/FormularioComprador.tsx",
+  "pases/components/ListaBeneficiarios.tsx",
+  "pases/components/ResumenCompra.tsx",
+  "pases/components/SelectorCantidad.tsx",
+  "pases/components/TarjetaPase.tsx",
+  "pases/views/PasesView.tsx",
+  "pases/views/PaseGestionarView.tsx",
+  "pagos/components/ChipPago.tsx",
+  "pagos/components/EstadoPagoActivacion.tsx",
+  "pagos/components/buckets.pago.ts",
 ];
 
-describe("la zona de pases no inventa colores literales (T-01)", () => {
+/**
+ * The files that declare an interactive target of their own.
+ *
+ * `EstadoPagoPase` is NOT in this list: it does not draw a button, it
+ * delegates the call to action to the shared chip of the payment area. The
+ * chip declares the 44 px target, and the suite proves that the delegation
+ * really happens.
+ */
+const FUENTES_TACTILES = [
+  "pases/components/CatalogoPases.tsx",
+  "pases/components/DialogoCheckout.tsx",
+  "pases/components/DialogoRevocar.tsx",
+  "pases/components/ListaBeneficiarios.tsx",
+  "pases/components/SelectorCantidad.tsx",
+  "pases/components/TarjetaPase.tsx",
+  "pases/views/PasesView.tsx",
+  "pases/views/PaseGestionarView.tsx",
+  "pagos/components/ChipPago.tsx",
+];
+
+/** The source of a file of `src/features`. */
+function leer(ruta: string): string {
+  return readFileSync(join(process.cwd(), "src", "features", ruta), "utf8");
+}
+
+/**
+ * The forms whose touch target comes from the shared field.
+ *
+ * They are NOT in `FUENTES_TACTILES`: they do not declare `min-h-11` on
+ * their own controls, they inherit it from `FormField`.
+ */
+const FUENTES_DELEGADOS = [
+  "pases/components/FormularioBeneficiario.tsx",
+  "pases/components/FormularioComprador.tsx",
+];
+
+describe("la zona de pases y de pagos no inventa colores literales (T-01)", () => {
   it.each(FUENTES)("%s no lleva un color literal", (ruta) => {
-    const fuente = readFileSync(
-      join(process.cwd(), "src", "features", "pases", ruta),
-      "utf8",
-    );
+    const fuente = leer(ruta);
 
     expect(fuente).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(fuente).not.toMatch(/\b(rgb|rgba|hsl|hsla)\(/);
@@ -284,12 +328,105 @@ describe("la zona de pases no inventa colores literales (T-01)", () => {
 });
 
 describe("la zona de pases cumple el contrato de los cinco anchos", () => {
-  it.each(FUENTES)("%s usa objetivos táctiles de 44 px", (ruta) => {
-    const fuente = readFileSync(
-      join(process.cwd(), "src", "features", "pases", ruta),
-      "utf8",
+  it.each(FUENTES_TACTILES)("%s usa objetivos táctiles de 44 px", (ruta) => {
+    expect(leer(ruta)).toContain("min-h-11");
+  });
+
+  /**
+   * The forms that delegate their target to the SHARED field.
+   *
+   * `FormField` (`src/components/forms`) draws the label, the icon, the
+   * error AND the 44 px target of the control, so a form that uses it does
+   * not repeat `min-h-11` on its inputs: the guarantee is inherited, not
+   * lost. The suite proves BOTH halves of it: the form delegates, and the
+   * shared primitive declares the target.
+   */
+  it.each(FUENTES_DELEGADOS)(
+    "%s hereda el objetivo táctil del campo compartido",
+    (ruta) => {
+      expect(leer(ruta)).toContain("@/components/forms/FormField");
+      expect(
+        readFileSync(
+          join(process.cwd(), "src", "components", "forms", "FormField.tsx"),
+          "utf8",
+        ),
+      ).toContain("min-h-11");
+    },
+  );
+});
+
+describe("el chip del pago es compartido, no duplicado", () => {
+  it("el estado del pago delega la pintura en el chip de la zona de pagos", () => {
+    expect(leer("pases/components/EstadoPagoPase.tsx")).toContain(
+      "@/features/pagos/components",
+    );
+  });
+
+  it("el chip compartido no conoce ningun tipo de otro dominio", () => {
+    const fuente = leer("pagos/components/ChipPago.tsx");
+
+    expect(fuente).not.toContain("@/features/pases");
+    expect(fuente).not.toContain("@/features/inscripciones");
+  });
+});
+
+describe("la tarjeta del pase", () => {
+  it("el pase elegido queda marcado y el que no, no", async () => {
+    const usuario = userEvent.setup();
+
+    render(
+      <CatalogoPases
+        pases={[
+          CATALOGO.pases[0],
+          {
+            ...CATALOGO.pases[0],
+            id: "00000000-0000-4000-8000-0000000000c2",
+            nombre: "PASE VIP",
+          },
+        ]}
+      />,
     );
 
-    expect(fuente).toContain("min-h-11");
+    const normal = screen.getByRole("button", { name: /PASE DE EJEMPLO/ });
+    const vip = screen.getByRole("button", { name: /PASE VIP/ });
+
+    expect(normal.getAttribute("aria-pressed")).toBe("false");
+    expect(vip.getAttribute("aria-pressed")).toBe("false");
+
+    await usuario.click(vip);
+
+    expect(
+      screen
+        .getByRole("button", { name: /PASE VIP/ })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: /PASE DE EJEMPLO/ })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+  });
+
+  it("un pase bloqueado dice por qué y no se puede elegir", () => {
+    render(
+      <TarjetaPase
+        pase={CATALOGO.pases[0]}
+        onSelect={() => {}}
+        motivoBloqueo="El inventario de este pase se agotó."
+      />,
+    );
+
+    expect(
+      screen.getByText("El inventario de este pase se agotó."),
+    ).toBeDefined();
+    expect(screen.getByRole("button")).toBeDisabled();
+  });
+
+  it("la tarjeta muestra el precio que publicó el servidor y ningún total", () => {
+    render(<TarjetaPase pase={CATALOGO.pases[0]} onSelect={() => {}} />);
+
+    expect(screen.getByText("PEN 0.00")).toBeDefined();
+    expect(screen.getByText("por pase")).toBeDefined();
+    expect(screen.queryByText(/total/i)).toBeNull();
   });
 });

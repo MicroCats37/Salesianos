@@ -1,12 +1,12 @@
 import { GitBranch } from "lucide-react";
 import { AdminEmptyState } from "@/features/admin/components";
-import { TarjetaEncuentro } from "./TarjetaEncuentro";
-import { estadoRonda } from "../utils/competencias.estados.utils";
 import type {
   Ronda,
   VistaPreviaAvance,
   VistaPreviaCorreccion,
 } from "../types/competencia.types";
+import { estadoRonda } from "../utils/competencias.estados.utils";
+import { TarjetaEncuentro } from "./TarjetaEncuentro";
 
 /**
  * CuadroCompetencia - the bracket.

@@ -42,6 +42,7 @@ const EQUIPOS = [
     disciplina_id: "dis-1",
     disciplina_nombre: "FUTSAL",
     nombre: "EQUIPO DE EJEMPLO",
+    categoria: { id: "cat-1", nombre: "JUNIOR" },
     estado: "ACTIVO",
   },
 ];
@@ -107,9 +108,7 @@ describe("ACCOUNT-03 — las personas del pool", () => {
     const equipo = screen.getByLabelText("Equipo");
     fireEvent.change(equipo, { target: { value: "eq-1" } });
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Asignar al equipo" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Asignar al equipo" }));
 
     await waitFor(() =>
       expect(apiSendMock).toHaveBeenCalledWith(

@@ -47,6 +47,7 @@ from modules.administracion.presentation.presenters.admin_operacion_presenter im
     AdminOperacionPresenter,
 )
 from modules.administracion.presentation.schemas.admin_operacion_schemas import (
+    AprobarPagoManualIn,
     AdminPagoDetalleOut,
     AdminPagoListItemOut,
 )
@@ -139,6 +140,28 @@ class AdminPagoController:
             raise NotFoundError(resource="Pago", code="RESOURCE_NOT_FOUND")
 
         return success_response(AdminOperacionPresenter.present_pago_detalle(detalle))
+
+    @route.post(
+        "/pagos/{orden_pago_id}/aprobar-manual",
+        response={200: ApiResponse[AdminPagoListItemOut]},
+        auth=JWTAuth(),
+        permissions=[RequireAdminVer],
+        summary="Registra evidencia de un pago externo.",
+    )
+    async def aprobar_pago_manual(
+        self, request, orden_pago_id: str, payload: AprobarPagoManualIn
+    ):
+        """Confirma una orden sin crear ni fingir una transacción de proveedor."""
+        item = await self.orchestrator.aprobar_pago_manual(
+            orden_pago_id=orden_pago_id,
+            actor_id=str(request.auth.id),
+            canal=payload.canal,
+            referencia=payload.referencia,
+            motivo=payload.motivo,
+        )
+        if item is None:
+            raise NotFoundError(resource="Pago", code="RESOURCE_NOT_FOUND")
+        return success_response(AdminOperacionPresenter.present_pago_lista(item))
 
 
 __all__ = ["AdminPagoController"]

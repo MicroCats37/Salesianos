@@ -1,11 +1,11 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { handleApiError, notify } from "@/errors";
 import {
   invalidateDatasets,
   updateCachedDetail,
 } from "@/shared/utils/cache-policy";
-import type { Respuesta } from "../services/respuesta.service";
 import type {
   CompraCreada,
   ComprarCuposIn,
@@ -21,6 +21,7 @@ import {
   crearInscripcionInicial,
   retirarParticipante,
 } from "../services/inscripcion.service";
+import type { Respuesta } from "../services/respuesta.service";
 import {
   clavesInscripcionDetalle,
   clavesInscripcionPool,
@@ -68,7 +69,11 @@ import {
 export function useAltaInscripcion() {
   const queryClient = useQueryClient();
 
-  return useMutation<Respuesta<InscripcionInicial>, unknown, InscripcionInicialIn>({
+  return useMutation<
+    Respuesta<InscripcionInicial>,
+    unknown,
+    InscripcionInicialIn
+  >({
     mutationFn: async (payload) => {
       try {
         return await crearInscripcionInicial(payload);
@@ -110,7 +115,12 @@ export function useAgregarParticipante() {
           () => respuesta.data,
         );
 
+        if (respuesta.message) notify.success(respuesta.message);
+
         return respuesta;
+      } catch (error) {
+        notify.error(handleApiError(error).message);
+        throw error;
       } finally {
         await invalidateDatasets(queryClient, [
           clavesInscripcionDetalle.detail(args.inscripcion_id),
@@ -152,7 +162,12 @@ export function useRetirarParticipante() {
           () => respuesta.data,
         );
 
+        if (respuesta.message) notify.success(respuesta.message);
+
         return respuesta;
+      } catch (error) {
+        notify.error(handleApiError(error).message);
+        throw error;
       } finally {
         await invalidateDatasets(queryClient, [
           clavesInscripcionDetalle.detail(args.inscripcion_id),
@@ -186,7 +201,14 @@ export function useCompraCupos() {
   return useMutation<Respuesta<CompraCreada>, unknown, ComprarCuposArgs>({
     mutationFn: async (args) => {
       try {
-        return await comprarCupos(args.inscripcion_id, args.payload);
+        const respuesta = await comprarCupos(args.inscripcion_id, args.payload);
+
+        if (respuesta.message) notify.success(respuesta.message);
+
+        return respuesta;
+      } catch (error) {
+        notify.error(handleApiError(error).message);
+        throw error;
       } finally {
         await invalidateDatasets(queryClient, [
           clavesInscripcionPool.detail(args.inscripcion_id),

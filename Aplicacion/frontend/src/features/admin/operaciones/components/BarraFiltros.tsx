@@ -1,8 +1,8 @@
 "use client";
 
 import { Filter, SlidersHorizontal } from "lucide-react";
-import { useId } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -97,14 +97,15 @@ export function BarraFiltros({
   const controles = filtros.map((filtro) => {
     const idEtiqueta = `${idBase}-${filtro.clave}-etiqueta`;
     const valor = parametros[filtro.clave] ?? "";
-    const deshabilitado = filtro.opciones.length === 0 && filtro.tipo !== "fecha";
+    const deshabilitado =
+      filtro.opciones.length === 0 && filtro.tipo !== "fecha";
 
     if (filtro.tipo === "fecha") {
       return (
         <div key={filtro.clave} className="flex flex-col gap-1.5">
           <label
             htmlFor={`${idBase}-${filtro.clave}-control`}
-            className="text-xs font-semibold tracking-[0.04em] text-foreground-muted uppercase"
+            className="text-xs font-semibold text-muted-foreground"
           >
             {filtro.etiqueta}
           </label>
@@ -125,7 +126,7 @@ export function BarraFiltros({
       <div key={filtro.clave} className="flex flex-col gap-1.5">
         <span
           id={idEtiqueta}
-          className="text-xs font-semibold tracking-[0.04em] text-foreground-muted uppercase"
+          className="text-xs font-semibold text-muted-foreground"
         >
           {filtro.etiqueta}
         </span>
@@ -155,7 +156,7 @@ export function BarraFiltros({
           </SelectContent>
         </Select>
         {deshabilitado && filtro.sinOpciones ? (
-          <p className="text-xs leading-snug text-foreground-muted">
+          <p className="text-caption leading-snug text-muted-foreground">
             {filtro.sinOpciones}
           </p>
         ) : null}
@@ -168,7 +169,10 @@ export function BarraFiltros({
       {/* 360 · 390 — the filters travel in a sheet. */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="outline" className="min-h-11 justify-between md:hidden">
+          <Button
+            variant="outline"
+            className="min-h-11 justify-between md:hidden"
+          >
             <span className="inline-flex items-center gap-2">
               <SlidersHorizontal className="size-4" aria-hidden="true" />
               {etiqueta}
@@ -195,12 +199,12 @@ export function BarraFiltros({
           <div className="flex flex-col gap-4 px-4">{controles}</div>
           <SheetFooter className="flex-row justify-end gap-2">
             {activos.length > 0 ? (
-              <Button variant="outline" onClick={limpiar}>
+              <Button variant="outline" onClick={limpiar} className="min-h-11">
                 Limpiar filtros
               </Button>
             ) : null}
             <SheetClose asChild>
-              <Button>Cerrar</Button>
+              <Button className="min-h-11">Cerrar</Button>
             </SheetClose>
           </SheetFooter>
         </SheetContent>

@@ -94,7 +94,9 @@ describe("the invalidation policy", () => {
 
     await invalidateDatasets(client, [["catalogo"]]);
 
-    expect(client.getQueryState(["catalogo", "list"])?.isInvalidated).toBe(true);
+    expect(client.getQueryState(["catalogo", "list"])?.isInvalidated).toBe(
+      true,
+    );
     expect(client.getQueryState(["pagos", "list"])?.isInvalidated).toBe(false);
   });
 
@@ -104,6 +106,8 @@ describe("the invalidation policy", () => {
 
     await invalidateDatasets(client);
 
-    expect(client.getQueryState(["catalogo", "list"])?.isInvalidated).toBe(false);
+    expect(client.getQueryState(["catalogo", "list"])?.isInvalidated).toBe(
+      false,
+    );
   });
 });

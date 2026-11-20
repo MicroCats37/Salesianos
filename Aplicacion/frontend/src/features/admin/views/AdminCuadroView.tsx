@@ -36,8 +36,8 @@ export function AdminCuadroView({ id }: { id: string }) {
       <AdminNotice title="El servidor manda en el cuadro">
         Programar un encuentro, configurar un bye, enlazar, registrar un
         resultado o confirmar un avance son acciones con motivo auditado y
-        bloqueo optimista: si otra persona cambió la misma versión, el
-        servidor rechaza el cambio y nada se escribe.
+        bloqueo optimista: si otra persona cambió la misma versión, el servidor
+        rechaza el cambio y nada se escribe.
       </AdminNotice>
 
       <AdminPanel

@@ -95,6 +95,11 @@ class Patrocinador(BaseModel):
             "(ADM-21)."
         ),
     )
+    orden = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Orden del banner",
+        help_text="Posición persistida en el carrusel público.",
+    )
     logo = models.ImageField(
         upload_to=ruta_patrocinador_logo,
         blank=True,
@@ -106,7 +111,7 @@ class Patrocinador(BaseModel):
         db_table = "patrocinadores_patrocinador"
         verbose_name = "Patrocinador"
         verbose_name_plural = "Patrocinadores"
-        ordering = ["nombre", "id"]
+        ordering = ["orden", "id"]
         constraints = [
             models.UniqueConstraint(
                 fields=["edicion", "slug"],

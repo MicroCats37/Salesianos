@@ -68,7 +68,7 @@ class InventarioOrchestrator:
         return self.core_service.listar_inventario(edicion_id)
 
     def _listar_entregas_sync(self, edicion_id):
-        return self.pedido_core_service.listar_entregas_pendientes(edicion_id)
+        return self.pedido_core_service.listar_entregas(edicion_id)
 
     async def listar_inventario(self):
         """El inventario de la edición vigente: físico, reservado y
@@ -77,7 +77,7 @@ class InventarioOrchestrator:
         return await self._listar_inventario(edicion.id)
 
     async def listar_entregas(self):
-        """Los pedidos PAGADOS cuya entrega sigue pendiente."""
+        """Las recogidas pendientes y entregadas de la edición vigente."""
         edicion = await self._edicion_actual()
         return await self._listar_entregas(edicion.id)
 

@@ -52,6 +52,10 @@ class PedidoSeguimientoResult(BaseModel):
         None,
         description="Orden de pago que financia el pedido, si ya existe.",
     )
+    compra_id: str | None = Field(
+        None,
+        description="Compra de `commerce` que financia el pedido, si ya existe.",
+    )
     siguientes_acciones: list[str] = Field(
         default_factory=list,
         description="Acciones seguras que el comprador puede realizar.",

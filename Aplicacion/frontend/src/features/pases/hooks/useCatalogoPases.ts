@@ -1,8 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { datasetQueryOptions } from "@/shared/utils/query-options";
-import { listarPases } from "../services/pase.service";
+import { useApiQuery } from "@/hooks";
+import { datosDelEnvelope } from "@/shared/utils/api-envelope";
+import { gcTimeFor, STALE_TIME } from "@/shared/utils/query-options";
+import { catalogoPasesEnvelope } from "../schemas/pase.schema";
+import { rutaCatalogoPases } from "../services/pase.service";
 import { paseClaves } from "../utils/pase.claves.utils";
 
 /**
@@ -23,11 +25,14 @@ export interface ParamsCatalogoPases {
  * keeps the staleness of a catalogue and NOT the one of a commercial state.
  */
 export function useCatalogoPases(params?: ParamsCatalogoPases) {
-  return useQuery(
-    datasetQueryOptions({
-      queryKey: paseClaves.catalogoParams(params),
-      queryFn: () => listarPases(params),
-      kind: "catalogo",
-    }),
-  );
+  return useApiQuery({
+    queryKey: paseClaves.catalogoParams(),
+    url: rutaCatalogoPases(),
+    schema: datosDelEnvelope(catalogoPasesEnvelope),
+    params: { edicion_id: params?.edicion_id },
+    queryOptions: {
+      staleTime: STALE_TIME.catalogo,
+      gcTime: gcTimeFor(STALE_TIME.catalogo),
+    },
+  });
 }

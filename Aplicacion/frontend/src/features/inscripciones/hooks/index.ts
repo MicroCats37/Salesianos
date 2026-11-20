@@ -1,8 +1,11 @@
 export {
   type ConsultaCatalogoParams,
+  useCatalogoCategorias,
   useCatalogoDisciplinas,
   useCatalogoPaquetes,
+  useCatalogoPromociones,
 } from "./useCatalogo";
+export { useCotizacion } from "./useCotizacion";
 export {
   useInscripcionDetalle,
   useInscripcionPool,

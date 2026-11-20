@@ -27,6 +27,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from ninja import Schema
+from pydantic import Field
 
 
 # ── Vocabulario compartido ───────────────────────────────────────────────────
@@ -325,6 +326,7 @@ class AdminPagoListItemOut(Schema):
 
     compra_id: str
     orden_pago_id: Optional[str] = None
+    inscripcion_id: Optional[str] = None
     tipo_compra: str
     resumen_concepto: str
     comprador: CompradorOut
@@ -361,6 +363,14 @@ class RetirarParticipanteIn(Schema):
     version: Optional[str] = None
 
 
+class AprobarPagoManualIn(Schema):
+    """Evidencia externa que un administrador registra sobre una orden."""
+
+    canal: str = Field(min_length=1, max_length=32)
+    referencia: str = Field(min_length=1, max_length=100)
+    motivo: str = Field(min_length=1, max_length=1000)
+
+
 __all__ = [
     "AccionOperativaOut",
     "AdminEquipoDetalleOut",
@@ -371,6 +381,7 @@ __all__ = [
     "AdminPagoListItemOut",
     "AdminPersonaDetalleOut",
     "AdminPersonaListItemOut",
+    "AprobarPagoManualIn",
     "CandidatoAEquipoOut",
     "CausaOut",
     "CompraDeCuposOut",

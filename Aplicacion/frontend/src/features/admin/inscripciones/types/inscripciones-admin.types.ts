@@ -39,6 +39,19 @@ export interface AdminInscripcionListItemOut {
   responsable: PersonaAdminOut;
   paquete: { id: string; nombre: string };
   edicion: { id: string; nombre: string };
+  /**
+   * The cohort that the visitor selected when the registration was created.
+   *
+   * It is absent while the administrative presenter does not publish it.
+   */
+  promocion?: { id: string; nombre: string } | null;
+  /**
+   * The secondary cohort of a fused registration.
+   *
+   * It is DESCRIPTIVE metadata: it never changes the band, the cupos, the
+   * payment, the team or the eligibility.
+   */
+  fusion_promocion?: { id: string; nombre: string } | null;
   /** The number of teams of the registration. */
   equipos: number;
   /** The number of people of the registration. */
@@ -73,6 +86,12 @@ export interface EquipoDeInscripcionOut {
   id: string;
   nombre: string;
   disciplina: { id: string; nombre: string };
+  /**
+   * The competitive band of the team, DERIVED by the server.
+   *
+   * It is absent while the administrative presenter does not publish it.
+   */
+  categoria?: { id: string; nombre: string } | null;
   /** `ACTIVO` or `RETIRADO`. */
   estado: string;
   /** The roster of the team. */
@@ -130,7 +149,8 @@ export interface EventoDeHistorialOut {
 }
 
 /** The detail of a registration (`RT-IN-08`). */
-export interface AdminInscripcionDetalleOut extends AdminInscripcionListItemOut {
+export interface AdminInscripcionDetalleOut
+  extends AdminInscripcionListItemOut {
   equipos_detalle: readonly EquipoDeInscripcionOut[];
   pool: PoolDeInscripcionOut;
   compras: readonly CompraDeCuposOut[];
@@ -143,6 +163,5 @@ export type EstadoListaInscripcionesAdmin = EstadoSuperficie<
 >;
 
 /** The state of the administrative detail of a registration. */
-export type EstadoDetalleInscripcionAdmin = EstadoSuperficie<
-  AdminInscripcionDetalleOut
->;
+export type EstadoDetalleInscripcionAdmin =
+  EstadoSuperficie<AdminInscripcionDetalleOut>;

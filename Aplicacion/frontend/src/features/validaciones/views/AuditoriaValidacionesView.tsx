@@ -1,15 +1,15 @@
 import { ScrollText } from "lucide-react";
 import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
   AdminEmptyState,
   AdminNotice,
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
-import {
-  ShellErrorState,
-  ShellPermissionDenied,
-} from "@/components/shell/ShellState";
-import { Skeleton } from "@/components/ui/skeleton";
 import { RUTAS } from "@/lib/routes";
 import {
   FiltrosAuditoria,
@@ -50,9 +50,8 @@ export function AuditoriaValidacionesView({
       />
 
       <AdminNotice title="El registro no se reescribe">
-        La auditoría es de solo lectura y conserva el orden de los hechos.
-        Una incidencia se corrige con un asiento nuevo, nunca editando el
-        anterior.
+        La auditoría es de solo lectura y conserva el orden de los hechos. Una
+        incidencia se corrige con un asiento nuevo, nunca editando el anterior.
       </AdminNotice>
 
       <AdminPanel

@@ -4,12 +4,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { pedidoSeguimientoSchema } from "../schemas/pedido.schema";
 import {
   categoriaListaSchema,
   productoDetalleSchema,
   productoListItemSchema,
 } from "../schemas/producto.schema";
-import { pedidoSeguimientoSchema } from "../schemas/pedido.schema";
 import type {
   EstadoDeclarado,
   VeredictoPago,
@@ -149,20 +149,20 @@ describe("SHOP-01 - el catálogo de la tienda", () => {
       />,
     );
 
-    expect(screen.getByText("No hay productos en esta categoría")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Quitar el filtro" })).toBeDefined();
+    expect(
+      screen.getByText("No hay productos en esta categoría"),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Quitar el filtro" }),
+    ).toBeDefined();
   });
 
   it("con datos muestra el producto y su precio", () => {
     render(
-      <TiendaCatalogoView
-        estado="listo"
-        productos={[PRODUCTO]}
-        moneda="PEN"
-      />,
+      <TiendaCatalogoView estado="listo" productos={[PRODUCTO]} moneda="PEN" />,
     );
 
-    expect(screen.getByText("PRODUCTO DE EJEMPLO")).toBeDefined();
+    expect(screen.getAllByText("PRODUCTO DE EJEMPLO")[0]).toBeDefined();
     expect(screen.getByText("Oferta")).toBeDefined();
   });
 });

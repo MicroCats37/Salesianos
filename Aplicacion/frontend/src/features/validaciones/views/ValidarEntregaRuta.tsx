@@ -3,10 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { handleApiError } from "@/errors";
 import { useSesionActual } from "@/features/auth/hooks";
-import {
-  useConfirmarTicket,
-  usePreviewTicket,
-} from "../hooks/useValidacion";
+import { useConfirmarTicket, usePreviewTicket } from "../hooks/useValidacion";
 import type {
   EstadoVistaValidaciones,
   ResultadoValidacion,

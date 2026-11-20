@@ -6,10 +6,10 @@
 
 export { buildCreatePayload } from "./buildCreatePayload";
 export {
-  buildUpdatePayload,
   type BuildUpdatePayloadOptions,
+  buildUpdatePayload,
 } from "./buildUpdatePayload";
-export { imageField, type ImageFieldResult } from "./imageField";
+export { type ImageFieldResult, imageField } from "./imageField";
 export {
   getFieldSchema,
   getTopLevelShape,

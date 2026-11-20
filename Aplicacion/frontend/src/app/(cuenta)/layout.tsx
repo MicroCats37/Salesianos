@@ -58,9 +58,15 @@ export default async function CuentaLayout({
           />
         }
       >
+        {/*
+          El ancho de la cuenta NO es el de la página pública: la matriz de
+          cinco anchos (SH-02 §1.1) da a la cuenta 720 px a 768 y 1100 px
+          desde 1024. A 360 y 390 manda la pantalla con su aire; a 1440 el
+          contenedor respira más, pero no estira la línea de lectura.
+        */}
         <main
           id="contenido"
-          className="mx-auto w-full max-w-page min-w-0 flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:px-10"
+          className="relative mx-auto w-full max-w-[720px] min-w-0 flex-1 bg-page-gradient px-4 py-8 sm:px-6 sm:py-10 lg:max-w-[1100px] lg:px-10"
         >
           <RouteTransition>{children}</RouteTransition>
         </main>

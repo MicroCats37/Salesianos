@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { UserMinus, Users } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AdminEmptyState } from "@/features/admin/components";
+import type {
+  ColumnaOperativa,
+  FilaOperativa,
+} from "@/features/admin/operaciones";
 import { CifrasCupos, ListaOperativa } from "@/features/admin/operaciones";
-import type { ColumnaOperativa, FilaOperativa } from "@/features/admin/operaciones";
 import type {
   ParticipanteDeEquipoOut,
   PoolDeInscripcionOut,

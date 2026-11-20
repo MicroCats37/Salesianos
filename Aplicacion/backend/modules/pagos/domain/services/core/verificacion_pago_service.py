@@ -114,6 +114,7 @@ class VerificacionPagoService:
         conocidas = {
             str(orden.referencia or ""),
             str(getattr(intento, "referencia_proveedor", "") or ""),
+            str(getattr(intento, "referencia_proveedor", "") or "")[:10],
         }
         conocidas.discard("")
         if order_number not in conocidas:

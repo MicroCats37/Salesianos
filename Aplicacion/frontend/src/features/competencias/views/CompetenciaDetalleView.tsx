@@ -1,27 +1,28 @@
 import { Swords } from "lucide-react";
 import Link from "next/link";
+import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AdminEmptyState,
   AdminNotice,
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
-import {
-  ShellErrorState,
-  ShellPermissionDenied,
-} from "@/components/shell/ShellState";
-import { Skeleton } from "@/components/ui/skeleton";
 import { RUTAS } from "@/lib/routes";
+import { ChipEstadoCompetencia } from "../components/ChipEstadoCompetencia";
+import { GestionEquiposCompetencia } from "../components/GestionEquiposCompetencia";
 import { ListaEncuentros } from "../components/ListaEncuentros";
 import { ListaEquiposCompetencia } from "../components/ListaEquiposCompetencia";
-import { ChipEstadoCompetencia } from "../components/ChipEstadoCompetencia";
-import { estadoCompetencia } from "../utils/competencias.estados.utils";
-import { formatearDia } from "../utils/competencias.fecha.utils";
 import type {
   CompetenciaDetalle,
   EstadoVistaCompetencias,
 } from "../types/competencia.types";
+import { estadoCompetencia } from "../utils/competencias.estados.utils";
+import { formatearDia } from "../utils/competencias.fecha.utils";
 
 /**
  * CompetenciaDetalleView - `ADM-11`, the operational centre of a
@@ -86,9 +87,9 @@ export function CompetenciaDetalleView({
 
       <AdminNotice title="Una versión desactualizada no se aplica sola">
         Cada encuentro tiene su propia versión. Si otra persona lo cambió
-        mientras este panel estaba abierto, el servidor rechaza el cambio y
-        esta pantalla te pide que actualices y revises: nunca aplica en
-        silencio lo que escribiste antes.
+        mientras este panel estaba abierto, el servidor rechaza el cambio y esta
+        pantalla te pide que actualices y revises: nunca aplica en silencio lo
+        que escribiste antes.
       </AdminNotice>
 
       {estado === "cargando" ? (
@@ -136,6 +137,11 @@ export function CompetenciaDetalleView({
             title="Equipos"
             description="Los equipos de la competencia, con su orden manual y su estado."
           >
+            <GestionEquiposCompetencia
+              competenciaId={id}
+              equipos={equipos}
+              bloqueado={(detalle?.rondas.length ?? 0) > 0}
+            />
             <ListaEquiposCompetencia equipos={equipos} />
           </AdminPanel>
 

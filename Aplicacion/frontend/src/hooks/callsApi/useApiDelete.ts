@@ -4,16 +4,18 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosRequestConfig } from "axios";
+import type { ZodType } from "zod";
 import { handleApiError, notify } from "@/errors";
 import { apiSend } from "@/lib/api";
 import { invalidateDatasets } from "@/shared/utils/cache-policy";
+import { relanzarSiCancelacion } from "./cancelacion";
 
 /**
  * Classic style: caller provides id (number | string).
  * Custom style: caller provides full payload with optional baseUrl override.
  */
-type DeleteVariables<TPayload = never> = TPayload extends never
+type DeleteVariables<TPayload = never> = [TPayload] extends [never]
   ? number | string
   : TPayload & { baseUrl?: string };
 
@@ -23,6 +25,10 @@ interface UseApiDeleteProps<TData, TPayload = never> {
    *  When provided, variables are treated as custom payload style.
    *  For classic id-based delete, omit this. */
   getUrl?: (variables: DeleteVariables<TPayload>) => string;
+  /** The mirror of the answer. It is parsed when the endpoint answers. */
+  schema?: ZodType<TData>;
+  /** The configuration of the request: its headers and its timeout. */
+  config?: AxiosRequestConfig;
   showToast?: boolean;
   showSuccessToast?: boolean;
   /**
@@ -39,6 +45,8 @@ interface UseApiDeleteProps<TData, TPayload = never> {
 export function useApiDelete<TData = unknown, TPayload = never>({
   baseUrl,
   getUrl,
+  schema,
+  config,
   showToast = true,
   showSuccessToast = true,
   invalidateKeys = [],
@@ -61,7 +69,12 @@ export function useApiDelete<TData = unknown, TPayload = never>({
           url = `${baseUrl}/${variables}`;
         }
 
-        const { status, data } = await apiSend<unknown>("delete", url);
+        const { status, data } = await apiSend<unknown>(
+          "delete",
+          url,
+          undefined,
+          config,
+        );
 
         // 204 No Content: the body is empty and it is NEVER parsed.
         if (status === 204) return undefined as unknown as TData;
@@ -76,8 +89,9 @@ export function useApiDelete<TData = unknown, TPayload = never>({
             notify.success(envelope.message);
           }
         }
-        return data as TData;
+        return schema ? schema.parse(data) : (data as TData);
       } catch (error) {
+        relanzarSiCancelacion(error);
         const apiError = handleApiError(error);
         if (showToast) notify.error(apiError.message);
         throw error;

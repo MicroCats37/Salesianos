@@ -1,5 +1,9 @@
 import { ScanLine } from "lucide-react";
 import Link from "next/link";
+import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
 import { Button } from "@/components/ui/button";
 import {
   AdminEmptyState,
@@ -7,10 +11,6 @@ import {
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
-import {
-  ShellErrorState,
-  ShellPermissionDenied,
-} from "@/components/shell/ShellState";
 import { RUTAS } from "@/lib/routes";
 import { ConfirmacionValidacion } from "../components/ConfirmacionValidacion";
 import { ConsolaEscaner } from "../components/ConsolaEscaner";
@@ -65,9 +65,9 @@ export function ValidarPaseView({
       />
 
       <AdminNotice title="El código es una credencial">
-        El código que se escanea es una credencial en sí mismo: no se publica
-        en la lista, no se copia en un registro y no se enseña en pantalla
-        para que alguien más lo use.
+        El código que se escanea es una credencial en sí mismo: no se publica en
+        la lista, no se copia en un registro y no se enseña en pantalla para que
+        alguien más lo use.
       </AdminNotice>
 
       {estado === "sin-permiso" ? (

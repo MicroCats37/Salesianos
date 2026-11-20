@@ -2,6 +2,7 @@
 
 import { TriangleAlert } from "lucide-react";
 import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { handleApiError } from "@/errors";
 import { useRetirarParticipante } from "../hooks";
 import type {
@@ -108,7 +108,9 @@ export function SeccionParticipantes(props: SeccionParticipantesProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Retirar a esta persona del equipo</AlertDialogTitle>
+            <AlertDialogTitle>
+              Retirar a esta persona del equipo
+            </AlertDialogTitle>
             <AlertDialogDescription>
               Se libera su cupo en esta inscripción. La compra no se cancela, no
               se devuelve dinero y el inventario no cambia.

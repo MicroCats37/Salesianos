@@ -329,12 +329,12 @@ export const COPY = {
 
   enVivo: {
     eyebrow: "06 / TRANSMISIÓN EN VIVO",
-    titulo: ["LA DISTANCIA", "NO NOS", "SEPARA."],
-    destacado: "SEPARA.",
-    copy: "Sigue el campeonato, las entrevistas y los momentos del festival desde donde estés. La familia salesiana siempre encuentra la forma de estar cerca.",
-    nota: "El enlace y los horarios de transmisión se anunciarán por los canales oficiales.",
-    cta: "IR A LA TRANSMISIÓN",
-    estado: "PRÓXIMAMENTE",
+    titulo: ["LA DISTANCIA", "NO NOS", "DETIENE."],
+    destacado: "DETIENE.",
+    copy: "Sigue los partidos, las entrevistas y los momentos centrales del festival desde donde estés. La señal oficial te conecta con cada jugada.",
+    nota: "Elige una señal para ver los partidos y el evento en vivo.",
+    cta: "VER TRANSMISIONES",
+    estado: "EN VIVO",
   },
 
   lugar: {

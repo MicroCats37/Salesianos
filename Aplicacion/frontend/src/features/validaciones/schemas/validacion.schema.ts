@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { apiResponseSchema } from "@/types/api.types";
 import { pedidoLineaSchema } from "@/features/marketplace/schemas/pedido.schema";
 import { beneficiarioPaseSchema } from "@/features/pases/schemas/pase.schema";
+import { apiResponseSchema } from "@/types/api.types";
 
 /**
  * The Zod mirrors of the VALIDATION area (`ADM-16`, `ADM-20`, `ADM-22`).
@@ -76,6 +76,9 @@ const marcaTiempo = z.string().min(1);
  */
 export const entregaPendienteSchema = z.object({
   pedido_id: id,
+  comprador_nombres: z.string().min(1),
+  comprador_apellidos: z.string().min(1),
+  comprador_documento: z.string().min(1),
   /** The state of the order. */
   estado: codigo,
   /** The state of the delivery. */
@@ -88,6 +91,18 @@ export const entregaPendienteSchema = z.object({
   lineas: z.array(pedidoLineaSchema),
   /** The moment the order was created. */
   created_at: marcaTiempo,
+});
+
+/** A delivery act already registered for a marketplace order. */
+export const entregaEntregadaSchema = z.object({
+  pedido_id: id,
+  comprador_nombres: z.string().min(1),
+  comprador_apellidos: z.string().min(1),
+  comprador_documento: z.string().min(1),
+  total: z.number(),
+  moneda: z.string(),
+  lineas: z.array(pedidoLineaSchema),
+  entregada_en: marcaTiempo,
 });
 
 /**
@@ -112,9 +127,12 @@ export const entregaConfirmadaSchema = z.object({
 
 // ── Envelopes ────────────────────────────────────────────────────────────────
 
-/** The queue of the pending pickups (`GET /administracion/marketplace/entregas`). */
+/** The pending and completed pickups (`GET /administracion/marketplace/entregas`). */
 export const entregasPendientesEnvelope = apiResponseSchema(
-  z.array(entregaPendienteSchema),
+  z.object({
+    pendientes: z.array(entregaPendienteSchema),
+    entregadas: z.array(entregaEntregadaSchema),
+  }),
 );
 
 /** The recorded delivery (`POST …/entregas/{pedido_id}/confirmar`). */
@@ -191,7 +209,9 @@ export const ticketConfirmadoSchema = z.object({
 export const ticketPreviewEnvelope = apiResponseSchema(ticketPreviewSchema);
 
 /** La respuesta del canje (`POST /validaciones/confirmar`). */
-export const ticketConfirmadoEnvelope = apiResponseSchema(ticketConfirmadoSchema);
+export const ticketConfirmadoEnvelope = apiResponseSchema(
+  ticketConfirmadoSchema,
+);
 
 /** El cuerpo de la comprobación (`RT-RT-01`). */
 export const previewTicketSchema = z.object({
@@ -220,5 +240,3 @@ export type ConfirmarTicketDatos = z.infer<typeof confirmarTicketSchema>;
  * and that `core/contract_versions.py` freezes for `validaciones` (`FR-07`).
  */
 export const SCHEMA_VERSION = "1.0.0";
-
-

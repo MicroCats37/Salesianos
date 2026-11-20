@@ -1,21 +1,24 @@
 "use client";
 
-import { ArrowUpRight, CalendarPlus, Play } from "lucide-react";
+import { ArrowUpRight, Play } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import Link from "next/link";
+import { handleApiError } from "@/errors";
 import { PortadaSection } from "@/features/portada/components/PortadaSection";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { ENLACES, FESTIVAL } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { FESTIVAL } from "@/features/portada/fixtures/festival";
+import { TarjetaVideo } from "@/features/videos/components/TarjetaVideo";
+import { useVideosLista } from "@/features/videos/hooks/useVideos";
 
 /**
  * Sección "06 / TRANSMISIÓN EN VIVO".
  *
- * El enlace oficial todavía no existe: la sección anuncia el canal y ofrece
- * guardar la fecha mientras tanto.
+ * Es la entrada pública a las señales de partidos y del evento.
  */
 export function LiveSection() {
-  const [abierto, setAbierto] = useState(false);
+  const videos = useVideosLista();
+  const error = videos.error ? handleApiError(videos.error) : null;
+  const destacados = videos.data ?? [];
 
   return (
     <PortadaSection
@@ -48,14 +51,13 @@ export function LiveSection() {
             />
             {COPY.enVivo.estado}
           </span>
-          <button
-            type="button"
-            onClick={() => setAbierto(true)}
-            aria-label="Ver información de la transmisión"
+          <Link
+            href="#transmisiones-publicadas"
+            aria-label="Ir a las transmisiones publicadas"
             className="absolute inset-0 m-auto grid size-16 place-items-center rounded-full bg-surface-raised/90 text-primary shadow-xl transition-transform hover:scale-105"
           >
             <Play className="size-7 fill-current" aria-hidden="true" />
-          </button>
+          </Link>
           <div className="absolute inset-x-0 bottom-0 p-5">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-cyan">
               {FESTIVAL.nombre}
@@ -70,53 +72,44 @@ export function LiveSection() {
           <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
             {COPY.enVivo.nota}
           </p>
-          <button
-            type="button"
-            onClick={() => setAbierto(true)}
+          <Link
+            href="#transmisiones-publicadas"
             className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full border border-primary/25 px-5 text-xs font-black uppercase tracking-wider text-primary transition-colors hover:bg-primary/5"
           >
-            {COPY.enVivo.cta}
+            VER SEÑALES PUBLICADAS
             <ArrowUpRight className="size-4" aria-hidden="true" />
-          </button>
+          </Link>
         </div>
       </div>
 
-      <Dialog open={abierto} onOpenChange={setAbierto}>
-        <DialogContent className="max-w-md text-center">
-          <DialogTitle className="text-2xl font-black uppercase leading-tight tracking-tight text-foreground">
-            LA FAMILIA,
-            <br />
-            <span className="text-info">SIEMPRE CERCA.</span>
-          </DialogTitle>
-          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.25em] text-info">
-            {COPY.enVivo.estado}
+      <div id="transmisiones-publicadas" className="mt-10" data-portada-stagger>
+        {videos.isPending ? (
+          <p className="text-sm text-muted-foreground">
+            Cargando las señales oficiales...
           </p>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            21 DE NOVIEMBRE DE 2026 · LIMA, PERÚ. La transmisión en vivo aún no
-            está disponible: publicaremos el enlace oficial y los horarios para
-            seguir el campeonato, las entrevistas y los momentos del festival.
+        ) : null}
+
+        {error ? (
+          <p className="text-sm text-destructive">{error.message}</p>
+        ) : null}
+
+        {!videos.isPending && !error && destacados.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Las señales oficiales aparecerán aquí cuando inicien los partidos y
+            actividades del festival.
           </p>
-          <div className="mt-6 flex flex-col gap-3">
-            <a
-              href={ENLACES.calendario}
-              download
-              className="btn-brand-gradient btn-shine inline-flex h-12 w-full items-center justify-center gap-2 rounded-full px-6 text-xs font-black uppercase tracking-wider"
-            >
-              <CalendarPlus className="size-4" aria-hidden="true" />
-              GUARDAR LA FECHA
-            </a>
-            <a
-              href={ENLACES.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-primary/25 px-5 text-xs font-black uppercase tracking-wider text-primary transition-colors hover:bg-primary/5"
-            >
-              VER NOVEDADES
-              <ArrowUpRight className="size-4" aria-hidden="true" />
-            </a>
-          </div>
-        </DialogContent>
-      </Dialog>
+        ) : null}
+
+        {destacados.length > 0 ? (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {destacados.map((video) => (
+              <li key={video.id}>
+                <TarjetaVideo video={video} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     </PortadaSection>
   );
 }

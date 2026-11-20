@@ -32,7 +32,11 @@ export function AdminPersonasView() {
             { key: "persona", label: "Persona" },
             { key: "documento", label: "Documento", identificador: true },
             { key: "estado", label: "Estado" },
-            { key: "participaciones", label: "Participaciones", numerico: true },
+            {
+              key: "participaciones",
+              label: "Participaciones",
+              numerico: true,
+            },
           ]}
           vacio={
             <AdminEmptyState

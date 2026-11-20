@@ -39,10 +39,10 @@ export const referenciaParticipanteSchema = z.object({
   nombre: z.string(),
 });
 
-/** A participation of a person, with its event, team and discipline. */
+/** A participation of a person, with its edition, team and discipline. */
 export const participacionAdminSchema = z.object({
   id: z.string().min(1),
-  evento: referenciaParticipanteSchema,
+  edicion: referenciaParticipanteSchema,
   equipo: referenciaParticipanteSchema,
   disciplina: referenciaParticipanteSchema,
   rol: z.string().min(1),

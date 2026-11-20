@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiSend } from "@/lib/api";
+import { EdicionActualSchema } from "../schemas/edicion.schema";
 import {
   EDICION_ACTUAL_PATH,
   obtenerEdicionActual,
 } from "../services/edicion.service";
-import { EdicionActualSchema } from "../schemas/edicion.schema";
 import { edicionClaves } from "../utils/edicion.claves.utils";
 
 /**
@@ -71,7 +71,8 @@ describe("el espejo de la edición vigente", () => {
 
   it("rechaza un identificador que no es un identificador", () => {
     expect(
-      EdicionActualSchema.safeParse({ ...EDICION, id: "no-es-un-uuid" }).success,
+      EdicionActualSchema.safeParse({ ...EDICION, id: "no-es-un-uuid" })
+        .success,
     ).toBe(false);
   });
 });

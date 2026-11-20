@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   CheckCircle2,
   CircleHelp,
@@ -7,7 +8,6 @@ import {
   TriangleAlert,
   XCircle,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RolVeredicto, Veredicto } from "../types/cuenta.types";
 
@@ -97,7 +97,10 @@ export function VeredictoEstado({
           cubo.superficie,
         )}
       >
-        <Icono className={cn("size-3.5 shrink-0", cubo.trazo)} aria-hidden="true" />
+        <Icono
+          className={cn("size-3.5 shrink-0", cubo.trazo)}
+          aria-hidden="true"
+        />
         <span className="text-xs font-semibold text-foreground">
           {veredicto.estado.etiqueta}
         </span>

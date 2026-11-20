@@ -1,5 +1,5 @@
 export {
-  ErrorContratoValidacion,
   confirmarTicket,
+  ErrorContratoValidacion,
   previewTicket,
 } from "./validacion.service";

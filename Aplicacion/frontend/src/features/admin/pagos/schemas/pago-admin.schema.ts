@@ -12,7 +12,6 @@ import type {
   CompraAdminOut,
   IntentoPagoAdminOut,
   OperacionManualAdminOut,
-  PagoOperativoOut,
 } from "../types/pagos-admin.types";
 
 /**
@@ -62,6 +61,7 @@ export const referenciaPagoSchema = z.object({
 export const pagoOperativoSchema = z.object({
   compra_id: z.string().min(1),
   orden_pago_id: z.string().min(1).nullable(),
+  inscripcion_id: z.string().min(1).nullable(),
   tipo_compra: z.string().min(1),
   resumen_concepto: z.string(),
   comprador: z.object({
@@ -99,13 +99,18 @@ export const intentoPagoAdminSchema = z.object({
   creada_en: z.string().min(1),
 });
 
-/** The purchase behind the payment. */
+/**
+ * The purchase behind the payment.
+ *
+ * It is the EXACT mirror of `CompraOut`: the backend publishes `id`, `estado`,
+ * `total` and `moneda`, and NOTHING else (`reutilizada` no se publica: el
+ * objetivo no lo persiste y un espejo que lo exigiera sería una mentira).
+ */
 export const compraAdminSchema = z.object({
   id: z.string().min(1),
   estado: z.string().min(1),
   total: z.string(),
   moneda: z.string().min(1),
-  reutilizada: z.boolean(),
 });
 
 /** A manual operation of an administrator over a payment. */
@@ -121,7 +126,8 @@ export const operacionManualAdminSchema = z.object({
 
 /** The detail of a payment: the commercial level and the diagnosis. */
 export const adminPagoDetalleSchema = pagoOperativoSchema.extend({
-  compra: compraAdminSchema,
+  /** The purchase behind the payment. It is NULLABLE: the backend may not have it. */
+  compra: compraAdminSchema.nullable(),
   origen_pago: z.string().min(1),
   intentos: z.array(intentoPagoAdminSchema),
   operaciones_manuales: z.array(operacionManualAdminSchema),
@@ -158,7 +164,9 @@ export type IntentoPagoAdminWire = z.infer<typeof intentoPagoAdminSchema>;
 export type CompraAdminWire = z.infer<typeof compraAdminSchema>;
 
 /** The wire of a manual operation. */
-export type OperacionManualAdminWire = z.infer<typeof operacionManualAdminSchema>;
+export type OperacionManualAdminWire = z.infer<
+  typeof operacionManualAdminSchema
+>;
 
 /** The wire of the detail of a payment. */
 export type AdminPagoDetalleWire = z.infer<typeof adminPagoDetalleSchema>;
@@ -171,7 +179,9 @@ export function intentoPagoAdminDesdeWire(
 }
 
 /** The purchase behind the payment, as the view expects it. */
-export function compraAdminDesdeWire(compra: CompraAdminWire): CompraAdminOut {
+export function compraAdminDesdeWire(
+  compra: CompraAdminWire | null,
+): CompraAdminOut | null {
   return compra;
 }
 
@@ -189,6 +199,7 @@ export function pagoAdminListaDesdeWire(
   return {
     compra_id: fila.compra_id,
     orden_pago_id: fila.orden_pago_id,
+    inscripcion_id: fila.inscripcion_id,
     tipo_compra: fila.tipo_compra,
     resumen_concepto: fila.resumen_concepto,
     comprador: fila.comprador,
@@ -208,6 +219,7 @@ export function pagoAdminDetalleDesdeWire(
   return {
     compra_id: detalle.compra_id,
     orden_pago_id: detalle.orden_pago_id,
+    inscripcion_id: detalle.inscripcion_id,
     tipo_compra: detalle.tipo_compra,
     resumen_concepto: detalle.resumen_concepto,
     comprador: detalle.comprador,

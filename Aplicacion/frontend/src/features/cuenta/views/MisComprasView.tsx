@@ -2,9 +2,16 @@ import { ShoppingBag } from "lucide-react";
 import { Suspense } from "react";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
 import { RouteHero } from "@/components/shell/RouteHero";
-import { ShellErrorState, ShellPermissionDenied } from "@/components/shell/ShellState";
+import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarraFiltros, ListaCompras, SinResultadosConFiltros } from "../components";
+import {
+  BarraFiltros,
+  ListaCompras,
+  SinResultadosConFiltros,
+} from "../components";
 import { etiquetaOrigen, ORIGENES } from "../components/ListaCompras";
 import type { CompraResumen, EstadoVista } from "../types/cuenta.types";
 
@@ -60,15 +67,27 @@ export function MisComprasView({
     <div className="flex flex-col gap-6">
       <RouteHero
         pageId="ACCOUNT-04"
+        tone="hero"
         title="Tus compras"
         description="Las compras de la edición con su estado de pago, su importe y la fecha en que se realizaron."
       />
 
       {estado === "sin-permiso" ? (
-          <ShellPermissionDenied
-            title="No podemos leer tus compras"
-            className="border-border bg-surface-raised"
-          />
+        <ShellPermissionDenied
+          title="No podemos leer tus compras"
+          className="border-border bg-surface-raised"
+        />
+      ) : null}
+
+      {estado === "cargando" ? (
+        <div
+          className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4"
+          aria-busy="true"
+        >
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
       ) : null}
 
       {estado === "error" ? (
@@ -82,7 +101,7 @@ export function MisComprasView({
         <RouteEmptyState
           icon={ShoppingBag}
           title="Todavía no tienes compras registradas"
-          description="Las compras se leen del servicio de la cuenta. Cuando la integración esté disponible, aquí se listarán con su tipo, su importe, su estado de pago y su fecha."
+          description="Aquí aparecerán las compras de inscripción, pases y tienda con su importe, estado de pago y fecha."
         />
       ) : null}
 
@@ -102,7 +121,11 @@ export function MisComprasView({
             >
               <BarraFiltros
                 definiciones={[
-                  { clave: "origen", etiqueta: "Origen", opciones: opcionesOrigen },
+                  {
+                    clave: "origen",
+                    etiqueta: "Origen",
+                    opciones: opcionesOrigen,
+                  },
                 ]}
               />
             </Suspense>
@@ -128,4 +151,3 @@ export function MisComprasView({
     </div>
   );
 }
-

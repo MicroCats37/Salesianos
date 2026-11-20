@@ -82,7 +82,9 @@ export const InputImage: React.FC<InputComponentProps> = ({
   const clearImage = () => {
     // `null` es un valor explícito: limpia la imagen del registro.
     onChange(null);
-    const input = document.getElementById(internalId) as HTMLInputElement | null;
+    const input = document.getElementById(
+      internalId,
+    ) as HTMLInputElement | null;
     if (input) input.value = "";
   };
 

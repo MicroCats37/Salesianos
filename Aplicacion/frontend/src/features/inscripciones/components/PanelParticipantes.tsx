@@ -8,8 +8,8 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
+  TableHeader as Thead,
 } from "@/components/ui/table";
 import type { ParticipacionPool } from "../types/inscripcion.types";
 
@@ -54,7 +54,7 @@ export function PanelParticipantes(props: PanelParticipantesProps) {
     <div className="flex flex-col gap-4">
       <div className="hidden lg:block">
         <Table>
-          <TableHeader>
+          <Thead>
             <TableRow>
               <TableHead scope="col">Equipo</TableHead>
               <TableHead scope="col">Disciplina</TableHead>
@@ -62,7 +62,7 @@ export function PanelParticipantes(props: PanelParticipantesProps) {
               <TableHead scope="col">Cupo</TableHead>
               {onRetirar ? <TableHead scope="col">Acción</TableHead> : null}
             </TableRow>
-          </TableHeader>
+          </Thead>
           <TableBody>
             {participaciones.map((participacion) => (
               <TableRow key={participacion.id}>

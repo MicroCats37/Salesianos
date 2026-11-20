@@ -95,7 +95,12 @@ export function PortadaSection({
 
   const fondoClases = {
     pagina: "surface-page-gradient",
-    marca: "bg-primary",
+    /*
+     * La banda de marca es el índigo PROFUNDO de la identidad, no un bloque
+     * de color plano: el degradado institucional (`--brand-deep-blue` →
+     * `--brand-deep-night`) es el fondo sobre el que vive la tinta de marca.
+     */
+    marca: "bg-brand-gradient-deep",
     inverso: "bg-surface-inverse",
   } as const;
 
@@ -106,11 +111,17 @@ export function PortadaSection({
       destacado: "text-info",
       copy: "text-muted-foreground",
     },
+    /*
+     * La tinta de la banda de marca NO puede depender de `primary-foreground`:
+     * ese rol se invierte con el tema y el degradado institucional es OSCURO
+     * en los dos temas. Sobre él manda `brand-on-gradient`, que es el mismo
+     * contrato en claro y en oscuro.
+     */
     marca: {
       eyebrow: "text-brand-cyan",
-      titulo: "text-primary-foreground",
-      destacado: "text-brand-cyan",
-      copy: "text-primary-foreground/75",
+      titulo: "text-brand-on-gradient",
+      destacado: "text-accent",
+      copy: "text-brand-on-gradient-muted",
     },
     inverso: {
       eyebrow: "text-brand-cyan/80",
@@ -149,13 +160,22 @@ export function PortadaSection({
       >
         {(eyebrow || titulo || parrafos.length > 0) && (
           <header className="max-w-3xl">
+            {/*
+              La "firma de oro": la regla de 2px que acompaña al eyebrow de
+              sección. Es el gesto reconocible de la marca y marca el
+              arranque de cada bloque sin añadir una línea de texto.
+            */}
+            {eyebrow && (
+              <span
+                data-portada-stagger
+                className="rule-gold mb-3 block h-0.5 w-10 rounded-full"
+                aria-hidden="true"
+              />
+            )}
             {eyebrow && (
               <p
                 data-portada-stagger
-                className={cn(
-                  "text-[10px] font-black uppercase tracking-[0.3em]",
-                  color.eyebrow,
-                )}
+                className={cn("text-eyebrow-brand", color.eyebrow)}
               >
                 {eyebrow}
               </p>
@@ -186,13 +206,13 @@ export function PortadaSection({
               </h2>
             )}
             {parrafos.length > 0 && (
-                <div
-                  data-portada-stagger
-                  className={cn(
-                    "mt-4 space-y-2 text-sm leading-relaxed sm:mt-5 sm:space-y-3 sm:text-base [@media(max-height:900px)]:mt-3",
-                    color.copy,
-                  )}
-                >
+              <div
+                data-portada-stagger
+                className={cn(
+                  "mt-4 space-y-2 text-sm leading-relaxed sm:mt-5 sm:space-y-3 sm:text-base [@media(max-height:900px)]:mt-3",
+                  color.copy,
+                )}
+              >
                 {parrafos.map((parrafo) => (
                   <p key={parrafo}>{parrafo}</p>
                 ))}

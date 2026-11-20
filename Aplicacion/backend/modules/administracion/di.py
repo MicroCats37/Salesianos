@@ -41,8 +41,14 @@ from modules.administracion.domain.services.core.admin_operacion_service import 
 from modules.administracion.domain.services.flujos.admin_accion_sensible_flujo import (
     AdminAccionSensibleFlujo,
 )
+from modules.administracion.domain.services.flujos.admin_asistido_flujo import (
+    AdminAsistidoFlujo,
+)
 from modules.administracion.domain.services.orchestrators.admin_auditoria_orchestrator import (
     AdminAuditoriaOrchestrator,
+)
+from modules.administracion.domain.services.orchestrators.admin_asistido_orchestrator import (
+    AdminAsistidoOrchestrator,
 )
 from modules.administracion.domain.services.orchestrators.admin_operacion_orchestrator import (
     AdminOperacionOrchestrator,
@@ -91,6 +97,22 @@ class AdministracionModule(Module):
         binder.bind(
             AdminOperacionOrchestrator,
             to=AdminOperacionOrchestrator,
+            scope=singleton,
+        )
+
+        # ── Comandos administrativos asistidos ────────────────────────────────
+        # `admin-client-purchases-and-participants`: alta de participante por
+        # documento y compras asistidas para un tercero. El flujo consume los
+        # dueños (`salesianos_fest`, `marketplace` y `pagos`), de modo que su
+        # wiring tiene que ir DETRÁS del de esos módulos.
+        binder.bind(
+            AdminAsistidoFlujo,
+            to=AdminAsistidoFlujo,
+            scope=singleton,
+        )
+        binder.bind(
+            AdminAsistidoOrchestrator,
+            to=AdminAsistidoOrchestrator,
             scope=singleton,
         )
 

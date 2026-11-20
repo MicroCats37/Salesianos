@@ -1,8 +1,8 @@
 import { ArrowLeft, Package } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
 import { RouteHero } from "@/components/shell/RouteHero";
+import { Button } from "@/components/ui/button";
 import { RUTAS } from "@/lib/routes";
 
 /**

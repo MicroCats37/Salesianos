@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { RouteTransition } from "@/components/shell/RouteTransition";
-import { SiteFooter } from "@/components/shell/SiteFooter";
 import { SiteHeader } from "@/components/shell/SiteHeader";
+import { PortadaFooter } from "@/features/portada/components/PortadaFooter";
 
 /**
  * The public layout.
@@ -29,7 +29,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         <RouteTransition>{children}</RouteTransition>
       </main>
 
-      <SiteFooter />
+      <PortadaFooter />
     </div>
   );
 }

@@ -37,8 +37,8 @@ A0-01 del evidence de DOM-05).
 from asgiref.sync import sync_to_async
 from injector import inject
 from ninja_extra import api_controller, route
+from ninja_extra.permissions import AllowAny
 
-from core.permissions import IsAuthenticated
 from core.responses import ApiResponse, success_response
 from core.security import JWTAuth
 from modules.marketplace.domain.schemas.pedido_schemas import PedidoCreateData
@@ -70,8 +70,8 @@ class PedidoController:
         "/pedidos",
         response={201: ApiResponse[PedidoCreadoOut]},
         summary="Alta del pedido de marketplace con su snapshot de precio",
-        auth=JWTAuth(),
-        permissions=[IsAuthenticated],
+        auth=None,
+        permissions=[AllowAny],
     )
     async def crear_pedido(self, request, payload: CrearPedidoIn):
         """Crea el pedido de una intención de compra.
@@ -95,8 +95,13 @@ class PedidoController:
                 }
                 for item in payload.items
             ],
+            tipo_documento=payload.tipo_documento,
+            numero_documento=payload.numero_documento,
+            nombres=payload.nombres,
+            apellidos=payload.apellidos,
+            contacto_email=payload.contacto_email,
         )
-        result = await self.orchestrator.crear_pedido(request.auth, data)
+        result = await self.orchestrator.crear_pedido(await _actor_opcional(request), data)
         return success_response(
             PedidoPresenter.present(result),
             message="El pedido se registró correctamente.",

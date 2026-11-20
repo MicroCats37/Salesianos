@@ -1,6 +1,6 @@
-import {
-  type AdminDestino,
-  type AdminGrupo,
+import type {
+  AdminDestino,
+  AdminGrupo,
 } from "@/features/admin/utils/admin.secciones";
 import { AppSidebar } from "./AppSidebar";
 

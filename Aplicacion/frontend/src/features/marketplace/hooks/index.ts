@@ -1,6 +1,7 @@
 export {
+  type ParamsCatalogoTienda,
   useCatalogoTienda,
   useCategoriasTienda,
-  type ParamsCatalogoTienda,
 } from "./useCatalogoTienda";
+export { usePagoPedido, usePedidoSeguimiento } from "./usePedidoSeguimiento";
 export { useProductoDetalle } from "./useProductoDetalle";

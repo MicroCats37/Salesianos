@@ -31,6 +31,9 @@ from core.exceptions import register_exception_handlers
 from modules.administracion.presentation.controllers.admin_controller import (
     AdminController,
 )
+from modules.administracion.presentation.controllers.admin_asistido_controller import (
+    AdminAsistidoController,
+)
 from modules.administracion.presentation.controllers.admin_equipo_controller import (
     AdminEquipoController,
 )
@@ -49,6 +52,9 @@ from modules.administracion.presentation.controllers.admin_persona_controller im
 from modules.competencias.presentation.controllers.competencias_controller import (
     CompetenciasController,
 )
+from modules.commerce.presentation.controllers.cuenta_compras_controller import (
+    CuentaComprasController,
+)
 from modules.eventos.presentation.controllers.edicion_controller import EdicionController
 from modules.marketplace.presentation.controllers.inventario_controller import (
     InventarioController,
@@ -57,6 +63,7 @@ from modules.marketplace.presentation.controllers.pedido_controller import Pedid
 from modules.marketplace.presentation.controllers.producto_controller import ProductoController
 from modules.pagos.presentation.controllers.pagos_controller import PagosController
 from modules.patrocinadores.presentation.controllers.patrocinadores_controller import (
+    AdminPatrocinadoresController,
     PatrocinadorController,
 )
 from modules.salesianos_fest.presentation.controllers.catalogo_controller import (
@@ -193,6 +200,9 @@ registrar_controladores(NinjaJWTDefaultController)
 #   - `AdminParticipanteController` → XCT-02 (`administracion`) · participantes
 #   - `AdminPagoController` → XCT-02 (`administracion`) · pagos
 #   - `AdminPersonaController` → XCT-02 (`administracion`) · personas
+#   - `AdminAsistidoController` → `admin-client-purchases-and-participants` ·
+#                             el alta de participante por documento y las
+#                             compras asistidas para un tercero
 #   - `VideoController` → `public-video-streaming-crud` · GET /api/videos,
 #                             GET /api/videos/{video_id}
 #   - `AdminVideosController` → `public-video-streaming-crud` · la gestión de
@@ -219,6 +229,7 @@ registrar_controladores(
     EdicionController,
     PersonaController,
     AuthController,
+    CuentaComprasController,
     PagosController,
     CatalogoController,
     CotizacionController,
@@ -230,6 +241,7 @@ registrar_controladores(
     AdminPaseController,
     CompetenciasController,
     PatrocinadorController,
+    AdminPatrocinadoresController,
     ValidacionController,
     AdminController,
     AdminInscripcionController,
@@ -237,6 +249,7 @@ registrar_controladores(
     AdminParticipanteController,
     AdminPagoController,
     AdminPersonaController,
+    AdminAsistidoController,
     VideoController,
     AdminVideosController,
 )

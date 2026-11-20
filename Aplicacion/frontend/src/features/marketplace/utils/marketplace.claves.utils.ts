@@ -28,6 +28,13 @@ export const marketplaceClaves = {
   categorias: () => [...CATALOGO, "categorias"] as const,
 
   /**
+   * The base key of the catalogue.
+   *
+   * The parameters travel in the key when the read declares them.
+   */
+  productos: () => [...CATALOGO, "productos"] as const,
+
+  /**
    * The key of ONE page of the catalogue.
    *
    * The category, the page and the size travel in it: two pages are two
@@ -41,4 +48,13 @@ export const marketplaceClaves = {
 
   /** The key of ONE product detail. */
   detalle: (slug: string) => [...PRODUCTOS, slug] as const,
+
+  /** The administrator inventory ledger and calculated balances. */
+  inventario: () => ["marketplace", "inventario"] as const,
+
+  /** The paid orders that still await their physical handover. */
+  entregas: () => ["marketplace", "entregas"] as const,
+
+  /** The order opened by one private recovery credential. */
+  pedido: (token: string) => ["marketplace", "pedido", token] as const,
 } as const;

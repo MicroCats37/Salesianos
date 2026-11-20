@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuthUser } from "@/features/auth/store/auth.store";
 import { RUTAS } from "@/lib/routes";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface PreinscribirButtonProps {
   variant?: React.ComponentProps<typeof Button>["variant"];
@@ -20,7 +21,12 @@ export function PreinscribirButton({
   const href = user ? RUTAS.cuenta.inscripcion : RUTAS.auth.registro;
 
   return (
-    <Button asChild variant={variant} size={size} className={className}>
+    <Button
+      asChild
+      variant={variant}
+      size={size}
+      className={cn("min-h-11", className)}
+    >
       <Link href={href}>Preinscribir equipo</Link>
     </Button>
   );

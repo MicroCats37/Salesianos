@@ -1,11 +1,11 @@
 import { Lock, UserRound } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
 import { RouteHero } from "@/components/shell/RouteHero";
 import {
   ShellErrorState,
   ShellPendingState,
 } from "@/components/shell/ShellState";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ContadoresPases } from "../components/ContadoresPases";
 import { EstadoPagoPase } from "../components/EstadoPagoPase";
 import { FormularioBeneficiario } from "../components/FormularioBeneficiario";
@@ -77,8 +77,8 @@ export function PaseGestionarView({
           <Lock className="size-4" aria-hidden="true" />
           <AlertTitle>No pudimos abrir esta compra</AlertTitle>
           <AlertDescription>
-            El enlace puede haber caducado o no corresponde a esta compra. Si
-            lo has perdido, puedes pedir un enlace nuevo para recuperarla.
+            El enlace puede haber caducado o no corresponde a esta compra. Si lo
+            has perdido, puedes pedir un enlace nuevo para recuperarla.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -97,7 +97,12 @@ export function PaseGestionarView({
             mensajeError ??
             "No pudimos comprobar el enlace en este momento. Vuelve a intentarlo en unos segundos."
           }
-          accion={reintentar ? { label: "Reintentar", onClick: reintentar } : undefined}
+          accion={
+            reintentar
+              ? { label: "Reintentar", onClick: reintentar }
+              : undefined
+          }
+          className="min-h-11"
         />
       ) : null}
 
@@ -112,7 +117,7 @@ export function PaseGestionarView({
         <>
           <section
             aria-labelledby="resumen-compra-pases-titulo"
-            className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4"
+            className="flex flex-col gap-4 rounded-[var(--radius-xl)] border border-border bg-surface-elevated p-5 shadow-[var(--elevation-md)]"
           >
             <h2
               id="resumen-compra-pases-titulo"
@@ -120,22 +125,28 @@ export function PaseGestionarView({
             >
               Tu compra
             </h2>
-            <dl className="grid gap-3 sm:grid-cols-3">
-              <div className="flex flex-col gap-0.5">
-                <dt className="text-caption text-muted-foreground">Pase</dt>
-                <dd className="text-sm font-semibold text-foreground">
+            <dl className="grid gap-4 sm:grid-cols-3">
+              <div className="flex flex-col gap-1">
+                <dt className="text-eyebrow-brand text-muted-foreground">
+                  Pase
+                </dt>
+                <dd className="text-base font-bold text-foreground">
                   {compra.pase_nombre}
                 </dd>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <dt className="text-caption text-muted-foreground">Total</dt>
-                <dd className="text-sm font-semibold tabular-nums text-foreground">
+              <div className="flex flex-col gap-1">
+                <dt className="text-eyebrow-brand text-muted-foreground">
+                  Total
+                </dt>
+                <dd className="text-base font-bold tabular-nums text-foreground">
                   {formatearMonto(compra.total, compra.moneda)}
                 </dd>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <dt className="text-caption text-muted-foreground">Estado</dt>
-                <dd className="text-sm font-semibold text-foreground">
+              <div className="flex flex-col gap-1">
+                <dt className="text-eyebrow-brand text-muted-foreground">
+                  Estado
+                </dt>
+                <dd className="text-base font-bold text-foreground">
                   {compra.estado_etiqueta}
                 </dd>
               </div>
@@ -143,40 +154,43 @@ export function PaseGestionarView({
             {pago ? <EstadoPagoPase veredicto={pago} conDescripcion /> : null}
           </section>
 
-            <ContadoresPases compra={compra} />
+          <ContadoresPases compra={compra} />
 
-            <section
-              aria-labelledby="asignar-pase-titulo"
-              className="flex flex-col gap-3"
+          <section
+            aria-labelledby="asignar-pase-titulo"
+            className="flex flex-col gap-3"
+          >
+            <h2
+              id="asignar-pase-titulo"
+              className="text-section-title text-foreground"
             >
-              <h2
-                id="asignar-pase-titulo"
-                className="text-section-title text-foreground"
-              >
-                Asignar una entrada
-              </h2>
-              <p className="text-caption text-muted-foreground">
-                Solo se reparten pases de una compra ya pagada: una compra
-                pendiente no habilita ninguna entrada.
-              </p>
-              <FormularioBeneficiario
-                enviar={asignar}
-                hayCupo={compra.disponibles > 0}
-              />
-            </section>
+              Asignar una entrada
+            </h2>
+            <p className="text-caption text-muted-foreground">
+              Solo se reparten pases de una compra ya pagada: una compra
+              pendiente no habilita ninguna entrada.
+            </p>
+            <FormularioBeneficiario
+              enviar={asignar}
+              hayCupo={compra.disponibles > 0}
+            />
+          </section>
 
-            <section aria-labelledby="beneficiarios-titulo" className="flex flex-col gap-3">
-              <h2
-                id="beneficiarios-titulo"
-                className="text-section-title text-foreground"
-              >
-                Quién usa cada pase
-              </h2>
-              <ListaBeneficiarios
-                beneficiarios={compra.beneficiarios}
-                revocar={revocar}
-              />
-            </section>
+          <section
+            aria-labelledby="beneficiarios-titulo"
+            className="flex flex-col gap-3"
+          >
+            <h2
+              id="beneficiarios-titulo"
+              className="text-section-title text-foreground"
+            >
+              Quién usa cada pase
+            </h2>
+            <ListaBeneficiarios
+              beneficiarios={compra.beneficiarios}
+              revocar={revocar}
+            />
+          </section>
         </>
       ) : null}
     </div>

@@ -47,7 +47,7 @@ function fieldStrategy(field: FormField): VisibilityStrategy {
 }
 
 function sectionStrategy(section: FormSection): VisibilityStrategy {
-  let names: string[] = [];
+  const names: string[] = [];
   let needsWholeForm = false;
 
   for (const field of section.fields) {
@@ -85,8 +85,13 @@ interface GateProps {
   children: ReactNode;
 }
 
-const StaticGate = ({ hidden, children }: { hidden: boolean; children: ReactNode }) =>
-  hidden ? null : <>{children}</>;
+const StaticGate = ({
+  hidden,
+  children,
+}: {
+  hidden: boolean;
+  children: ReactNode;
+}) => (hidden ? null : <>{children}</>);
 
 const NamedGate = ({
   names,

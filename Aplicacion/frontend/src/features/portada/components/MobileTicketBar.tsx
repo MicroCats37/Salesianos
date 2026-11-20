@@ -41,7 +41,7 @@ export function MobileTicketBar() {
         </span>
         <a
           href="#paquetes"
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-[10px] font-black uppercase tracking-widest text-primary-foreground"
+          className="btn-shine inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-[10px] font-black uppercase tracking-widest text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
         >
           {COPY.barraMovil.cta}
           <ArrowUpRight className="size-3.5" aria-hidden="true" />

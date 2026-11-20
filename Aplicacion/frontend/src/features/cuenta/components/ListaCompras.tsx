@@ -16,8 +16,8 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
+  TableHeader as Thead,
 } from "@/components/ui/table";
 import { RUTAS } from "@/lib/routes";
 import type { CompraResumen, OrigenCompra } from "../types/cuenta.types";
@@ -70,6 +70,7 @@ export function ListaCompras({ compras, className }: ListaComprasProps) {
       {/* Cards below 1024: the origin is the header of the card. */}
       <ItemGroup className="gap-3 lg:hidden">
         {compras.map((compra) => (
+          // biome-ignore lint/a11y/useSemanticElements: el `Item` del proyecto renderiza un `div`, así que la lista se construye con el rol ARIA y no con `<li>`; cambiar el elemento del componente compartido está fuera de esta zona.
           <Item
             key={compra.id}
             variant="outline"
@@ -78,7 +79,10 @@ export function ListaCompras({ compras, className }: ListaComprasProps) {
           >
             <ItemHeader>
               <ItemMedia variant="icon">
-                <ShoppingBag className="size-4 text-primary" aria-hidden="true" />
+                <ShoppingBag
+                  className="size-4 text-primary"
+                  aria-hidden="true"
+                />
               </ItemMedia>
               <ItemContent>
                 <ItemTitle className="text-foreground">
@@ -119,7 +123,7 @@ export function ListaCompras({ compras, className }: ListaComprasProps) {
       {/* Table from 1024: the origin is its own column. */}
       <div className="hidden lg:block">
         <Table>
-          <TableHeader>
+          <Thead>
             <TableRow>
               <TableHead scope="col">Origen</TableHead>
               <TableHead scope="col">Concepto</TableHead>
@@ -128,7 +132,7 @@ export function ListaCompras({ compras, className }: ListaComprasProps) {
               <TableHead scope="col">Estado</TableHead>
               <TableHead scope="col">Detalle</TableHead>
             </TableRow>
-          </TableHeader>
+          </Thead>
           <TableBody>
             {compras.map((compra) => (
               <TableRow key={compra.id}>
@@ -136,7 +140,9 @@ export function ListaCompras({ compras, className }: ListaComprasProps) {
                   {etiquetaOrigen(compra.origen)}
                 </TableCell>
                 <TableCell>{compra.concepto}</TableCell>
-                <TableCell className="text-muted-foreground">{compra.fecha}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {compra.fecha}
+                </TableCell>
                 <TableCell className="font-semibold tabular-nums text-foreground">
                   {formatearMonto(compra.monto, compra.moneda)}
                 </TableCell>
@@ -144,7 +150,12 @@ export function ListaCompras({ compras, className }: ListaComprasProps) {
                   <VeredictoEstado veredicto={compra.veredicto} />
                 </TableCell>
                 <TableCell>
-                  <Button asChild variant="outline" size="sm" className="min-h-11">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11"
+                  >
                     <Link href={RUTAS.cuenta.misComprasDetalle(compra.id)}>
                       Ver la compra
                       <ArrowRight className="size-4" aria-hidden="true" />

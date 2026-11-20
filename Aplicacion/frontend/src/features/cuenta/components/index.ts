@@ -6,4 +6,3 @@ export { PanelSesion } from "./PanelSesion";
 export { PasosInscripcion } from "./PasosInscripcion";
 export { SinResultadosConFiltros } from "./SinResultadosConFiltros";
 export { VeredictoEstado } from "./VeredictoEstado";
-

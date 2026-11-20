@@ -37,6 +37,36 @@ function envelope(data: unknown) {
   };
 }
 
+/**
+ * The answer of the read of a product (`ProductoDetalleOut`).
+ *
+ * It is the detail of the product with its gallery: every read is parsed with
+ * the mirror of the wrapper it publishes, and a body of another shape is a
+ * loud failure.
+ */
+const PRODUCTO = {
+  id: "00000000-0000-4000-8000-0000000000a1",
+  nombre: "Camiseta del festival",
+  slug: "producto-de-ejemplo",
+  categoria_id: null,
+  categoria_nombre: null,
+  precio: 24,
+  precio_oferta: null,
+  precio_efectivo: 24,
+  oferta_activa: false,
+  estado: "ACTIVO",
+  imagen_principal_url: null,
+  cantidad_imagenes: 0,
+  created_at: "2026-11-18T14:20:00Z",
+  updated_at: "2026-11-18T14:20:00Z",
+  edicion_id: "00000000-0000-4000-8000-000000000001",
+  edicion_nombre: "EDICION DE EJEMPLO",
+  descripcion: "La camiseta del festival",
+  oferta_inicia: null,
+  oferta_termina: null,
+  imagenes: [],
+};
+
 beforeEach(() => {
   apiSend.mockReset();
 });
@@ -94,7 +124,7 @@ describe("el cliente de la tienda", () => {
   });
 
   it("el detalle se pide por el identificador del producto", async () => {
-    apiSend.mockResolvedValue(envelope({ id: "x" }));
+    apiSend.mockResolvedValue(envelope(PRODUCTO));
 
     await obtenerProducto("producto-de-ejemplo");
 
@@ -106,7 +136,12 @@ describe("las claves de la tienda", () => {
   it("el filtro y la página viajan en la clave del catálogo", () => {
     expect(
       marketplaceClaves.productosParams({ categoria_id: "cat-1", page: 2 }),
-    ).toEqual(["marketplace", "catalogo", "productos", { categoria_id: "cat-1", page: 2 }]);
+    ).toEqual([
+      "marketplace",
+      "catalogo",
+      "productos",
+      { categoria_id: "cat-1", page: 2 },
+    ]);
   });
 
   it("un filtro ausente es la misma entrada que ninguno", () => {
@@ -116,7 +151,10 @@ describe("las claves de la tienda", () => {
       "productos",
     ]);
     expect(
-      marketplaceClaves.productosParams({ categoria_id: undefined, page: undefined }),
+      marketplaceClaves.productosParams({
+        categoria_id: undefined,
+        page: undefined,
+      }),
     ).toEqual(["marketplace", "catalogo", "productos"]);
   });
 

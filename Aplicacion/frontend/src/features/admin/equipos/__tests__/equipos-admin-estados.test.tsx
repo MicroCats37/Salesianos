@@ -4,12 +4,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import {
-  equipoAdminDetalle,
-  listaEquiposAdmin,
-} from "./equipo-admin.datos";
 import { EquipoAdminDetalleView } from "../views/EquipoAdminDetalleView";
 import { EquiposAdminView } from "../views/EquiposAdminView";
+import { equipoAdminDetalle, listaEquiposAdmin } from "./equipo-admin.datos";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/administracion/equipos",
@@ -40,9 +37,9 @@ describe("ADM-07 — el listado de los equipos", () => {
     );
 
     // La etiqueta del backend y su descripción; NUNCA el código.
-    expect(screen.getByText("Falta 1 jugador")).toBeDefined();
+    expect(screen.getAllByText("Falta 1 jugador")[0]).toBeDefined();
     expect(
-      screen.getByText("Se necesita al menos 7 jugadores para competir"),
+      screen.getAllByText("Se necesita al menos 7 jugadores para competir")[0],
     ).toBeDefined();
     expect(screen.queryByText("INCOMPLETO")).toBeNull();
   });
@@ -56,9 +53,20 @@ describe("ADM-07 — el listado de los equipos", () => {
 
     // 6 registradas, mínimo 7, máximo 10: la cifra visible es "6 / 7–10" y
     // la frase completa la lleva un lector de pantalla.
-    expect(screen.getByText(/6\s*\/ 7–10/)).toBeDefined();
+    //
+    // La cifra visible se compone de DOS nodos de texto ("6" y
+    // " / 7–10", el segundo dentro de un `aria-hidden`): una consulta por
+    // expresión regular sobre el texto DIRECTO del nodo no la encuentra
+    // nunca. La aserción mira el `textContent` del elemento que la compone.
     expect(
-      screen.getByText("6 jugadores registrados; mínimo 7; máximo 10"),
+      screen.getAllByText(
+        (_contenido, elemento) =>
+          (elemento?.textContent ?? "").replace(/\s+/g, " ").trim() ===
+          "6 / 7–10",
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("6 jugadores registrados; mínimo 7; máximo 10")[0],
     ).toBeDefined();
   });
 
@@ -88,11 +96,13 @@ describe("ADM-08 — el detalle del equipo", () => {
       />,
     );
 
-    expect(screen.getByText("Sin cupo deportivo disponible")).toBeDefined();
     expect(
-      screen.getByText(
+      screen.getAllByText("Sin cupo deportivo disponible")[0],
+    ).toBeDefined();
+    expect(
+      screen.getAllByText(
         "No hay cupos deportivos disponibles en esta inscripción para sumar a otra persona.",
-      ),
+      )[0],
     ).toBeDefined();
   });
 
@@ -104,9 +114,9 @@ describe("ADM-08 — el detalle del equipo", () => {
       />,
     );
 
-    expect(screen.getByText("PERSONA DE EJEMPLO")).toBeDefined();
-    expect(screen.getByText("00000000")).toBeDefined();
-    expect(screen.getByText("ACTIVA")).toBeDefined();
+    expect(screen.getAllByText("PERSONA DE EJEMPLO")[0]).toBeDefined();
+    expect(screen.getAllByText("00000000")[0]).toBeDefined();
+    expect(screen.getAllByText("ACTIVA")[0]).toBeDefined();
   });
 
   it("las acciones proyectadas se muestran pero NO se pueden ejecutar", () => {

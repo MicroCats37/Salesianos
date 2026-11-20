@@ -1,20 +1,23 @@
 "use client";
 
-import { ArrowLeft, Package } from "lucide-react";
+import { ArrowLeft, Minus, Package, Plus, ShoppingBag } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FestivalPublicPage } from "@/components/shell/FestivalPublicPage";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
-import { RouteHero } from "@/components/shell/RouteHero";
 import {
   ShellErrorState,
   ShellPendingState,
   ShellPermissionDenied,
 } from "@/components/shell/ShellState";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { RUTAS } from "@/lib/routes";
 import { DialogoCheckoutTienda } from "../components/DialogoCheckoutTienda";
 import { GaleriaProducto } from "../components/GaleriaProducto";
+import type { CrearPedido } from "../schemas/pedido.schema";
+import { crearPedido } from "../services/marketplace.service";
 import type {
   EstadoVistaTienda,
   ProductoDetalle,
@@ -66,25 +69,44 @@ export function ProductoDetalleView({
   mensajeError,
   reintentar,
 }: ProductoDetalleViewProps) {
+  const router = useRouter();
   const [cantidad, setCantidad] = useState(1);
   const [dialogoAbierto, setDialogoAbierto] = useState(false);
 
+  async function crearPedidoYContinuar(comprador: Omit<CrearPedido, "items">) {
+    if (!producto) return;
+    const pedido = await crearPedido({
+      ...comprador,
+      items: [{ tipo: "PRODUCTO", producto_id: producto.id, cantidad }],
+    });
+    setDialogoAbierto(false);
+    router.push(`/tienda/pedidos/${encodeURIComponent(pedido.token)}`);
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      <RouteHero
-        pageId="SHOP-02"
-        title="Producto del catálogo"
-        description="La ficha del producto con su galería, su precio vigente y sus existencias, y el pedido a partir de ella."
-        facts={[{ label: "Referencia", value: slug }]}
-        actions={
-          <Button asChild variant="outline" className="min-h-11">
-            <Link href={RUTAS.publico.tienda}>
-              <ArrowLeft className="size-4" aria-hidden="true" />
-              Volver a la tienda
-            </Link>
-          </Button>
-        }
-      />
+    <FestivalPublicPage
+      eyebrow="TIENDA / SALESIANOS FEST"
+      title={
+        producto
+          ? ["LLEVA EL", "FESTIVAL", "CONTIGO."]
+          : ["TU COMPRA", "DEL FESTIVAL."]
+      }
+      highlighted={producto ? "CONTIGO." : "FESTIVAL."}
+      description="Elige tu producto, confirma la cantidad y continúa como invitado. El servidor valida el precio, el stock y el pago."
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button
+          asChild
+          variant="outline"
+          className="min-h-11 bg-surface-raised"
+        >
+          <Link href={RUTAS.publico.tienda}>
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Volver a la tienda
+          </Link>
+        </Button>
+        <p className="text-caption text-muted-foreground">Referencia: {slug}</p>
+      </div>
 
       {estado === "sin-permiso" ? (
         <ShellPermissionDenied
@@ -108,7 +130,11 @@ export function ProductoDetalleView({
             mensajeError ??
             "No pudimos leer la ficha del producto en este momento. Vuelve a intentarlo en unos segundos."
           }
-          accion={reintentar ? { label: "Reintentar", onClick: reintentar } : undefined}
+          accion={
+            reintentar
+              ? { label: "Reintentar", onClick: reintentar }
+              : undefined
+          }
         />
       ) : null}
 
@@ -121,25 +147,36 @@ export function ProductoDetalleView({
       ) : null}
 
       {estado === "listo" && producto ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
-          <GaleriaProducto imagenes={producto.imagenes} />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(20rem,5fr)] lg:items-start">
+          <GaleriaProducto
+            imagenes={producto.imagenes}
+            className="rounded-[var(--radius-xl)] border border-border bg-surface-raised p-3 shadow-sm"
+          />
 
           <section
             aria-labelledby="detalle-producto-titulo"
-            className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4"
+            className="flex flex-col gap-6 rounded-[var(--radius-xl)] border border-border bg-surface-raised p-5 shadow-sm sm:p-6"
           >
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-3">
+              {producto.categoria_nombre ? (
+                <p className="text-caption font-semibold text-eyebrow-brand">
+                  {producto.categoria_nombre}
+                </p>
+              ) : null}
               <h2
                 id="detalle-producto-titulo"
                 className="text-title-section text-foreground"
               >
                 {producto.nombre}
               </h2>
-              {producto.categoria_nombre ? (
-                <p className="text-caption text-muted-foreground">
-                  {producto.categoria_nombre}
-                </p>
-              ) : null}
+              <p className="text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">
+                {formatearMonto(producto.precio_efectivo, moneda ?? "")}
+                {producto.oferta_activa && producto.precio_oferta !== null ? (
+                  <span className="ml-3 text-sm font-normal text-muted-foreground line-through">
+                    {formatearMonto(producto.precio, moneda ?? "")}
+                  </span>
+                ) : null}
+              </p>
             </div>
 
             {producto.descripcion ? (
@@ -148,43 +185,62 @@ export function ProductoDetalleView({
               </p>
             ) : null}
 
-            <p className="text-lg font-semibold tabular-nums text-foreground">
-              {formatearMonto(producto.precio_efectivo, moneda ?? "")}
-              {producto.oferta_activa && producto.precio_oferta !== null ? (
-                <span className="ml-2 text-sm font-normal text-muted-foreground line-through">
-                  {formatearMonto(producto.precio, moneda ?? "")}
-                </span>
-              ) : null}
-            </p>
-
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="cantidad-producto"
-                className="text-sm font-medium text-foreground"
-              >
-                Cantidad
-              </label>
-              <Input
-                id="cantidad-producto"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                value={cantidad}
-                onChange={(evento) => {
-                  const siguiente = Number.parseInt(evento.target.value, 10);
-                  if (Number.isNaN(siguiente) || siguiente < 1) return;
-                  setCantidad(siguiente);
-                }}
-                aria-describedby="cantidad-producto-descripcion"
-                className="min-h-11 w-24 text-center tabular-nums"
-              />
-              <p
-                id="cantidad-producto-descripcion"
-                className="text-caption text-muted-foreground"
-              >
-                La cantidad máxima y el stock los confirma el servidor al
-                crear el pedido.
-              </p>
+            <div className="rounded-[var(--radius-lg)] border border-border bg-surface-recessed p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Cantidad
+                  </p>
+                  <p
+                    id="cantidad-producto-descripcion"
+                    className="text-caption text-muted-foreground"
+                  >
+                    El stock final se confirma al crear el pedido.
+                  </p>
+                </div>
+                <div className="flex items-center rounded-[var(--radius-md)] border border-border bg-surface-raised">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="min-h-11 min-w-11"
+                    disabled={cantidad === 1}
+                    onClick={() =>
+                      setCantidad((actual) => Math.max(1, actual - 1))
+                    }
+                    aria-label="Reducir cantidad"
+                  >
+                    <Minus className="size-4" aria-hidden="true" />
+                  </Button>
+                  <Input
+                    id="cantidad-producto"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    value={cantidad}
+                    onChange={(evento) => {
+                      const siguiente = Number.parseInt(
+                        evento.target.value,
+                        10,
+                      );
+                      if (Number.isNaN(siguiente) || siguiente < 1) return;
+                      setCantidad(siguiente);
+                    }}
+                    aria-describedby="cantidad-producto-descripcion"
+                    className="h-11 w-12 border-y-0 border-x text-center tabular-nums focus-visible:ring-0"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="min-h-11 min-w-11"
+                    onClick={() => setCantidad((actual) => actual + 1)}
+                    aria-label="Aumentar cantidad"
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              </div>
             </div>
 
             {motivoBloqueo ? (
@@ -195,12 +251,16 @@ export function ProductoDetalleView({
 
             <Button
               type="button"
-              className="min-h-11 w-full"
+              className="min-h-12 w-full text-base"
               disabled={Boolean(motivoBloqueo)}
               onClick={() => setDialogoAbierto(true)}
             >
-              Comprar
+              <ShoppingBag className="size-4" aria-hidden="true" />
+              Comprar como invitado
             </Button>
+            <p className="text-center text-caption text-muted-foreground">
+              Ingresa tus datos y continúa al pago sin crear una cuenta.
+            </p>
           </section>
         </div>
       ) : null}
@@ -213,8 +273,9 @@ export function ProductoDetalleView({
           onOpenChange={setDialogoAbierto}
           pago={pago}
           moneda={moneda}
+          crearPedido={crearPedidoYContinuar}
         />
       ) : null}
-    </div>
+    </FestivalPublicPage>
   );
 }

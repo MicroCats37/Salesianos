@@ -8,7 +8,9 @@ export function cn(...inputs: ClassValue[]) {
 export function resolveImageUrl(path: string | null | undefined): string {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  // API requests use the `/api` prefix, while uploaded media is served by Django
+  // outside that namespace.
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api\/?$/, "");
   return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
 }
 

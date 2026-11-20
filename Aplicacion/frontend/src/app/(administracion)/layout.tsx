@@ -69,7 +69,10 @@ export default async function AdministracionLayout({
         area="Administración"
         areaHref={RUTAS.administracion.resumen}
       >
-        <main id="contenido" className="min-w-0 flex-1 p-4 lg:p-6">
+        <main
+          id="contenido"
+          className="relative min-w-0 flex-1 surface-page-gradient p-4 lg:p-6"
+        >
           <RouteTransition>{children}</RouteTransition>
         </main>
       </AppShell>

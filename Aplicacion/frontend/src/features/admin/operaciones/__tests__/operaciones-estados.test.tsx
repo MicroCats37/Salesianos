@@ -53,7 +53,11 @@ describe("el chip de un veredicto", () => {
     render(
       <VeredictoOperativo
         veredicto={{
-          estado: { codigo: "CODIGO_NUEVO", etiqueta: "Veredicto nuevo", descripcion: "" },
+          estado: {
+            codigo: "CODIGO_NUEVO",
+            etiqueta: "Veredicto nuevo",
+            descripcion: "",
+          },
           rol: "desconocido",
         }}
       />,

@@ -7,6 +7,11 @@ import {
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
+import type {
+  AccionOperativa,
+  ColumnaOperativa,
+  FilaOperativa,
+} from "@/features/admin/operaciones";
 import {
   CifrasCupos,
   EsqueletoOperativo,
@@ -14,11 +19,6 @@ import {
   ListaOperativa,
   MarcoOperativo,
   VeredictoConCausa,
-} from "@/features/admin/operaciones";
-import type {
-  AccionOperativa,
-  ColumnaOperativa,
-  FilaOperativa,
 } from "@/features/admin/operaciones";
 import { RUTAS } from "@/lib/routes";
 import { PanelPlantillaEquipo } from "../components/PanelPlantillaEquipo";
@@ -77,15 +77,17 @@ export function EquipoAdminDetalleView({
         meta={[{ etiqueta: "Equipo", valor: id }]}
         actions={
           <Button variant="outline" asChild className="min-h-11">
-            <Link href={RUTAS.administracion.equipos}>Volver a los equipos</Link>
+            <Link href={RUTAS.administracion.equipos}>
+              Volver a los equipos
+            </Link>
           </Button>
         }
       />
 
       <AdminNotice title="El veredicto lo dice el servidor">
         La elegibilidad de una persona y la razón por la que un equipo puede o
-        no competir los decide el backend. Aquí se reproduce su veredicto con
-        su etiqueta y su descripción; nunca se calcula en el navegador.
+        no competir los decide el backend. Aquí se reproduce su veredicto con su
+        etiqueta y su descripción; nunca se calcula en el navegador.
       </AdminNotice>
 
       <MarcoOperativo
@@ -99,9 +101,7 @@ export function EquipoAdminDetalleView({
         }
         cargando={<EsqueletoOperativo columnas={COLUMNAS_ELEGIBILIDAD} />}
       >
-        {(datos: AdminEquipoDetalleOut) => (
-          <DetalleEquipo datos={datos} />
-        )}
+        {(datos: AdminEquipoDetalleOut) => <DetalleEquipo datos={datos} />}
       </MarcoOperativo>
     </div>
   );
@@ -125,10 +125,16 @@ function DetalleEquipo({ datos }: { datos: AdminEquipoDetalleOut }) {
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Dato etiqueta="Equipo" valor={datos.nombre} />
             <Dato etiqueta="Disciplina" valor={datos.disciplina.nombre} />
-            <Dato etiqueta="Categoría" valor={datos.categoria.nombre} />
+            <Dato etiqueta="Categoría" valor={datos.categoria?.nombre ?? "—"} />
             <Dato etiqueta="Responsable" valor={datos.responsable.nombre} />
-            <Dato etiqueta="Inscripción" valor={datos.inscripcion_detalle.nombre} />
-            <Dato etiqueta="Referencia" valor={datos.inscripcion_detalle.referencia} />
+            <Dato
+              etiqueta="Inscripción"
+              valor={datos.inscripcion_detalle.nombre}
+            />
+            <Dato
+              etiqueta="Referencia"
+              valor={datos.inscripcion_detalle.referencia}
+            />
           </dl>
 
           <ExplicacionVeredicto veredicto={datos.estado_operativo} />
@@ -152,8 +158,8 @@ function DetalleEquipo({ datos }: { datos: AdminEquipoDetalleOut }) {
                 ))}
               </div>
               <p className="text-xs leading-snug text-muted-foreground">
-                Las acciones aparecen porque el backend las proyecta, pero no
-                se pueden ejecutar todavía: su endpoint no está registrado.
+                Las acciones aparecen porque el backend las proyecta, pero no se
+                pueden ejecutar todavía: su endpoint no está registrado.
               </p>
             </div>
           ) : null}

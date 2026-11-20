@@ -12,10 +12,6 @@ import { RouteTransition } from "@/components/shell/RouteTransition";
  * content enters with the shared fade and every navigation inside the
  * product arrives with the shared GSAP timeline.
  */
-export default function PortadaLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function PortadaLayout({ children }: { children: ReactNode }) {
   return <RouteTransition>{children}</RouteTransition>;
 }

@@ -4,8 +4,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { listaParticipantesAdmin } from "./participante-admin.datos";
 import { ParticipantesAdminView } from "../views/ParticipantesAdminView";
+import { listaParticipantesAdmin } from "./participante-admin.datos";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/administracion/participantes",
@@ -24,9 +24,7 @@ describe("ADM-09 — la búsqueda de personas y participaciones", () => {
   it("sin búsqueda muestra un AVISO, no una tabla vacía", () => {
     render(<ParticipantesAdminView />);
 
-    expect(
-      screen.getByText("Busca a una persona para empezar"),
-    ).toBeDefined();
+    expect(screen.getByText("Busca a una persona para empezar")).toBeDefined();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
@@ -44,9 +42,11 @@ describe("ADM-09 — la búsqueda de personas y participaciones", () => {
       />,
     );
 
-    expect(screen.getByText("PERSONA DE EJEMPLO")).toBeDefined();
+    expect(screen.getAllByText("PERSONA DE EJEMPLO")[0]).toBeDefined();
     expect(
-      screen.getByText("Esta persona ya participa en la misma disciplina en este equipo."),
+      screen.getByText(
+        "Esta persona ya participa en la misma disciplina en este equipo.",
+      ),
     ).toBeDefined();
   });
 

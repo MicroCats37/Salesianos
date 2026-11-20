@@ -3,8 +3,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { PATROCINADOR, PATROCINADOR_SIN_PIEZAS } from "./datos.contract";
 import { PatrocinadoresAdminView } from "../views/PatrocinadoresAdminView";
+import { PATROCINADOR, PATROCINADOR_SIN_PIEZAS } from "./datos.contract";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -25,9 +25,8 @@ vi.mock("next/navigation", () => ({
 /**
  * The states of the sponsors area.
  *
- * **The suites of this packet have NEVER RUN.** They are written and the
- * execution is deferred to the verification phase. Nothing here may be read
- * as a green result.
+ * The record is edited in the modal of the area (`AppFormModal`): the tests
+ * that need the fields open the modal first.
  */
 describe("patrocinadores - ficha, piezas y galería", () => {
   it("la ruta dice que el servicio no existe en vez de inventar aliados", () => {
@@ -92,7 +91,9 @@ describe("patrocinadores - ficha, piezas y galería", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Pieza siguiente" }));
 
-    expect(screen.getByText(/no está disponible en el servidor/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no está disponible en el servidor/i),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /logo de/i })).toBeInTheDocument();
   });
 
@@ -124,16 +125,36 @@ describe("patrocinadores - ficha, piezas y galería", () => {
     ).toBeInTheDocument();
   });
 
+  it("el formulario se abre en el modal de la ficha", () => {
+    render(<PatrocinadoresAdminView estado="listo" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /nuevo patrocinador/i }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: /nuevo patrocinador/i }),
+    ).toBeInTheDocument();
+  });
+
   it("el formulario anuncia los tipos y el tamaño que acepta el servidor", () => {
     render(<PatrocinadoresAdminView estado="listo" />);
 
+    fireEvent.click(
+      screen.getByRole("button", { name: /nuevo patrocinador/i }),
+    );
+
     const logo = screen.getByLabelText(/logo de identidad/i);
     expect(logo).toHaveAttribute("accept", "image/jpeg, image/png, image/webp");
-    expect(screen.getByText(/hasta 5 MiB/)).toBeInTheDocument();
+    expect(screen.getAllByText(/hasta 5 MiB/)[0]).toBeInTheDocument();
   });
 
   it("el formulario de visibilidad tiene una etiqueta real", () => {
     render(<PatrocinadoresAdminView estado="listo" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /nuevo patrocinador/i }),
+    );
 
     expect(
       screen.getByLabelText(/visible en la página pública/i),
@@ -148,6 +169,10 @@ describe("patrocinadores - ficha, piezas y galería", () => {
       />,
     );
 
+    fireEvent.click(
+      screen.getByRole("button", { name: /nuevo patrocinador/i }),
+    );
+
     expect(
       screen.getByText(/supera el tamaño máximo de 5 MiB/i),
     ).toBeInTheDocument();
@@ -155,6 +180,10 @@ describe("patrocinadores - ficha, piezas y galería", () => {
 
   it("sin servicio conectado el guardado no sale del dispositivo", () => {
     render(<PatrocinadoresAdminView estado="listo" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /nuevo patrocinador/i }),
+    );
 
     expect(
       screen.getByRole("button", { name: /guardar el patrocinador/i }),
@@ -175,6 +204,8 @@ describe("patrocinadores - ficha, piezas y galería", () => {
 
     const html = container.innerHTML;
     expect(html).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
-    expect(html).not.toMatch(/\b(bg|text|border)-(red|blue|green|yellow|slate|gray|zinc|neutral|stone)-\d{2,3}\b/);
+    expect(html).not.toMatch(
+      /\b(bg|text|border)-(red|blue|green|yellow|slate|gray|zinc|neutral|stone)-\d{2,3}\b/,
+    );
   });
 });

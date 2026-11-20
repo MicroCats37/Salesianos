@@ -15,6 +15,11 @@
  * never derived in the browser (`SH-01` T-03).
  */
 
+/** The order of the store (`DOM-05`) — NOT REGISTERED, NOT BOUND. */
+export type {
+  PedidoLinea as LineaPedido,
+  PedidoSeguimiento as SeguimientoPedido,
+} from "../schemas/pedido.schema";
 /** The catalogue of the store (`DOM-04`). */
 export type {
   CategoriaLista as CategoriaProducto,
@@ -22,12 +27,6 @@ export type {
   ProductoImagen as ImagenProducto,
   ProductoListItem,
 } from "../schemas/producto.schema";
-
-/** The order of the store (`DOM-05`) — NOT REGISTERED, NOT BOUND. */
-export type {
-  PedidoLinea as LineaPedido,
-  PedidoSeguimiento as SeguimientoPedido,
-} from "../schemas/pedido.schema";
 
 /** The five presentable payment states of `SH-03` section 3. */
 export type RolPago =

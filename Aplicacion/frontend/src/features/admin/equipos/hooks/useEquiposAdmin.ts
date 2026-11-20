@@ -1,15 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { datasetQueryOptions } from "@/shared/utils/query-options";
+import { useAdminQuery } from "@/features/admin/operaciones/hooks/useAdminQuery";
 import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
 import { adminClaves } from "@/features/admin/operaciones/utils/admin.claves.utils";
 import { estadoDesdeConsulta } from "@/features/admin/operaciones/utils/admin.estado.utils";
 import { parametrosListaAdminDesdeUrl } from "@/features/admin/operaciones/utils/admin.filtros.utils";
 import {
-  listarEquiposAdmin,
-  obtenerEquipoAdmin,
-} from "../services/equipo-admin.service";
+  equipoAdminDetalleDesdeWire,
+  equipoAdminDetalleEnvelope,
+  equipoAdminListaDesdeWire,
+  listaEquiposAdminEnvelope,
+} from "../schemas/equipo-admin.schema";
 import type {
   EstadoDetalleEquipoAdmin,
   EstadoListaEquiposAdmin,
@@ -39,36 +40,28 @@ import type {
 export function useListaEquiposAdmin(
   parametros: Record<string, string> | undefined,
 ): EstadoListaEquiposAdmin {
-  const consulta = useQuery({
-    ...datasetQueryOptions({
-      queryKey: adminClaves.equipos.listPage(
-        parametrosListaAdminDesdeUrl(parametros),
-      ),
-      queryFn: () =>
-        listarEquiposAdmin(parametrosListaAdminDesdeUrl(parametros)),
-      kind: "listadoAdministrativo",
-    }),
-    enabled: RUTAS_ADMIN.equiposLista.registrado,
+  const consulta = useAdminQuery({
+    queryKey: adminClaves.equipos.list,
+    ruta: RUTAS_ADMIN.equiposLista,
+    envelope: listaEquiposAdminEnvelope,
+    filtros: parametrosListaAdminDesdeUrl(parametros),
+    select: (pagina) => pagina.items.map(equipoAdminListaDesdeWire),
   });
 
-  return estadoDesdeConsulta(
-    consulta,
-    RUTAS_ADMIN.equiposLista.registrado,
-    (pagina) => pagina.items,
-  );
+  return estadoDesdeConsulta(consulta, RUTAS_ADMIN.equiposLista.registrado);
 }
 
 /** The administrative detail of a team (`ADM-08`). */
 export function useDetalleEquipoAdmin(
   equipoId: string | undefined,
 ): EstadoDetalleEquipoAdmin {
-  const consulta = useQuery({
-    ...datasetQueryOptions({
-      queryKey: adminClaves.equipos.detail(equipoId ?? ""),
-      queryFn: () => obtenerEquipoAdmin(equipoId ?? ""),
-      kind: "listadoAdministrativo",
-    }),
-    enabled: Boolean(equipoId) && RUTAS_ADMIN.equipoDetalle.registrado,
+  const consulta = useAdminQuery({
+    queryKey: adminClaves.equipos.detail(equipoId ?? ""),
+    ruta: RUTAS_ADMIN.equipoDetalle,
+    envelope: equipoAdminDetalleEnvelope,
+    parametros: equipoId ? { equipo_id: equipoId } : undefined,
+    enabled: Boolean(equipoId),
+    select: (detalle) => equipoAdminDetalleDesdeWire(detalle),
   });
 
   return estadoDesdeConsulta(consulta, RUTAS_ADMIN.equipoDetalle.registrado);

@@ -2,23 +2,23 @@ import type { Method } from "axios";
 import type { ZodType } from "zod";
 import { apiSend } from "@/lib/api";
 import {
+  type AsignarBeneficiarioDatos,
   asignarBeneficiarioSchema,
+  type BeneficiarioRevocado,
+  type BeneficiariosPase,
   beneficiarioRevocadoEnvelope,
   beneficiariosPaseEnvelope,
   CABECERA_TOKEN_PASE,
+  type CatalogoPases,
+  type CompraPaseCreada,
+  type CompraPasesWire,
+  type ComprarPaseDatos,
   catalogoPasesEnvelope,
   compraPaseCreadaEnvelope,
   compraPasesEnvelope,
   comprarPaseSchema,
-  paseDetalleEnvelope,
-  type AsignarBeneficiarioDatos,
-  type BeneficiarioRevocado,
-  type BeneficiariosPase,
-  type CompraPaseCreada,
-  type CompraPasesWire,
-  type ComprarPaseDatos,
   type PaseDetalle,
-  type CatalogoPases,
+  paseDetalleEnvelope,
 } from "../schemas/pase.schema";
 
 /**
@@ -44,7 +44,35 @@ import {
  */
 
 /** The base of every pass route. */
-const BASE = "/pases";
+export const RUTA_PASES = "/pases";
+
+/** The route of the catalogue of passes of the edition in scope. */
+export function rutaCatalogoPases(): string {
+  return RUTA_PASES;
+}
+
+/** The route of the purchase of a batch of passes. */
+export function rutaCompras(): string {
+  return `${RUTA_PASES}/compras`;
+}
+
+/** The route of ONE batch purchase. */
+export function rutaCompraDetalle(compraPaseId: string): string {
+  return `${RUTA_PASES}/compras/${compraPaseId}`;
+}
+
+/** The route of the rights granted in ONE batch. */
+export function rutaBeneficiarios(compraPaseId: string): string {
+  return `${RUTA_PASES}/compras/${compraPaseId}/beneficiarios`;
+}
+
+/** The route of ONE entry right of ONE batch. */
+export function rutaBeneficiario(
+  compraPaseId: string,
+  personaId: string,
+): string {
+  return `${RUTA_PASES}/compras/${compraPaseId}/beneficiarios/${personaId}`;
+}
 
 /**
  * The answer of the server does NOT comply with the frozen contract.
@@ -130,12 +158,12 @@ async function pedir<T>(
 export function listarPases(params?: {
   edicion_id?: string;
 }): Promise<CatalogoPases> {
-  return pedir("get", BASE, catalogoPasesEnvelope, { params });
+  return pedir("get", rutaCatalogoPases(), catalogoPasesEnvelope, { params });
 }
 
 /** The detail of one pass (`RT-PS-02`). */
 export function obtenerPase(paseId: string): Promise<PaseDetalle> {
-  return pedir("get", `${BASE}/${paseId}`, paseDetalleEnvelope);
+  return pedir("get", `${RUTA_PASES}/${paseId}`, paseDetalleEnvelope);
 }
 
 /**
@@ -149,7 +177,7 @@ export function obtenerPase(paseId: string): Promise<PaseDetalle> {
 export function comprarPase(
   datos: ComprarPaseDatos,
 ): Promise<CompraPaseCreada> {
-  return pedir("post", `${BASE}/compras`, compraPaseCreadaEnvelope, {
+  return pedir("post", rutaCompras(), compraPaseCreadaEnvelope, {
     payload: comprarPaseSchema.parse(datos),
   });
 }
@@ -165,12 +193,9 @@ export function obtenerCompra(
   compraPaseId: string,
   token: string,
 ): Promise<CompraPasesWire> {
-  return pedir(
-    "get",
-    `${BASE}/compras/${compraPaseId}`,
-    compraPasesEnvelope,
-    { token },
-  );
+  return pedir("get", rutaCompraDetalle(compraPaseId), compraPasesEnvelope, {
+    token,
+  });
 }
 
 /** The rights granted in a batch (`RT-PS-04`). */
@@ -180,7 +205,7 @@ export function listarBeneficiarios(
 ): Promise<BeneficiariosPase> {
   return pedir(
     "get",
-    `${BASE}/compras/${compraPaseId}/beneficiarios`,
+    rutaBeneficiarios(compraPaseId),
     beneficiariosPaseEnvelope,
     { token },
   );
@@ -200,7 +225,7 @@ export function asignarBeneficiario(
 ): Promise<BeneficiariosPase> {
   return pedir(
     "post",
-    `${BASE}/compras/${compraPaseId}/beneficiarios`,
+    rutaBeneficiarios(compraPaseId),
     beneficiariosPaseEnvelope,
     { token, payload: asignarBeneficiarioSchema.parse(datos) },
   );
@@ -223,7 +248,7 @@ export function revocarBeneficiario(
 ): Promise<BeneficiarioRevocado> {
   return pedir(
     "delete",
-    `${BASE}/compras/${compraPaseId}/beneficiarios/${personaId}`,
+    rutaBeneficiario(compraPaseId, personaId),
     beneficiarioRevocadoEnvelope,
     { token, params: { motivo: motivo ?? undefined } },
   );

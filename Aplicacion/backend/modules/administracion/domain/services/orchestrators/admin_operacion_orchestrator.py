@@ -25,6 +25,9 @@ from modules.administracion.domain.services.core.admin_operacion_service import 
 from modules.administracion.domain.services.flujos.admin_accion_sensible_flujo import (
     AdminAccionSensibleFlujo,
 )
+from modules.pagos.domain.services.flujos.aprobar_pago_manual_flujo import (
+    AprobarPagoManualFlujo,
+)
 from modules.eventos.domain.services.core.edicion_scope_service import (
     EdicionScopeService,
 )
@@ -41,11 +44,13 @@ class AdminOperacionOrchestrator:
         accion_flujo: AdminAccionSensibleFlujo,
         scope: EdicionScopeService,
         pool_flujo: PoolFlujo,
+        aprobar_pago_manual_flujo: AprobarPagoManualFlujo,
     ):
         self.servicio = servicio
         self.accion_flujo = accion_flujo
         self.scope = scope
         self.pool_flujo = pool_flujo
+        self.aprobar_pago_manual_flujo = aprobar_pago_manual_flujo
 
     # ── Inscripciones (RT-IN-07 · RT-IN-08) ──────────────────────────────────
 
@@ -164,6 +169,19 @@ class AdminOperacionOrchestrator:
     async def obtener_pago(self, compra_id):
         """El detalle comercial de un pago."""
         return await sync_to_async(self.servicio.obtener_pago)(compra_id)
+
+    async def aprobar_pago_manual(
+        self, *, orden_pago_id: str, actor_id: str, canal: str, referencia: str, motivo: str
+    ):
+        """Registra evidencia manual y devuelve la fila de pago actualizada."""
+        await self.aprobar_pago_manual_flujo.aprobar(
+            orden_pago_id=orden_pago_id,
+            actor_id=actor_id,
+            canal=canal,
+            referencia=referencia,
+            motivo=motivo,
+        )
+        return await sync_to_async(self.servicio.obtener_pago_por_orden)(orden_pago_id)
 
     # ── Personas (RT-ID-07 · RT-ID-08) ───────────────────────────────────────
 

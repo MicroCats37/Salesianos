@@ -56,6 +56,7 @@ from modules.administracion.domain.results.admin_operacion_results import (
     EquipoDeInscripcionAdminResultado,
     EventoHistorialAdminResultado,
     IntentoPagoAdminResultado,
+    OperacionManualAdminResultado,
     ParticipacionAdminResultado,
     ParticipacionPoolAdminResultado,
     ParticipanteAdminResultado,
@@ -75,9 +76,11 @@ from modules.administracion.domain.selectors.admin_operacion_selector import (
 )
 from modules.administracion.domain.models import AccionAuditada
 from modules.pagos.domain.constants import EstadoTransaccionPago, OrigenPago
+from modules.pagos.domain.models import AprobacionPagoManual
 from modules.pagos.domain.services.core.estado_operativo_pago_service import (
     EstadoOperativoPagoService,
 )
+from modules.salesianos_fest.domain.referencia import parsear_referencia
 from modules.salesianos_fest.domain.constants import (
     EstadoInscripcion,
     EstadoParticipacion,
@@ -339,17 +342,16 @@ class AdminOperacionService:
 
     def obtener_pago(self, compra_id) -> tuple:
         """El detalle comercial de un pago, o `None` si no existe."""
-        lote = self.pago_selector.obtener(compra_id)
+        compra = self.pago_selector.obtener(compra_id)
 
-        if lote is None:
+        if compra is None:
             return None
 
-        compra = lote.compra
-        orden = compra.orden_pago if compra else None
+        orden = compra.orden_pago
         intentos = self._intentos(compra)
 
         return AdminPagoDetalleAdminResultado(
-            item=self._fila_pago(lote),
+            item=self._fila_pago(compra),
             compra=CompraAdminResultado(
                 id=str(compra.id),
                 estado=compra.estado,
@@ -360,9 +362,14 @@ class AdminOperacionService:
             else None,
             origen_pago=self._origen_pago(orden, intentos),
             intentos=intentos,
-            operaciones_manuales=[],
+            operaciones_manuales=self._operaciones_manuales(orden),
             siguiente_accion=None,
         )
+
+    def obtener_pago_por_orden(self, orden_pago_id):
+        """La fila operativa actualizada después de un comando de pago."""
+        compra = self.pago_selector.obtener_por_orden(orden_pago_id)
+        return self._fila_pago(compra) if compra is not None else None
 
     # ── Personas (RT-ID-07 · RT-ID-08) ───────────────────────────────────────
 
@@ -549,30 +556,40 @@ class AdminOperacionService:
             estado=participacion.estado,
         )
 
-    def _fila_pago(self, lote) -> AdminPagoListItemAdminResultado:
+    def _fila_pago(self, compra) -> AdminPagoListItemAdminResultado:
         """La fila operativa de un pago."""
-        compra = lote.compra
-        orden = compra.orden_pago if compra else None
+        orden = compra.orden_pago
         veredicto = self._veredicto_de_pago(orden)
+        lote_pase = getattr(compra, "compra_de_pases", None)
+        inscripcion_id = self._inscripcion_id_de_compra(compra)
 
         return AdminPagoListItemAdminResultado(
-            compra_id=str(compra.id) if compra else "",
+            compra_id=str(compra.id),
             orden_pago_id=str(orden.id) if orden else None,
+            inscripcion_id=inscripcion_id,
             tipo_compra=self._tipo_de_compra(compra),
             resumen_concepto=self._resumen_de_compra(compra),
             comprador=CompradorAdminResultado(
-                persona_id=str(lote.comprador_id),
-                nombre=self._nombre_de_persona(lote.comprador),
+                persona_id=str(compra.persona_id),
+                nombre=self._nombre_de_persona(compra.persona),
             ),
-            monto=str(compra.total) if compra else "0",
-            moneda=compra.moneda if compra else "",
+            monto=str(compra.total),
+            moneda=compra.moneda,
             estado_operativo=veredicto,
             entrega_derechos=EntregaDerechosAdminResultado(
-                codigo="PASE",
-                etiqueta=lote.pase.nombre,
+                codigo=compra.origen,
+                etiqueta=(
+                    lote_pase.pase.nombre
+                    if lote_pase is not None
+                    else "Cupos de inscripción"
+                ),
             ),
-            acciones_disponibles=[],
-            fecha=compra.created_at if compra else lote.created_at,
+            acciones_disponibles=(
+                ["APROBACION_MANUAL"]
+                if orden and veredicto.codigo == "PENDIENTE"
+                else []
+            ),
+            fecha=compra.created_at,
         )
 
     def _intentos(self, compra) -> list:
@@ -675,12 +692,14 @@ class AdminOperacionService:
     def _origen_pago(self, orden, intentos) -> str:
         """La procedencia de la evidencia de la orden.
 
-        Se deriva de los INTENTOS que publica el dueño: hay un intento
-        exitoso y verificado ⇒ `IZIPAY`; si no, `SIN_PAGO`. El objetivo no
-        tiene una aprobación manual persistida (`A0-XCT02-10`).
+        Se deriva de los intentos del proveedor o de la evidencia manual
+        persistida: ambas son fuentes de verdad auditables.
         """
         if orden is None:
             return OrigenPago.SIN_PAGO
+
+        if AprobacionPagoManual.objects.filter(orden_pago_id=orden.id).exists():
+            return OrigenPago.MANUAL
 
         for intento in intentos:
             if (
@@ -690,6 +709,26 @@ class AdminOperacionService:
                 return OrigenPago.IZIPAY
 
         return OrigenPago.SIN_PAGO
+
+    @staticmethod
+    def _operaciones_manuales(orden) -> list[OperacionManualAdminResultado]:
+        """La evidencia manual auditada, sólo en el detalle administrativo."""
+        if orden is None:
+            return []
+        return [
+            OperacionManualAdminResultado(
+                id=str(aprobacion.id),
+                canal=aprobacion.canal,
+                monto=str(aprobacion.monto),
+                moneda=aprobacion.moneda,
+                motivo=aprobacion.motivo,
+                registrada_en=aprobacion.created_at,
+                actor=getattr(aprobacion.actor, "username", "") or "",
+            )
+            for aprobacion in AprobacionPagoManual.objects.filter(
+                orden_pago_id=orden.id
+            ).select_related("actor")
+        ]
 
     def _alerta_de_inscripcion(self, inscripcion) -> CausaAdminResultado:
         """La alerta de la fila, si la hay."""
@@ -814,7 +853,13 @@ class AdminOperacionService:
         if not lineas or not isinstance(lineas[0], dict):
             return ""
 
-        return str(lineas[0].get("concepto", ""))
+        return str(lineas[0].get("concepto_nombre", ""))
+
+    @staticmethod
+    def _inscripcion_id_de_compra(compra) -> str | None:
+        """El vínculo de inscripción publicado por su referencia canónica."""
+        referencia = parsear_referencia(compra.referencia)
+        return str(referencia.inscripcion_id) if referencia is not None else None
 
     @staticmethod
     def _paginar(total: int, page: int, page_size: int) -> tuple:

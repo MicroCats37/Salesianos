@@ -1,23 +1,21 @@
 import { Search, Users } from "lucide-react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AdminEmptyState,
   AdminNotice,
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
+import type {
+  ColumnaOperativa,
+  FilaOperativa,
+} from "@/features/admin/operaciones";
 import {
   BusquedaOperativa,
   EsqueletoOperativo,
   ListaOperativa,
   MarcoOperativo,
 } from "@/features/admin/operaciones";
-import type { ColumnaOperativa, FilaOperativa } from "@/features/admin/operaciones";
 import type {
   EstadoParticipantesAdmin,
   ParticipacionAdminOut,
@@ -30,7 +28,7 @@ import type {
  * facts follow it.
  */
 const COLUMNAS_EVENTO: ColumnaOperativa[] = [
-  { key: "evento", label: "Evento", prioridad: 1, titular: true },
+  { key: "edicion", label: "Edición", prioridad: 1, titular: true },
   { key: "persona", label: "Persona", prioridad: 1 },
   { key: "equipo", label: "Equipo", prioridad: 1 },
   { key: "disciplina", label: "Disciplina", prioridad: 1 },
@@ -41,7 +39,7 @@ const COLUMNAS_EVENTO: ColumnaOperativa[] = [
 const COLUMNAS_EQUIPO: ColumnaOperativa[] = [
   { key: "equipo", label: "Equipo", prioridad: 1, titular: true },
   { key: "persona", label: "Persona", prioridad: 1 },
-  { key: "evento", label: "Evento", prioridad: 1 },
+  { key: "edicion", label: "Edición", prioridad: 1 },
   { key: "disciplina", label: "Disciplina", prioridad: 1 },
   { key: "estado", label: "Estado", prioridad: 2 },
   { key: "conflicto", label: "Conflicto", prioridad: 2 },
@@ -50,7 +48,7 @@ const COLUMNAS_EQUIPO: ColumnaOperativa[] = [
 const COLUMNAS_DISCIPLINA: ColumnaOperativa[] = [
   { key: "disciplina", label: "Disciplina", prioridad: 1, titular: true },
   { key: "persona", label: "Persona", prioridad: 1 },
-  { key: "evento", label: "Evento", prioridad: 1 },
+  { key: "edicion", label: "Edición", prioridad: 1 },
   { key: "equipo", label: "Equipo", prioridad: 1 },
   { key: "estado", label: "Estado", prioridad: 2 },
   { key: "conflicto", label: "Conflicto", prioridad: 2 },
@@ -72,13 +70,15 @@ function filaDe(
     celdas: {
       persona: (
         <span className="flex flex-col">
-          <span className="font-semibold text-foreground">{persona.nombre}</span>
+          <span className="font-semibold text-foreground">
+            {persona.nombre}
+          </span>
           <span className="text-xs text-foreground-muted">
             {persona.documento}
           </span>
         </span>
       ),
-      evento: participacion.evento.nombre,
+      edicion: participacion.edicion.nombre,
       equipo: participacion.equipo.nombre,
       disciplina: participacion.disciplina.nombre,
       estado: participacion.estado,
@@ -101,7 +101,10 @@ function participacionesDe(
   personas: readonly ParticipanteAdminOut[],
 ): { participacion: ParticipacionAdminOut; persona: ParticipanteAdminOut }[] {
   return personas.flatMap((persona) =>
-    persona.participaciones.map((participacion) => ({ participacion, persona })),
+    persona.participaciones.map((participacion) => ({
+      participacion,
+      persona,
+    })),
   );
 }
 
@@ -140,8 +143,7 @@ export function ParticipantesAdminView({
       <AdminNotice title="Dos magnitudes, no una">
         Las dos listas nunca se reconcilian en el navegador. Un cupo pagado
         habilita a una persona en todas las disciplinas contratadas, así que
-        «personas» y «participaciones» son recuentos distintos por
-        construcción.
+        «personas» y «participaciones» son recuentos distintos por construcción.
       </AdminNotice>
 
       <BusquedaOperativa
@@ -181,7 +183,10 @@ export function ParticipantesAdminView({
                   <TabsTrigger value="equipo" className="min-h-11 flex-none">
                     Por equipo
                   </TabsTrigger>
-                  <TabsTrigger value="disciplina" className="min-h-11 flex-none">
+                  <TabsTrigger
+                    value="disciplina"
+                    className="min-h-11 flex-none"
+                  >
                     Por disciplina
                   </TabsTrigger>
                 </TabsList>
@@ -190,8 +195,9 @@ export function ParticipantesAdminView({
                   <ListaOperativa
                     caption="Participaciones agrupadas por evento"
                     columnas={COLUMNAS_EVENTO}
-                    filas={participacionesDe(personas).map(({ participacion, persona }) =>
-                      filaDe(participacion, persona),
+                    filas={participacionesDe(personas).map(
+                      ({ participacion, persona }) =>
+                        filaDe(participacion, persona),
                     )}
                     vacio={
                       <AdminEmptyState
@@ -207,8 +213,9 @@ export function ParticipantesAdminView({
                   <ListaOperativa
                     caption="Participaciones agrupadas por equipo"
                     columnas={COLUMNAS_EQUIPO}
-                    filas={participacionesDe(personas).map(({ participacion, persona }) =>
-                      filaDe(participacion, persona),
+                    filas={participacionesDe(personas).map(
+                      ({ participacion, persona }) =>
+                        filaDe(participacion, persona),
                     )}
                     vacio={
                       <AdminEmptyState
@@ -224,8 +231,9 @@ export function ParticipantesAdminView({
                   <ListaOperativa
                     caption="Participaciones agrupadas por disciplina"
                     columnas={COLUMNAS_DISCIPLINA}
-                    filas={participacionesDe(personas).map(({ participacion, persona }) =>
-                      filaDe(participacion, persona),
+                    filas={participacionesDe(personas).map(
+                      ({ participacion, persona }) =>
+                        filaDe(participacion, persona),
                     )}
                     vacio={
                       <AdminEmptyState

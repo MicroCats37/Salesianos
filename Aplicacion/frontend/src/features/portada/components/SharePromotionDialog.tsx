@@ -3,7 +3,6 @@
 import { ArrowUpRight, Copy, MessageCircle, Share, Share2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Promocion } from "@/features/portada/fixtures/promotions";
+import { notify } from "@/errors";
 import { COPY } from "@/features/portada/fixtures/copy";
+import type { Promocion } from "@/features/portada/fixtures/promotions";
 
 export type PromotionDialogMode = "poster" | "compartir";
 
@@ -80,7 +80,7 @@ export function SharePromotionDialog({
       await navigator.clipboard.writeText(promocion.fuente);
       const aviso = conAnio(COPY.promociones.share.copiado, anio);
       setEstado(aviso);
-      toast.success(aviso);
+      notify.success(aviso);
     } catch {
       setMostrarEnlace(true);
       setEstado(COPY.promociones.share.copiarManual);
@@ -97,7 +97,7 @@ export function SharePromotionDialog({
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
       setEstado(COPY.promociones.share.errorCompartir);
-      toast.error(COPY.promociones.share.errorCompartir);
+      notify.error(COPY.promociones.share.errorCompartir);
     }
   };
 

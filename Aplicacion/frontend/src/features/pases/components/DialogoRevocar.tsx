@@ -1,5 +1,6 @@
 "use client";
 
+import { TriangleAlert } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,6 +9,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { BeneficiarioPase } from "../types/pase.types";
@@ -32,6 +34,9 @@ export interface DialogoRevocarProps {
  *
  * The policy of the reassignment is still OPEN (`PD-02`), and the dialog says
  * so instead of promising something the backend has not decided.
+ *
+ * The confirming action is painted as DESTRUCTIVE: the word of the button
+ * already says what it does, and the colour says it before it is pressed.
  */
 export function DialogoRevocar({
   beneficiario,
@@ -47,9 +52,11 @@ export function DialogoRevocar({
     <AlertDialog open={abierto} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {`Revocar la entrada de ${nombre}`}
-          </AlertDialogTitle>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <TriangleAlert className="size-6" aria-hidden="true" />
+          </AlertDialogMedia>
+
+          <AlertDialogTitle>{`Revocar la entrada de ${nombre}`}</AlertDialogTitle>
           <AlertDialogDescription>
             Revocar la entrada la deja sin efecto y queda registrada en la
             auditoría. No genera devolución ni devuelve el pase al lote, y la
@@ -59,8 +66,11 @@ export function DialogoRevocar({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel className="min-h-11">Mantener la entrada</AlertDialogCancel>
+          <AlertDialogCancel className="min-h-11">
+            Mantener la entrada
+          </AlertDialogCancel>
           <AlertDialogAction
+            variant="destructive"
             className="min-h-11"
             disabled={!revocar || !beneficiario}
             onClick={() => {

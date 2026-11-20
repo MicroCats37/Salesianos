@@ -24,7 +24,11 @@ describe("handleApiError — the field errors of the frozen envelope", () => {
           message: "La solicitud no es válida.",
           details: null,
           field_errors: [
-            { field: "titulo", code: "REQUIRED", message: "El título es obligatorio." },
+            {
+              field: "titulo",
+              code: "REQUIRED",
+              message: "El título es obligatorio.",
+            },
           ],
         },
         message: null,
@@ -42,7 +46,11 @@ describe("handleApiError — the field errors of the frozen envelope", () => {
     const error = handleApiError(
       axiosError(422, {
         detail: [
-          { loc: ["body", "titulo"], msg: "Este campo es requerido.", type: "value_error.missing" },
+          {
+            loc: ["body", "titulo"],
+            msg: "Este campo es requerido.",
+            type: "value_error.missing",
+          },
         ],
       }),
     );
@@ -56,7 +64,11 @@ describe("handleApiError — the field errors of the frozen envelope", () => {
       axiosError(404, {
         success: false,
         data: null,
-        error: { code: "NO_ENCONTRADO", message: "No se encontró.", details: null },
+        error: {
+          code: "NO_ENCONTRADO",
+          message: "No se encontró.",
+          details: null,
+        },
         message: null,
       }),
     );

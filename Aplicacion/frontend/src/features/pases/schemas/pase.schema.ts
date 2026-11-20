@@ -49,7 +49,12 @@ const marcaTiempo = z.string().min(1);
 /** An ISO-4217 currency code. */
 const moneda = z.string().min(1).max(3);
 
-/** The catalogue price of a pass (`PrecioPaseOut`). */
+/**
+ * The catalogue price of a pass (`PrecioPaseOut`).
+ *
+ * `monto` is a `Decimal` on the server and the wire publishes it as a float
+ * (`core/types.py` → `BaseSchema.ser_json_decimal_to_float`).
+ */
 export const precioPaseSchema = z.object({
   monto: z.number(),
   moneda,
@@ -223,7 +228,9 @@ export const asignarBeneficiarioSchema = z.object({
 /** The envelope of every pass read and write (`FREEZE-ENV-1.0.0`). */
 export const catalogoPasesEnvelope = apiResponseSchema(catalogoPasesSchema);
 export const paseDetalleEnvelope = apiResponseSchema(paseDetalleSchema);
-export const compraPaseCreadaEnvelope = apiResponseSchema(compraPaseCreadaSchema);
+export const compraPaseCreadaEnvelope = apiResponseSchema(
+  compraPaseCreadaSchema,
+);
 export const compraPasesEnvelope = apiResponseSchema(compraPasesSchema);
 export const beneficiariosPaseEnvelope = apiResponseSchema(
   beneficiariosPaseSchema,
@@ -244,4 +251,6 @@ export type CompraPasesWire = z.infer<typeof compraPasesSchema>;
 export type CompraPaseCreada = z.infer<typeof compraPaseCreadaSchema>;
 export type BeneficiarioRevocado = z.infer<typeof beneficiarioRevocadoSchema>;
 export type ComprarPaseDatos = z.infer<typeof comprarPaseSchema>;
-export type AsignarBeneficiarioDatos = z.infer<typeof asignarBeneficiarioSchema>;
+export type AsignarBeneficiarioDatos = z.infer<
+  typeof asignarBeneficiarioSchema
+>;

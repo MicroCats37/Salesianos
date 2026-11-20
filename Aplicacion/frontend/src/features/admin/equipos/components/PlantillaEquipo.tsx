@@ -18,7 +18,10 @@ export interface PlantillaEquipoProps {
  * The visible figure is compact and the SENTENCE is complete: a screen
  * reader reads "6 jugadores registrados; mínimo 7; máximo 10".
  */
-export function PlantillaEquipo({ plantilla, className }: PlantillaEquipoProps) {
+export function PlantillaEquipo({
+  plantilla,
+  className,
+}: PlantillaEquipoProps) {
   return (
     <span className={className}>
       <span className="tabular-nums">
@@ -29,8 +32,8 @@ export function PlantillaEquipo({ plantilla, className }: PlantillaEquipoProps) 
         </span>
       </span>
       <span className="sr-only">
-        {plantilla.registrados} jugadores registrados; mínimo {plantilla.minimo};
-        máximo {plantilla.maximo}
+        {plantilla.registrados} jugadores registrados; mínimo {plantilla.minimo}
+        ; máximo {plantilla.maximo}
       </span>
     </span>
   );

@@ -270,7 +270,13 @@ class PagoConfirmacionFlujo:
         estado_intento = self._estado_intento(codigo)
         metadata = sanitizar_payload_proveedor(payload)
 
-        confirmar = estado_verificacion == EstadoVerificacionPago.FIRMADA
+        # The legacy browser relay settles an approved payment after ownership
+        # verification when the merchant key is unavailable. An invalid
+        # signature is still rejected by `_verificar_canal` before this point.
+        confirmar = estado_verificacion == EstadoVerificacionPago.FIRMADA or (
+            canal == CanalConfirmacionPago.BROWSER
+            and estado_verificacion == EstadoVerificacionPago.NO_VERIFICABLE
+        )
 
         orden, intento, ya_confirmado = await sync_to_async(
             self._aplicar_confirmacion_sync

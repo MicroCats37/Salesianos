@@ -78,8 +78,10 @@ export function PaqueteComercialCard({
   return (
     <article
       className={cn(
-        "group flex h-full flex-col overflow-hidden rounded-2xl bg-surface-raised shadow-[0_8px_30px_color-mix(in_srgb,var(--brand-deep-navy)_10%,transparent)] ring-1 ring-border/70 transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_36px_color-mix(in_srgb,var(--brand-deep-navy)_16%,transparent)]",
-        selected && "ring-2 ring-primary",
+        "group flex h-full flex-col overflow-hidden rounded-2xl bg-surface-raised shadow-[var(--elevation-md)] ring-1 ring-border/70 transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-[var(--elevation-lg)]",
+        // El halo dorado sólo aparece en la tarjeta distinguida: es una
+        // marca de atención, no un adorno de todas.
+        selected && "glow-accent ring-2 ring-primary",
         onSelect && "cursor-pointer",
         className,
       )}
@@ -110,7 +112,7 @@ export function PaqueteComercialCard({
               {paquete.nombre}
             </h3>
             {selected && (
-              <span className="mt-1 inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-primary-foreground">
+              <span className="mt-1 inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-accent-foreground">
                 Seleccionado
               </span>
             )}

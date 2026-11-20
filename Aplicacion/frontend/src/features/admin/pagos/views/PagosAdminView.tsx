@@ -5,6 +5,10 @@ import {
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
+import type {
+  ColumnaOperativa,
+  FiltroOperativo,
+} from "@/features/admin/operaciones";
 import {
   BarraFiltros,
   BusquedaOperativa,
@@ -12,7 +16,6 @@ import {
   EsqueletoOperativo,
   MarcoOperativo,
 } from "@/features/admin/operaciones";
-import type { ColumnaOperativa, FiltroOperativo } from "@/features/admin/operaciones";
 import { ListaPagosOperativa } from "../components/ListaPagosOperativa";
 import type {
   AdminPagoDetalleOut,
@@ -20,7 +23,13 @@ import type {
 } from "../types/pagos-admin.types";
 
 const COLUMNAS: ColumnaOperativa[] = [
-  { key: "compra", label: "Compra", prioridad: 1, titular: true, identificador: true },
+  {
+    key: "compra",
+    label: "Compra",
+    prioridad: 1,
+    titular: true,
+    identificador: true,
+  },
   { key: "estado", label: "Estado", prioridad: 1 },
   { key: "total", label: "Total", prioridad: 1, numerico: true },
   { key: "concepto", label: "Concepto", prioridad: 2 },
@@ -122,10 +131,10 @@ export function PagosAdminView({
       />
 
       <AdminNotice title="Acciones sensibles, nivel de break-glass">
-        Registrar un pago manual, anular una aprobación y cancelar una
-        compra de pases exigen un motivo auditado y la capacidad de
-        aprobación de pagos. El personal de staff lee esta lista; el personal
-        con capacidad de aprobación ve además los botones.
+        Registrar un pago manual, anular una aprobación y cancelar una compra de
+        pases exigen un motivo auditado y la capacidad de aprobación de pagos.
+        El personal de staff lee esta lista; el personal con capacidad de
+        aprobación ve además los botones.
       </AdminNotice>
 
       <BusquedaOperativa
@@ -150,7 +159,7 @@ export function PagosAdminView({
             <AdminEmptyState
               icon={CreditCard}
               title="Todavía no hay compras cargadas"
-              description="Las compras y sus órdenes se leen del servicio de administración, que todavía no expone su ruta. Cuando exista, aquí se listarán con su veredicto de pago y su evidencia, con los filtros por estado, por tipo y por rango de fechas."
+              description="No hay compras de inscripciones ni pases para la edición seleccionada. Cuando existan, se listarán con su veredicto de pago y evidencia, con filtros por estado, tipo y rango de fechas."
             />
           }
           cargando={<EsqueletoOperativo columnas={COLUMNAS} />}

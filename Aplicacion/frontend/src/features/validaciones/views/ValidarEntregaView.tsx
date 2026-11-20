@@ -1,6 +1,8 @@
 import { PackageCheck } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
 import {
   AdminEmptyState,
   AdminNotice,
@@ -8,22 +10,18 @@ import {
   AdminPanel,
   AdminSubnav,
 } from "@/features/admin/components";
-import {
-  ShellErrorState,
-  ShellPermissionDenied,
-} from "@/components/shell/ShellState";
 import { RUTAS } from "@/lib/routes";
 import { ConfirmacionValidacion } from "../components/ConfirmacionValidacion";
 import { ConsolaEscaner } from "../components/ConsolaEscaner";
 import { VistaPreviaValidacion } from "../components/VistaPreviaValidacion";
-import { estadoEntrega } from "../utils/validaciones.estados.utils";
-import { formatearInstante } from "../utils/validaciones.fecha.utils";
 import type {
   EntregaPendiente,
   EstadoVistaValidaciones,
   ResultadoValidacion,
   VistaPreviaValidacion as VistaPrevia,
 } from "../types/validacion.types";
+import { estadoEntrega } from "../utils/validaciones.estados.utils";
+import { formatearInstante } from "../utils/validaciones.fecha.utils";
 
 /**
  * ValidarEntregaView - `ADM-20`, the pickups of the store.
@@ -77,18 +75,13 @@ export function ValidarEntregaView({
             label: "Inventario",
             description: "Movimientos de stock",
           },
-          {
-            href: RUTAS.administracion.marketplaceEntregas,
-            label: "Entregas",
-            description: "Recogidas por confirmar",
-          },
         ]}
       />
 
       <AdminNotice title="Pagado y entregado son dos hechos">
         Un pedido pagado no es un pedido entregado. La entrega la registra una
-        persona en el mostrador y queda anotada con su nombre y con el
-        instante, nunca como una consecuencia automática del pago.
+        persona en el mostrador y queda anotada con su nombre y con el instante,
+        nunca como una consecuencia automática del pago.
       </AdminNotice>
 
       {estado === "sin-permiso" ? (

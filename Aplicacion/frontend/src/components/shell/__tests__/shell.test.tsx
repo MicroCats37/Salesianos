@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   ADMIN_GRUPOS,
   ADMIN_RESUMEN,
@@ -15,6 +16,23 @@ import { SiteFooter } from "../SiteFooter";
 import { SiteHeader } from "../SiteHeader";
 
 const RUTA_POR_DEFECTO = "/administracion/pagos";
+
+/**
+ * The shell renders INSIDE the providers of the application: the tooltips of
+ * the theme switch (`ThemeToggle`) and of the sidebar (`AppSidebar`) need
+ * `TooltipProvider`, which `src/providers/AppProviders.tsx` mounts.
+ *
+ * The harness mounts the SAME provider: without it every render of the shell
+ * dies with "`Tooltip` must be used within `TooltipProvider`" and the
+ * assertions never run.
+ */
+function renderShell(ui: React.ReactElement) {
+  return render(
+    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+      {ui}
+    </TooltipProvider>,
+  );
+}
 
 const pathnameMock = vi.fn(() => RUTA_POR_DEFECTO);
 
@@ -37,7 +55,7 @@ vi.mock("next/navigation", () => ({
  */
 describe("shell — SiteHeader", () => {
   it("expone la navegación con nombre accesible", () => {
-    render(<SiteHeader />);
+    renderShell(<SiteHeader />);
 
     expect(
       screen.getByRole("navigation", { name: "Navegación principal" }),
@@ -45,7 +63,7 @@ describe("shell — SiteHeader", () => {
   });
 
   it("ofrece los destinos públicos sin inventar módulos", () => {
-    render(<SiteHeader />);
+    renderShell(<SiteHeader />);
 
     expect(screen.getByRole("link", { name: "Información" })).toBeDefined();
     expect(screen.getByRole("link", { name: "Pases" })).toBeDefined();
@@ -53,7 +71,7 @@ describe("shell — SiteHeader", () => {
   });
 
   it("el botón de menú tiene nombre accesible y área táctil de 44px", () => {
-    render(<SiteHeader />);
+    renderShell(<SiteHeader />);
 
     const boton = screen.getByRole("button", {
       name: "Abrir menú de navegación",
@@ -66,7 +84,7 @@ describe("shell — SiteHeader", () => {
   it("expone la ubicación actual con aria-current (SH-02 A11Y-10)", () => {
     pathnameMock.mockReturnValue("/informacion");
 
-    render(<SiteHeader />);
+    renderShell(<SiteHeader />);
 
     const actual = screen.getByRole("link", { name: "Información" });
     expect(actual.getAttribute("aria-current")).toBe("page");
@@ -80,7 +98,7 @@ describe("shell — SiteHeader", () => {
 
 describe("shell — AccountTopbar", () => {
   it("ofrece los destinos de la cuenta", () => {
-    render(<AccountTopbar usuario="Ana Pérez" />);
+    renderShell(<AccountTopbar usuario="Ana Pérez" />);
 
     expect(
       screen.getByRole("button", { name: "Abrir menú de cuenta" }),
@@ -88,7 +106,7 @@ describe("shell — AccountTopbar", () => {
   });
 
   it("no ofrece administración a quien no es administrador", () => {
-    render(<AccountTopbar usuario="Ana Pérez" esAdmin={false} />);
+    renderShell(<AccountTopbar usuario="Ana Pérez" esAdmin={false} />);
 
     // El enlace vive dentro de un menú desplegable: se comprueba el árbol.
     expect(document.body.textContent).not.toContain("Administración");
@@ -97,7 +115,7 @@ describe("shell — AccountTopbar", () => {
   it("expone la ubicación actual con aria-current (SH-02 A11Y-10)", () => {
     pathnameMock.mockReturnValue("/mis-inscripciones");
 
-    render(<AccountTopbar usuario="Ana Pérez" />);
+    renderShell(<AccountTopbar usuario="Ana Pérez" />);
 
     // El menú desplegable sólo existe en el DOM cuando está abierto.
     // jsdom no implementa PointerEvent, así que el menú se abre con el
@@ -120,7 +138,7 @@ describe("shell — AccountTopbar", () => {
 
 describe("shell — AdminSidebar", () => {
   it("marca el destino activo con el veredicto de la ruta", () => {
-    render(
+    renderShell(
       <SidebarProvider>
         <AdminSidebar resumen={ADMIN_RESUMEN} grupos={ADMIN_GRUPOS} />
       </SidebarProvider>,
@@ -133,7 +151,7 @@ describe("shell — AdminSidebar", () => {
   });
 
   it("expone la ubicación actual con aria-current (SH-02 A11Y-10)", () => {
-    render(
+    renderShell(
       <SidebarProvider>
         <AdminSidebar resumen={ADMIN_RESUMEN} grupos={ADMIN_GRUPOS} />
       </SidebarProvider>,
@@ -143,15 +161,16 @@ describe("shell — AdminSidebar", () => {
     expect(pagos.getAttribute("aria-current")).toBe("page");
 
     // El resumen NO es la ubicación actual en /administracion/pagos.
-    expect(
-      screen
-        .getByRole("link", { name: /Resumen/ })
-        .getAttribute("aria-current"),
-    ).toBeNull();
+    // El sidebar publica el resumen en la cabecera del grupo y en su
+    // destino: la aserción mira TODOS los enlaces que lo nombran, para no
+    // depender de cuál aparece primero en el DOM.
+    for (const enlace of screen.getAllByRole("link", { name: /Resumen/ })) {
+      expect(enlace.getAttribute("aria-current")).toBeNull();
+    }
   });
 
   it("muestra los tres grupos del plan", () => {
-    render(
+    renderShell(
       <SidebarProvider>
         <AdminSidebar resumen={ADMIN_RESUMEN} grupos={ADMIN_GRUPOS} />
       </SidebarProvider>,

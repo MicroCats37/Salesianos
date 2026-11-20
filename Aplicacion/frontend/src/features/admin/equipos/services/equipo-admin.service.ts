@@ -1,10 +1,10 @@
-import type { PaginatedResult } from "@/shared/schemas/pagination.schema";
 import {
   pedirAdmin,
   RUTAS_ADMIN,
 } from "@/features/admin/operaciones/services/admin.service";
 import type { ParamsListaAdmin } from "@/features/admin/operaciones/utils/admin.claves.utils";
 import { parametrosConsultaAdmin } from "@/features/admin/operaciones/utils/admin.filtros.utils";
+import type { PaginatedResult } from "@/shared/schemas/pagination.schema";
 import {
   equipoAdminDetalleDesdeWire,
   equipoAdminDetalleEnvelope,

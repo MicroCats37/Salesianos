@@ -110,7 +110,6 @@
   --shadow-xl: var(--elevation-xl);
   --shadow-focus: var(--elevation-focus);
 
-
   /* --- Radios: el lenguaje blando de Salesianos (SH-01 §3.6) ---
      La jerarquía del producto se lee TAMBIÉN por la forma: los controles
      son cómodos, los paneles intermedios y los contenedores amplios.
@@ -695,6 +694,9 @@
     color-mix(in srgb, var(--brand-cyan) 24%, var(--surface-raised)) 100%
   );
   background-size: 240% 100%;
+}
+
+@utility bg-brand-band-drift {
   animation: brand-band-drift 22s var(--motion-ease-standard) infinite;
 }
 
@@ -837,7 +839,7 @@
   );
   box-shadow:
     0 4px 14px color-mix(in srgb, var(--primary) 30%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #ffffff 15%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--brand-on-gradient) 15%, transparent);
   color: var(--primary-foreground);
   transition:
     background-image var(--motion-duration-base) var(--motion-ease-standard),
@@ -850,7 +852,8 @@
     );
     box-shadow:
       0 6px 18px color-mix(in srgb, var(--primary) 38%, transparent),
-      inset 0 1px 0 color-mix(in srgb, #ffffff 15%, transparent);
+      inset 0 1px 0
+      color-mix(in srgb, var(--brand-on-gradient) 15%, transparent);
   }
 }
 
@@ -865,7 +868,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in srgb, #ffffff 30%, transparent),
+      color-mix(in srgb, var(--brand-on-gradient) 30%, transparent),
       transparent
     );
     animation: shine-sweep 3s var(--motion-ease-standard) infinite;
@@ -937,7 +940,6 @@
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: 0.01em;
-  color: var(--foreground);
 }
 
 @keyframes orb-float {

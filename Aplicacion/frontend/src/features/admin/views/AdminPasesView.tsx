@@ -24,9 +24,8 @@ export function AdminPasesView() {
       />
 
       <AdminNotice title="Ingreso separado del deporte">
-        El ingreso de los pases no se mezcla con las métricas deportivas de
-        la edición: una venta de pases no es una inscripción y no ocupa
-        cupo.
+        El ingreso de los pases no se mezcla con las métricas deportivas de la
+        edición: una venta de pases no es una inscripción y no ocupa cupo.
       </AdminNotice>
 
       <AdminPanel

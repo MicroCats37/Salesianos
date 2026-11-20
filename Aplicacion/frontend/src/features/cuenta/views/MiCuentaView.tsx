@@ -1,16 +1,16 @@
 import { ArrowRight, ClipboardList, ShoppingBag, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
-import { RouteHero } from "@/components/shell/RouteHero";
-import { ShellErrorState } from "@/components/shell/ShellState";
-import { ShellPermissionDenied } from "@/components/shell/ShellState";
+import {
+  ShellErrorState,
+  ShellPermissionDenied,
+} from "@/components/shell/ShellState";
 import { Button } from "@/components/ui/button";
 import {
   Item,
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemGroup,
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
@@ -45,29 +45,62 @@ export function MiCuentaView({
   const hayResumen = estado === "listo" && Boolean(resumen);
 
   return (
-    <div className="flex flex-col gap-8">
-      <RouteHero
-        pageId="ACCOUNT-01"
-        title={
-          nombre ? `Hola, ${nombre.split(" ")[0] ?? nombre}` : "Tu cuenta de responsable"
-        }
-        description="Desde aquí sigues tus inscripciones, tus compras y el siguiente paso de cada una. El comité valida cada inscripción antes de que se active."
-        actions={
-          <Button asChild size="lg" className="min-h-11">
-            <Link href={RUTAS.cuenta.inscripcion}>
-              <Sparkles className="size-4" aria-hidden="true" />
-              Crear una inscripción
-            </Link>
-          </Button>
-        }
-      />
+    <div className="flex flex-col gap-10 pb-10">
+      <section className="relative left-1/2 w-screen -translate-x-1/2 border-b border-border bg-background px-4 py-10 sm:px-6 lg:py-12">
+        <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-eyebrow-brand text-primary">
+                Salesianos FEST 2026
+              </p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                {nombre
+                  ? `Hola, ${nombre.split(" ")[0] ?? nombre}`
+                  : "Tu cuenta de responsable"}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Aquí encontrarás el estado de tus inscripciones, los equipos y
+                los pasos que faltan para completar la participación de tu
+                promoción.
+              </p>
+            </div>
+            <Button
+              asChild
+              size="lg"
+              className="min-h-12 w-full rounded-full bg-accent px-6 text-sm font-semibold text-accent-foreground shadow-glow-brand transition-colors duration-(--motion-duration-fast) hover:bg-accent-muted sm:w-auto"
+            >
+              <Link href={RUTAS.cuenta.inscripcion}>
+                <Sparkles className="size-4" aria-hidden="true" />
+                Crear una inscripción
+              </Link>
+            </Button>
+          </div>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-section-title text-foreground">Tus operaciones</h2>
-          <p className="max-w-measure text-caption text-muted-foreground">
-            Las dos listas de la cuenta, con el estado que calcula el servidor.
-          </p>
+          <div className="flex flex-col gap-3">
+            <p className="text-eyebrow-brand text-primary/80">Cómo funciona</p>
+            <PasosInscripcion className="gap-3 sm:grid-cols-2 xl:grid-cols-4" />
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl rounded-[var(--radius-xl)] border border-border bg-surface-elevated p-6 shadow-[var(--elevation-md)] sm:p-8">
+        <div className="flex flex-col gap-1 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+          <div>
+            <p className="text-eyebrow-brand text-primary">Panel</p>
+            <h2 className="mt-1 text-title-section text-foreground">
+              Tus operaciones
+            </h2>
+            <p className="mt-1 max-w-measure text-caption text-muted-foreground">
+              Cada acceso reúne el estado, lo que falta y el siguiente paso.
+            </p>
+          </div>
+          <Link
+            href={RUTAS.publico.inicio}
+            className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:self-auto"
+          >
+            Ver el festival
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
         </div>
 
         {estado === "sin-permiso" ? (
@@ -84,36 +117,47 @@ export function MiCuentaView({
           />
         ) : null}
 
+        {/*
+          Las dos operaciones de la cuenta son REJILLA desde 1024 (SH-02
+          §1.1): a 360 y 768 se apilan a lo ancho y a 1024 y 1440 se leen de
+          un vistazo. El grupo de `Item` es una columna: la rejilla la compone
+          el contenedor, para que el hueco sea el de la retícula y no el del
+          grupo.
+        */}
         {estado !== "sin-permiso" && estado !== "error" ? (
-          <ItemGroup className="gap-2">
+          <div className="mt-5 grid gap-3 lg:grid-cols-2 lg:gap-4">
             <Item
               variant="outline"
               size="sm"
               asChild
-              className="transition-all duration-(--motion-duration-base) hover:border-primary/40 hover:shadow-[var(--elevation-md)]"
+              className="min-h-40 rounded-[var(--radius-lg)] border-border bg-background p-5 transition-colors duration-(--motion-duration-fast) hover:border-accent"
             >
               <Link href={RUTAS.cuenta.misInscripciones}>
-                <ItemMedia variant="icon">
-                  <ClipboardList className="size-4 text-primary" aria-hidden="true" />
+                <ItemMedia
+                  variant="icon"
+                  className="size-11 rounded-[var(--radius-md)] bg-primary text-primary-foreground"
+                >
+                  <ClipboardList className="size-5" aria-hidden="true" />
                 </ItemMedia>
                 <ItemContent>
-                  <ItemTitle>Mis inscripciones</ItemTitle>
-                  <ItemDescription>
+                  <ItemTitle className="text-base font-semibold">
+                    Inscripciones deportivas
+                  </ItemTitle>
+                  <ItemDescription className="max-w-sm">
                     El estado de cada registro, su paquete y las personas que
                     lleva.
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
                   {hayResumen ? (
-                    <span className="text-2xl font-bold tabular-nums text-primary">
+                    <span className="text-3xl font-semibold tabular-nums text-foreground">
                       {resumen?.inscripciones}
                       <span className="sr-only"> inscripciones</span>
                     </span>
                   ) : null}
-                  <ArrowRight
-                    className="size-4 shrink-0 text-muted-foreground transition-transform duration-(--motion-duration-fast) group-hover/item:translate-x-1"
-                    aria-hidden="true"
-                  />
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-primary transition-colors duration-(--motion-duration-fast) group-hover/item:bg-accent/10 group-hover/item:text-accent">
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </span>
                 </ItemActions>
               </Link>
             </Item>
@@ -122,55 +166,47 @@ export function MiCuentaView({
               variant="outline"
               size="sm"
               asChild
-              className="transition-all duration-(--motion-duration-base) hover:border-primary/40 hover:shadow-[var(--elevation-md)]"
+              className="min-h-40 rounded-[var(--radius-lg)] border-border bg-background p-5 transition-colors duration-(--motion-duration-fast) hover:border-accent"
             >
               <Link href={RUTAS.cuenta.misCompras}>
-                <ItemMedia variant="icon">
-                  <ShoppingBag className="size-4 text-primary" aria-hidden="true" />
+                <ItemMedia
+                  variant="icon"
+                  className="size-11 rounded-[var(--radius-md)] bg-secondary text-secondary-foreground"
+                >
+                  <ShoppingBag className="size-5" aria-hidden="true" />
                 </ItemMedia>
                 <ItemContent>
-                  <ItemTitle>Mis compras</ItemTitle>
-                  <ItemDescription>
+                  <ItemTitle className="text-base font-semibold">
+                    Compras y pagos
+                  </ItemTitle>
+                  <ItemDescription className="max-w-sm">
                     Las compras de la edición, su estado de pago y su recogida.
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
                   {hayResumen ? (
-                    <span className="text-2xl font-bold tabular-nums text-primary">
+                    <span className="text-3xl font-semibold tabular-nums text-foreground">
                       {resumen?.compras}
                       <span className="sr-only"> compras</span>
                     </span>
                   ) : null}
-                  <ArrowRight
-                    className="size-4 shrink-0 text-muted-foreground transition-transform duration-(--motion-duration-fast) group-hover/item:translate-x-1"
-                    aria-hidden="true"
-                  />
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-primary transition-colors duration-(--motion-duration-fast) group-hover/item:bg-accent/10 group-hover/item:text-accent">
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </span>
                 </ItemActions>
               </Link>
             </Item>
-          </ItemGroup>
+          </div>
         ) : null}
 
         {estado === "sin-datos" ? (
           <RouteEmptyState
             icon={ClipboardList}
-            title="Todavía no hay un resumen de la cuenta"
-            description="El resumen reúne tus inscripciones, sus pasos y sus pagos en un vistazo. Se compondrá cuando el servicio de la cuenta esté conectado; mientras tanto, las dos listas de arriba muestran lo mismo."
+            className="mt-5 min-h-0 border-dashed bg-surface-recessed/40 py-8"
+            title="Todavía no hay inscripciones para mostrar"
+            description="Crea la primera inscripción de tu promoción y podrás seguir cada etapa desde este panel."
           />
         ) : null}
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-section-title text-foreground">
-            Cómo avanza una inscripción
-          </h2>
-          <p className="max-w-measure text-caption text-muted-foreground">
-            Los cuatro pasos son los mismos para todas las promociones: lo
-            único que cambia es en cuál de ellos está la tuya.
-          </p>
-        </div>
-        <PasosInscripcion />
       </section>
     </div>
   );

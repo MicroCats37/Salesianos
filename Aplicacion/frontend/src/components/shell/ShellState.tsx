@@ -51,7 +51,12 @@ export function ShellErrorState({
       {description ? <AlertDescription>{description}</AlertDescription> : null}
       {accion ? (
         <AlertAction className="mt-3">
-          <Button variant="outline" size="sm" onClick={accion.onClick}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-h-11"
+            onClick={accion.onClick}
+          >
             <RefreshCw className="size-4" aria-hidden="true" />
             {accion.label}
           </Button>
@@ -83,7 +88,7 @@ export function ShellEmptyState({
       </EmptyHeader>
       {accion ? (
         <EmptyContent>
-          <Button size="sm" onClick={accion.onClick}>
+          <Button size="sm" className="min-h-11" onClick={accion.onClick}>
             {accion.label}
           </Button>
         </EmptyContent>

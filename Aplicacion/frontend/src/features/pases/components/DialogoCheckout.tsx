@@ -1,5 +1,7 @@
 "use client";
 
+import { Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -9,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import type {
   EnviarCompraPase,
   PaseCatalogo,
@@ -75,16 +76,19 @@ export function DialogoCheckout({
         </DialogHeader>
 
         {pago ? (
-          <div className="rounded-[var(--radius-md)] border border-border bg-surface-recessed p-3">
+          <div className="rounded-[var(--radius-lg)] border border-border bg-surface-recessed p-4">
             <EstadoPagoPase veredicto={pago} conDescripcion />
           </div>
         ) : null}
 
         <FormularioComprador enviar={enviar} pase={pase} cantidad={cantidad} />
 
-        <p className="text-caption text-muted-foreground">
-          Si cierras esta ventana, la compra no se borra: la retomas con el
-          enlace de gestión. Cerrar no cancela la compra ni confirma el pago.
+        <p className="flex items-start gap-2 rounded-[var(--radius-md)] border border-border bg-surface-recessed p-3 text-caption text-muted-foreground">
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>
+            Si cierras esta ventana, la compra no se borra: la retomas con el
+            enlace de gestión. Cerrar no cancela la compra ni confirma el pago.
+          </span>
         </p>
 
         <DialogFooter>

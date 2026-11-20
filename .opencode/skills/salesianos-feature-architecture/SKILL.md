@@ -16,7 +16,7 @@ Use when creating or restructuring a Salesianos route, page, view, container, mo
 ## Hard Rules
 
 - Before editing, read relevant `contract/`, existing source, and `Aplicacion/documentacion/03a-*`, `03b-*`, `05a-*`, and `07-*` route evidence.
-- Edit tracked `frontend/src`, never `Aplicacion/frontend`. Keep `app/**` routing-only and `'use client'` at the lowest interactive boundary.
+- Edit the frontend root selected for the current task. Keep `app/**` routing-only and `'use client'` at the lowest interactive boundary.
 - Enforce: route page -> feature view/container -> components -> hooks -> services -> schemas; keep colocated tests with each changed layer.
 - Keep transport and business rules out of pages and components. Never use raw `fetch`; delegate API construction to `salesianos-api-data`.
 - Never add to `_legacy-*`, target `Aplicacion/frontend`, or cite deleted `features-app-example` / `features-example-app` as a pattern.
@@ -33,7 +33,7 @@ Use when creating or restructuring a Salesianos route, page, view, container, mo
 
 | CURRENT BEHAVIOR | TARGET RULE | REQUIRED AGENT ACTION |
 | --- | --- | --- |
-| `Aplicacion/frontend/src` is an untracked copy; old example features are deleted; `.agent/skills/app-builder/` is legacy | `frontend/src` and current feature code are authoritative | Do not edit/cite the copies or legacy scaffolder; report any conflicting instruction |
+| A legacy copy or stale scaffold is present | The user-selected frontend root and current feature code are authoritative | Do not cite legacy scaffolding as a pattern; report only a concrete conflict with the current task |
 
 ## Execution Steps
 

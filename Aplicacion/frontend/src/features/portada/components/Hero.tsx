@@ -119,7 +119,7 @@ export function Hero() {
       className="relative overflow-hidden text-surface-inverse-foreground scroll-mt-20"
     >
       {/* Background gradient */}
-      <div className="absolute inset-0 -z-10 bg-[linear-gradient(132deg,#211e70_0%,#312e8e_48%,#1557b8_100%)]" />
+      <div className="absolute inset-0 -z-10 bg-brand-gradient-deep" />
       {/* Orbs */}
       <div className="hero-orb absolute left-[8%] top-20 -z-10 size-64 rounded-full bg-secondary/25 blur-3xl" />
       <div className="hero-orb absolute right-[2%] top-24 -z-10 size-80 rounded-full bg-brand-cyan/16 blur-3xl" />
@@ -196,7 +196,7 @@ export function Hero() {
           <div className="hero-stagger mt-6 flex flex-wrap gap-3">
             <PreinscribirButton
               size="lg"
-              className="btn-brand-gradient btn-shine h-14 rounded-2xl px-8 text-base font-black"
+              className="btn-shine h-14 rounded-2xl bg-accent px-8 text-base font-black text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
             />
             <Button
               asChild

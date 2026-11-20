@@ -27,7 +27,10 @@ export interface IndiceInformacionProps {
  * a rail that nobody asked for. From 768 it is a sticky rail and the
  * section that is being read is marked with `aria-current`.
  */
-export function IndiceInformacion({ secciones, className }: IndiceInformacionProps) {
+export function IndiceInformacion({
+  secciones,
+  className,
+}: IndiceInformacionProps) {
   const [activo, setActivo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,7 +76,12 @@ export function IndiceInformacion({ secciones, className }: IndiceInformacionPro
               <a
                 href={`#${seccion.id}`}
                 aria-current={activo === seccion.id ? "true" : undefined}
-                className="block py-2 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                className={cn(
+                  "block py-2 text-sm underline-offset-4 transition-colors hover:underline",
+                  activo === seccion.id
+                    ? "-ml-3 border-l-2 border-accent pl-3 font-semibold text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
               >
                 {seccion.titulo}
               </a>
@@ -95,8 +103,14 @@ export function IndiceInformacion({ secciones, className }: IndiceInformacionPro
                 aria-current={activo === seccion.id ? "true" : undefined}
                 className={cn(
                   "block py-2 text-sm underline-offset-4 transition-colors hover:underline",
+                  /*
+                    La "firma de oro": la sección que se está leyendo se
+                    marca con la misma regla de 2px que abre cada bloque de
+                    la portada. La regla se apoya sobre el riel del índice,
+                    así que el texto no se mueve al cambiar de sección.
+                  */
                   activo === seccion.id
-                    ? "font-semibold text-foreground"
+                    ? "-ml-3 border-l-2 border-accent pl-3 font-semibold text-foreground"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >

@@ -139,7 +139,7 @@ export function Gallery() {
               variant="outline"
               size="icon"
               onClick={scrollPrev}
-              className="rounded-full"
+              className="min-h-11 min-w-11 rounded-full"
               aria-label="Imagen anterior"
             >
               <ChevronLeft />
@@ -148,7 +148,7 @@ export function Gallery() {
               variant="outline"
               size="icon"
               onClick={scrollNext}
-              className="rounded-full"
+              className="min-h-11 min-w-11 rounded-full"
               aria-label="Siguiente imagen"
             >
               <ChevronRight />

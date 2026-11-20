@@ -1,7 +1,7 @@
 import { Store } from "lucide-react";
 import Link from "next/link";
+import { FestivalPublicPage } from "@/components/shell/FestivalPublicPage";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
-import { RouteHero } from "@/components/shell/RouteHero";
 import {
   ShellErrorState,
   ShellPendingState,
@@ -62,14 +62,12 @@ export function TiendaCatalogoView({
   const filtrado = Boolean(categoriaActiva);
 
   return (
-    <div className="flex flex-col gap-6">
-      <RouteHero
-        pageId="SHOP-01"
-        title="Tienda del festival"
-        description="La merchandising de Salesianos FEST: cada producto tiene su precio y su stock, y la recogida se confirma en el punto del evento."
-        tone="band"
-      />
-
+    <FestivalPublicPage
+      eyebrow="TIENDA / SALESIANOS FEST"
+      title={["LLEVA EL", "FESTIVAL", "CONTIGO."]}
+      highlighted="CONTIGO."
+      description="Productos oficiales para recordar el encuentro. Cada precio, existencia y entrega los confirma la organización."
+    >
       {estado === "sin-permiso" ? (
         <ShellPermissionDenied
           title="No podemos mostrarte la tienda"
@@ -92,7 +90,11 @@ export function TiendaCatalogoView({
             mensajeError ??
             "No pudimos leer los productos en este momento. Vuelve a intentarlo en unos segundos."
           }
-          accion={reintentar ? { label: "Reintentar", onClick: reintentar } : undefined}
+          accion={
+            reintentar
+              ? { label: "Reintentar", onClick: reintentar }
+              : undefined
+          }
         />
       ) : null}
 
@@ -129,7 +131,10 @@ export function TiendaCatalogoView({
       ) : null}
 
       {categorias.length > 0 ? (
-        <nav aria-label="Categorías de la tienda" className="flex flex-wrap gap-2">
+        <nav
+          aria-label="Categorías de la tienda"
+          className="flex flex-wrap gap-2"
+        >
           {categorias.map((categoria) => (
             <Link
               key={categoria.id}
@@ -159,6 +164,6 @@ export function TiendaCatalogoView({
           ))}
         </ul>
       ) : null}
-    </div>
+    </FestivalPublicPage>
   );
 }

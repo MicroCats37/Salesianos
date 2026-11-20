@@ -9,19 +9,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { ColumnaOperativa, FilaOperativa } from "../types/operaciones.types";
+import type {
+  ColumnaOperativa,
+  FilaOperativa,
+} from "../types/operaciones.types";
 
 /**
  * The classes of a cell, derived from the column.
  *
- * The contract is the same for every operational list: quantities align to
- * the right with TABULAR figures, identifiers wear the monospace face and
- * the rest is prose that may wrap.
+ * The contract is the same for every operational list AND for the shared
+ * table of the area: quantities align to the right with TABULAR figures,
+ * identifiers wear the monospace face and the rest is prose that wraps.
  */
 function clasesCelda(columna: ColumnaOperativa): string {
   return cn(
-    columna.numerico && "text-right tabular-nums",
-    columna.identificador && "font-mono text-xs tracking-tight",
+    "whitespace-normal",
+    columna.numerico && "text-right whitespace-nowrap tabular-nums",
+    columna.identificador &&
+      "whitespace-nowrap font-mono text-xs tracking-tight",
   );
 }
 
@@ -103,7 +108,7 @@ export function ListaOperativa({
           <li
             key={fila.id}
             data-operacion="fila"
-            className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4 shadow-[var(--elevation-sm)]"
+            className="flex min-h-11 flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4 shadow-[var(--elevation-sm)]"
           >
             <p className="text-sm leading-snug font-semibold text-foreground">
               {fila.celdas[titular.key]}
@@ -112,7 +117,7 @@ export function ListaOperativa({
               <dl className="grid grid-cols-1 gap-x-4 gap-y-2">
                 {resto.map((columna) => (
                   <div key={columna.key} className="flex flex-col gap-0.5">
-                    <dt className="text-xs text-foreground-muted">
+                    <dt className="text-xs text-muted-foreground">
                       {columna.label}
                     </dt>
                     <dd className="text-sm leading-snug text-foreground">
@@ -137,7 +142,7 @@ export function ListaOperativa({
                   key={columna.key}
                   scope="col"
                   className={cn(
-                    "h-11 bg-surface-recessed text-xs font-semibold tracking-[0.04em] text-foreground-muted",
+                    "h-11 bg-surface-recessed text-xs font-semibold text-muted-foreground",
                     columna.numerico && "text-right tabular-nums",
                     clasesPrioridad(columna),
                   )}
@@ -154,8 +159,8 @@ export function ListaOperativa({
                   <TableCell
                     key={columna.key}
                     className={cn(
+                      "min-h-11",
                       clasesCelda(columna),
-                      "whitespace-normal",
                       clasesPrioridad(columna),
                     )}
                   >

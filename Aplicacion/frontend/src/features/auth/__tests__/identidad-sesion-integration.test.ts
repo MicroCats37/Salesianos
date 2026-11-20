@@ -1,21 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiSend } from "@/lib/api";
 import {
+  DocumentoConsultaSchema,
   PersonaConfirmarInSchema,
   PersonaResueltaSchema,
   PersonaSchema,
-  DocumentoConsultaSchema,
 } from "../schemas/identidad.schema";
 import { SesionUsuarioSchema } from "../schemas/sesion.schema";
 import {
+  confirmarPersona,
+  consultarDocumento,
   PERSONA_BUSQUEDA_PATH,
   PERSONA_CONFIRMAR_PATH,
   PERSONA_RESOLVER_PATH,
-  confirmarPersona,
-  consultarDocumento,
   resolverPersona,
 } from "../services/identidad.service";
-import { SESION_ACTUAL_PATH, obtenerSesionActual } from "../services/sesion.service";
+import {
+  obtenerSesionActual,
+  SESION_ACTUAL_PATH,
+} from "../services/sesion.service";
 import { authClaves } from "../utils/auth.claves.utils";
 
 /**
@@ -163,11 +166,10 @@ describe("las rutas de la identidad", () => {
       numero_documento: "12345678",
     });
 
-    expect(apiSend).toHaveBeenCalledWith(
-      "POST",
-      PERSONA_RESOLVER_PATH,
-      { tipo_documento: "DNI", numero_documento: "12345678" },
-    );
+    expect(apiSend).toHaveBeenCalledWith("POST", PERSONA_RESOLVER_PATH, {
+      tipo_documento: "DNI",
+      numero_documento: "12345678",
+    });
   });
 
   it("confirma la identidad en la ruta registrada", async () => {
@@ -184,17 +186,13 @@ describe("las rutas de la identidad", () => {
       genero: "F",
     });
 
-    expect(apiSend).toHaveBeenCalledWith(
-      "POST",
-      PERSONA_CONFIRMAR_PATH,
-      {
-        tipo_documento: "DNI",
-        numero_documento: "12345678",
-        nombres: "ANA",
-        apellidos: "PEREZ",
-        genero: "F",
-      },
-    );
+    expect(apiSend).toHaveBeenCalledWith("POST", PERSONA_CONFIRMAR_PATH, {
+      tipo_documento: "DNI",
+      numero_documento: "12345678",
+      nombres: "ANA",
+      apellidos: "PEREZ",
+      genero: "F",
+    });
   });
 });
 

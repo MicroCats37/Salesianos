@@ -3,10 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { handleApiError } from "@/errors";
 import { useSesionActual } from "@/features/auth/hooks";
-import {
-  useConfirmarTicket,
-  usePreviewTicket,
-} from "../hooks/useValidacion";
+import { useConfirmarTicket, usePreviewTicket } from "../hooks/useValidacion";
 import type {
   EstadoVistaValidaciones,
   ResultadoValidacion,
@@ -130,7 +127,17 @@ function claveDeIdempotencia(codigo: string): string {
 
 /** The name of the operator, as the session publishes it. */
 function nombreDelOperador(sesion: unknown): string {
-  const cuenta = (sesion as { cuenta?: { nombres?: string | null; apellidos?: string | null; username?: string } } | undefined)?.cuenta;
+  const cuenta = (
+    sesion as
+      | {
+          cuenta?: {
+            nombres?: string | null;
+            apellidos?: string | null;
+            username?: string;
+          };
+        }
+      | undefined
+  )?.cuenta;
   if (!cuenta) return "";
   const nombre = [cuenta.nombres, cuenta.apellidos].filter(Boolean).join(" ");
   return nombre || cuenta.username || "";

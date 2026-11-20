@@ -57,7 +57,7 @@ from modules.marketplace.presentation.presenters.inventario_presenter import (
 )
 from modules.marketplace.presentation.schemas.inventario_schemas import (
     EntregaConfirmadaOut,
-    EntregaPendienteOut,
+    EntregasOut,
     InventarioProductoOut,
     MovimientoInventarioOut,
     RegistrarMovimientoInventarioIn,
@@ -161,20 +161,20 @@ class InventarioController:
 
     @route.get(
         "/entregas",
-        response={200: ApiResponse[list[EntregaPendienteOut]]},
-        summary="Pedidos pagados que esperan su entrega",
+        response={200: ApiResponse[EntregasOut]},
+        summary="Recogidas pendientes y entregadas de la edición vigente",
         permissions=[RequireAdmin],
     )
     async def listar_entregas(self):
-        """La cola de entregas pendientes.
+        """Las colas de recogidas pendientes y entregadas.
 
         Route: GET /api/administracion/marketplace/entregas
 
-        Un pedido pagado y entregado NO aparece: la lista se decide por el
-        estado de la ENTREGA (`RN-M07` · `QA-M04`).
+        Ambas tablas se deciden por el estado de la ENTREGA (`RN-M07` ·
+        `QA-M04`), no por el pago.
         """
         items = await self.orchestrator.listar_entregas()
-        return success_response(EntregaPresenter.present_pendientes(items))
+        return success_response(EntregaPresenter.present_listado(items))
 
     # ── RT-MK-11 · POST …/entregas/{pedido_id}/confirmar ────────────────────
 

@@ -1,4 +1,4 @@
-export { useCatalogoPases, type ParamsCatalogoPases } from "./useCatalogoPases";
+export { type ParamsCatalogoPases, useCatalogoPases } from "./useCatalogoPases";
 export { useCompraPase } from "./useCompraPase";
 export {
   useAsignarBeneficiario,

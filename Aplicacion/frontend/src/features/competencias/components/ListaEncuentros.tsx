@@ -1,12 +1,12 @@
 import { CalendarClock } from "lucide-react";
 import { AdminEmptyState } from "@/features/admin/components";
-import { TarjetaEncuentro } from "./TarjetaEncuentro";
-import { formatearInstante } from "../utils/competencias.fecha.utils";
 import type {
   Encuentro,
   VistaPreviaAvance,
   VistaPreviaCorreccion,
 } from "../types/competencia.types";
+import { formatearInstante } from "../utils/competencias.fecha.utils";
+import { TarjetaEncuentro } from "./TarjetaEncuentro";
 
 /**
  * ListaEncuentros - the encounters of a competition or of a day.
@@ -52,9 +52,7 @@ export function ListaEncuentros({
             ) : null}
             <TarjetaEncuentro
               encuentro={encuentro}
-              vistaPreviaAvance={
-                vistaPreviaAvancePorEncuentro?.[encuentro.id]
-              }
+              vistaPreviaAvance={vistaPreviaAvancePorEncuentro?.[encuentro.id]}
               vistaPreviaCorreccion={
                 vistaPreviaCorreccionPorEncuentro?.[encuentro.id]
               }

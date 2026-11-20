@@ -115,9 +115,7 @@ export function RouteHero({
           <dl
             className={cn(
               "flex flex-wrap gap-x-8 gap-y-3 border-t pt-5",
-              esHero
-                ? "border-brand-on-gradient-border"
-                : "border-border/70",
+              esHero ? "border-brand-on-gradient-border" : "border-border/70",
             )}
           >
             {facts.map((dato) => (

@@ -257,6 +257,10 @@ class ConfirmarPagoIn(BaseSchema):
         "populate_by_name": True,
     }
 
+    kr_answer: dict | None = Field(
+        default=None,
+        description="Payload íntegro que entrega el SDK de Izipay.",
+    )
     transaction_id: str | None = Field(
         default=None,
         validation_alias=AliasChoices("transaction_id", "transactionId"),

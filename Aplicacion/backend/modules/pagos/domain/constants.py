@@ -196,6 +196,12 @@ class OrigenPago(models.TextChoices):
     SIN_PAGO = "SIN_PAGO", "Sin pago"
 
 
+class EstadoAprobacionPagoManual(models.TextChoices):
+    """Estado de la evidencia administrativa de un pago externo."""
+
+    APROBADA = "APROBADA", "Aprobada"
+
+
 # ── Canal de la confirmación ────────────────────────────────────────────────
 
 

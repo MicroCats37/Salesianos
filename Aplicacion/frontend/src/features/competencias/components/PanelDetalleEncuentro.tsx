@@ -10,22 +10,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  ChipBloqueo,
-  ChipEstadoCompetencia,
-} from "./ChipEstadoCompetencia";
-import { VistaPreviaAvancePanel } from "./VistaPreviaAvancePanel";
-import { VistaPreviaCorreccionPanel } from "./VistaPreviaCorreccionPanel";
-import {
-  etiquetaAccion,
-  estadoEncuentro,
-} from "../utils/competencias.estados.utils";
-import { formatearInstante } from "../utils/competencias.fecha.utils";
 import type {
   Encuentro,
   VistaPreviaAvance,
   VistaPreviaCorreccion,
 } from "../types/competencia.types";
+import {
+  estadoEncuentro,
+  etiquetaAccion,
+} from "../utils/competencias.estados.utils";
+import { formatearInstante } from "../utils/competencias.fecha.utils";
+import { ChipBloqueo, ChipEstadoCompetencia } from "./ChipEstadoCompetencia";
+import { VistaPreviaAvancePanel } from "./VistaPreviaAvancePanel";
+import { VistaPreviaCorreccionPanel } from "./VistaPreviaCorreccionPanel";
 
 /**
  * PanelDetalleEncuentro - the ONE match detail of the area.
@@ -74,7 +71,10 @@ function nombreParticipante(encuentro: Encuentro, indice: number): string {
 }
 
 /** The seed of a participant, or `null` when the backend did not publish one. */
-function ordenParticipante(encuentro: Encuentro, indice: number): number | null {
+function ordenParticipante(
+  encuentro: Encuentro,
+  indice: number,
+): number | null {
   return (
     encuentro.participantes.find((p) => p.slot === `PARTICIPANTE_${indice + 1}`)
       ?.orden ?? null
@@ -139,22 +139,26 @@ export function PanelDetalleEncuentro({
               <dt className="text-caption text-muted-foreground">
                 Participante 1
               </dt>
-              <dd className="text-sm font-semibold text-foreground">{equipo1}</dd>
+              <dd className="text-sm font-semibold text-foreground">
+                {equipo1}
+              </dd>
               <dd className="text-caption text-muted-foreground">
                 {semilla1 === null
-                  ? "Sin semilla publicada"
-                  : `Semilla ${semilla1}`}
+                  ? "Sin orden publicado"
+                  : `Orden ${semilla1}`}
               </dd>
             </div>
             <div className="rounded-[var(--radius-md)] border border-border bg-surface-recessed p-3">
               <dt className="text-caption text-muted-foreground">
                 Participante 2
               </dt>
-              <dd className="text-sm font-semibold text-foreground">{equipo2}</dd>
+              <dd className="text-sm font-semibold text-foreground">
+                {equipo2}
+              </dd>
               <dd className="text-caption text-muted-foreground">
                 {semilla2 === null
-                  ? "Sin semilla publicada"
-                  : `Semilla ${semilla2}`}
+                  ? "Sin orden publicado"
+                  : `Orden ${semilla2}`}
               </dd>
             </div>
             <div className="rounded-[var(--radius-md)] border border-border bg-surface-recessed p-3">
@@ -186,10 +190,10 @@ export function PanelDetalleEncuentro({
           <div className="flex flex-col gap-2">
             <p className="text-caption text-muted-foreground">Estado</p>
             <div className="flex flex-wrap items-center gap-2">
-              <ChipEstadoCompetencia estado={estadoEncuentro(encuentro.estado)} />
-              {encuentro.es_bye ? (
-                <ChipBloqueo motivo="Pase libre" />
-              ) : null}
+              <ChipEstadoCompetencia
+                estado={estadoEncuentro(encuentro.estado)}
+              />
+              {encuentro.es_bye ? <ChipBloqueo motivo="Pase libre" /> : null}
             </div>
           </div>
 
@@ -247,8 +251,8 @@ export function PanelDetalleEncuentro({
           ) : null}
 
           <p className="text-caption text-muted-foreground">
-            Versión del recurso: {encuentro.version}. Un cambio con una
-            versión anterior se rechaza y no se escribe nada.
+            Versión del recurso: {encuentro.version}. Un cambio con una versión
+            anterior se rechaza y no se escribe nada.
           </p>
         </div>
 

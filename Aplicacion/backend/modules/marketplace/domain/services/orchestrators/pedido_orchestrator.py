@@ -24,6 +24,7 @@ from modules.marketplace.domain.results.pedido_result import (
 )
 from modules.marketplace.domain.schemas.pedido_schemas import PedidoCreateData
 from modules.marketplace.domain.services.flujos.pedido_flujo import PedidoFlujo
+from modules.salesianos_fest.domain.ports import IObtensionPersonaService
 
 
 class PedidoOrchestrator:
@@ -34,9 +35,11 @@ class PedidoOrchestrator:
         self,
         flujo: PedidoFlujo,
         titularidad: ITitularidadActorService,
+        obtencion_persona: IObtensionPersonaService,
     ):
         self.flujo = flujo
         self.titularidad = titularidad
+        self.obtencion_persona = obtencion_persona
 
     async def crear_pedido(
         self,
@@ -55,9 +58,7 @@ class PedidoOrchestrator:
         Raises:
             `CompradorSinPersonaError`: la cuenta no tiene persona vinculada.
         """
-        persona_id = await sync_to_async(self._persona_id)(usuario)
-        if not persona_id:
-            raise CompradorSinPersonaError()
+        persona_id = await sync_to_async(self._resolver_comprador)(usuario, data)
         return await self.flujo.crear_pedido(data, persona_id)
 
     async def obtener_pedido_por_token(
@@ -96,6 +97,21 @@ class PedidoOrchestrator:
         if usuario is None:
             return None
         return self.titularidad.persona_id_del_actor(usuario)
+
+    def _resolver_comprador(self, usuario, data: PedidoCreateData) -> str:
+        """Resuelve la identidad en servidor sin crear una cuenta invitada."""
+        persona_id = self._persona_id(usuario)
+        if persona_id:
+            return str(persona_id)
+        if usuario is not None and getattr(usuario, "is_authenticated", False):
+            raise CompradorSinPersonaError()
+        persona = self.obtencion_persona.obtener_o_registrar(
+            tipo_documento=data.tipo_documento,
+            numero_documento=data.numero_documento,
+            nombres=data.nombres,
+            apellidos=data.apellidos,
+        )
+        return str(persona.id)
 
 
 __all__ = ["PedidoOrchestrator"]

@@ -1,6 +1,4 @@
-export {
-  AuditoriaValidacionesView,
-} from "./AuditoriaValidacionesView";
+export { AuditoriaValidacionesView } from "./AuditoriaValidacionesView";
 export { ValidarEntregaRuta } from "./ValidarEntregaRuta";
 export { ValidarEntregaView } from "./ValidarEntregaView";
 export { ValidarPaseRuta } from "./ValidarPaseRuta";

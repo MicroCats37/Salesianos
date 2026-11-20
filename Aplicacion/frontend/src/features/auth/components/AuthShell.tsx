@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
 import { gsap } from "gsap";
-import { AuthVisualPanel } from "@/features/auth/components/AuthVisualPanel";
+import { type ReactNode, useEffect } from "react";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
+import {
+  AuthVisualPanel,
+  EVENTO_FEST,
+} from "@/features/auth/components/AuthVisualPanel";
 
 export type AuthVariant = "login" | "register";
 
@@ -20,8 +23,9 @@ export interface AuthShellProps {
  * AuthShell — la ENVOLVENTE del acceso.
  *
  * Dos columnas en escritorio: la banda de marca y el formulario. En móvil la
- * banda se oculta, pero la marca NO desaparece: se queda la marca compacta
- * arriba del formulario, para que la persona sepa en qué sitio está.
+ * banda se colapsa en una cabecera de marca sobre el formulario, para que la
+ * persona sepa en qué sitio está sin que la fotografía le robe el foco a la
+ * tarea.
  *
  * El reveal es UN momento orquestado (pauta §8) y se apaga por completo con
  * `prefers-reduced-motion`.
@@ -81,8 +85,20 @@ export function AuthShell({
         </div>
 
         <div className="auth-shell-card relative z-10 w-full max-w-[480px] py-4">
-          <div className="mb-6 flex justify-center lg:hidden">
-            <BrandMark size={26} />
+          {/*
+            Debajo de 1024 el panel de marca se colapsa en una CABECERA: el
+            formulario sigue mandando, pero la identidad no se pierde.
+
+            El wordmark es la variante para fondo oscuro (`brand.png`, blanco y
+            azul): la marina (`brand2.png`) se pierde sobre el gradiente
+            profundo. Y la fecha y el lugar son los del propio panel de
+            marca, no una segunda version de ese dato.
+          */}
+          <div className="mb-6 flex flex-col items-center gap-2.5 lg:hidden">
+            <BrandMark size={30} wordmark="brand" />
+            <span className="text-eyebrow-brand text-accent">
+              {EVENTO_FEST.date} · {EVENTO_FEST.place}
+            </span>
           </div>
           {form}
         </div>

@@ -30,7 +30,7 @@ function datosDe<T>(envelope: { data: T | null }): T {
 const ESTADO_PENDIENTE = {
   codigo: "PENDIENTE",
   etiqueta: "Pago pendiente",
-  descripcion: "El pago todavía no se ha confirmado.",
+  descripcion: "El pago todavía no ha sido confirmado.",
 };
 
 const PAGO = {
@@ -80,7 +80,6 @@ export const detallePagoAdmin: AdminPagoDetalleOut = pagoAdminDetalleDesdeWire(
           estado: "PENDIENTE",
           total: "0.00",
           moneda: "PEN",
-          reutilizada: false,
         },
         origen_pago: "SIN_PAGO",
         intentos: [

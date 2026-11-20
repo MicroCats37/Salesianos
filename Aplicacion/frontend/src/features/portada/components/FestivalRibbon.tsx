@@ -24,7 +24,7 @@ export function FestivalRibbon({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative snap-none overflow-hidden border-y border-primary-foreground/10 bg-primary py-3",
+        "relative snap-none overflow-hidden border-y border-brand-on-gradient-border bg-brand-gradient-deep py-3",
         className,
       )}
     >
@@ -47,7 +47,7 @@ export function FestivalRibbon({ className }: { className?: string }) {
           >
             {COPY.ribbon.map((palabra) => (
               <span key={palabra} className="flex items-center gap-6">
-                <span className="text-xs font-black uppercase tracking-[0.25em] text-primary-foreground/90 sm:text-sm">
+                <span className="text-xs font-black uppercase tracking-[0.25em] text-brand-on-gradient sm:text-sm">
                   {palabra}
                 </span>
                 <span className="text-accent" aria-hidden="true">

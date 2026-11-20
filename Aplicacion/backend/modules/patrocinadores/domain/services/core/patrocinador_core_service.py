@@ -143,6 +143,7 @@ class PatrocinadorCoreService:
             descripcion=patrocinador.descripcion or "",
             sitio_web=patrocinador.sitio_web or "",
             visible=bool(patrocinador.visible),
+            orden=patrocinador.orden,
             logo=logo,
             imagenes=[self.result_imagen(imagen) for imagen in imagenes],
             created_at=patrocinador.created_at,

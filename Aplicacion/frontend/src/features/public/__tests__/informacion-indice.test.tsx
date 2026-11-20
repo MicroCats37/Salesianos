@@ -1,8 +1,25 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { InformacionView } from "../views/InformacionView";
+
+/**
+ * The renders of this suite happen inside a `QueryClientProvider`: the view
+ * reads the edition with a hook of TanStack Query and a hook needs the
+ * provider. The provider is created per render and it NEVER retries.
+ */
+function renderConProveedor(elemento: ReactNode) {
+  const cliente = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
+  return render(
+    <QueryClientProvider client={cliente}>{elemento}</QueryClientProvider>,
+  );
+}
 
 /**
  * The anchor navigation of the information page.
@@ -13,7 +30,7 @@ import { InformacionView } from "../views/InformacionView";
  */
 describe("PUB-02 - el índice de anclas", () => {
   it("el índice es una navegación con nombre accesible", () => {
-    render(<InformacionView />);
+    renderConProveedor(<InformacionView />);
 
     expect(
       screen.getByRole("navigation", { name: "Contenido de esta página" }),
@@ -21,11 +38,9 @@ describe("PUB-02 - el índice de anclas", () => {
   });
 
   it("cada ancla del índice resuelve a una sección que existe", () => {
-    const { container } = render(<InformacionView />);
+    const { container } = renderConProveedor(<InformacionView />);
 
-    const enlaces = Array.from(
-      container.querySelectorAll('nav a[href^="#"]'),
-    );
+    const enlaces = Array.from(container.querySelectorAll('nav a[href^="#"]'));
 
     expect(enlaces.length).toBeGreaterThan(0);
 
@@ -37,7 +52,7 @@ describe("PUB-02 - el índice de anclas", () => {
   });
 
   it("la página ofrece el camino a la inscripción", () => {
-    render(<InformacionView />);
+    renderConProveedor(<InformacionView />);
 
     expect(
       screen.getByRole("link", { name: "Crear una inscripción" }),

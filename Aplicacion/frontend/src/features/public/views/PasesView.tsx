@@ -10,13 +10,13 @@ const PASOS = [
   },
   {
     titulo: "Completa el pago",
-    detalle: "El precio y la moneda los fija el servidor en el momento del pago.",
+    detalle:
+      "El precio y la moneda los fija el servidor en el momento del pago.",
     Icono: CreditCard,
   },
   {
     titulo: "Asigna los beneficiarios",
-    detalle:
-      "Después del pago, el acceso permite elegir quién usa cada pase.",
+    detalle: "Después del pago, el acceso permite elegir quién usa cada pase.",
     Icono: UserRound,
   },
 ] as const;
@@ -52,7 +52,7 @@ export function PasesView() {
             return (
               <li
                 key={paso.titulo}
-                className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 transition-all duration-(--motion-duration-base) hover:-translate-y-0.5 hover:border-border-strong hover:shadow-[var(--elevation-sm)]"
+                className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 transition-colors duration-(--motion-duration-fast) hover:border-border-strong"
               >
                 <span className="flex items-center gap-2">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">

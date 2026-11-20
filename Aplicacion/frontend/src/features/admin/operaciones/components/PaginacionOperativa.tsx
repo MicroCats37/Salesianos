@@ -61,9 +61,13 @@ export function PaginacionOperativa({
     <div className="flex flex-col gap-3 border-t border-border pt-4">
       <p className="text-sm text-muted-foreground">
         Mostrando{" "}
-        <span className="font-medium tabular-nums text-foreground">{primero}</span>{" "}
+        <span className="font-medium tabular-nums text-foreground">
+          {primero}
+        </span>{" "}
         a{" "}
-        <span className="font-medium tabular-nums text-foreground">{ultimo}</span>{" "}
+        <span className="font-medium tabular-nums text-foreground">
+          {ultimo}
+        </span>{" "}
         de{" "}
         <span className="font-medium tabular-nums text-foreground">
           {pagina.total}
@@ -79,9 +83,9 @@ export function PaginacionOperativa({
               text="Anterior"
               aria-label="Ir a la página anterior"
               aria-disabled={pagina.page === 1}
-              className={
-                pagina.page === 1 ? "pointer-events-none opacity-50" : undefined
-              }
+              className={`min-h-11 ${
+                pagina.page === 1 ? "pointer-events-none opacity-50" : ""
+              }`}
             />
           </PaginationItem>
 
@@ -91,6 +95,7 @@ export function PaginacionOperativa({
                 href={urlDePagina(parametros, numero)}
                 isActive={numero === pagina.page}
                 aria-label={`Ir a la página ${numero}`}
+                className="min-h-11"
               >
                 {numero}
               </PaginationLink>
@@ -106,11 +111,11 @@ export function PaginacionOperativa({
               text="Siguiente"
               aria-label="Ir a la página siguiente"
               aria-disabled={pagina.page === pagina.total_pages}
-              className={
+              className={`min-h-11 ${
                 pagina.page === pagina.total_pages
                   ? "pointer-events-none opacity-50"
-                  : undefined
-              }
+                  : ""
+              }`}
             />
           </PaginationItem>
         </PaginationContent>

@@ -21,9 +21,9 @@ describe("fieldPathFromLocation", () => {
   });
 
   it("keeps the nested path with its indexes", () => {
-    expect(fieldPathFromLocation(["body", "beneficiarios", 0, "documento"])).toBe(
-      "beneficiarios.0.documento",
-    );
+    expect(
+      fieldPathFromLocation(["body", "beneficiarios", 0, "documento"]),
+    ).toBe("beneficiarios.0.documento");
   });
 
   it("returns undefined when there is no field", () => {
@@ -43,7 +43,11 @@ describe("parseFieldErrors — the frozen channel", () => {
         message: "La solicitud no es válida.",
         details: null,
         field_errors: [
-          { field: "titulo", code: "REQUIRED", message: "El título es obligatorio." },
+          {
+            field: "titulo",
+            code: "REQUIRED",
+            message: "El título es obligatorio.",
+          },
           {
             field: "beneficiarios.0.documento",
             code: "INVALID_VALUE",
@@ -92,8 +96,16 @@ describe("parseFieldErrors — the legacy wire shapes", () => {
   it("reads the Django Ninja / Pydantic detail[]", () => {
     const body = {
       detail: [
-        { loc: ["body", "titulo"], msg: "Este campo es requerido.", type: "value_error.missing" },
-        { loc: ["body", "precio"], msg: "Un número es requerido.", type: "type_error.number" },
+        {
+          loc: ["body", "titulo"],
+          msg: "Este campo es requerido.",
+          type: "value_error.missing",
+        },
+        {
+          loc: ["body", "precio"],
+          msg: "Un número es requerido.",
+          type: "type_error.number",
+        },
       ],
     };
 
@@ -133,7 +145,11 @@ describe("parseFieldErrorEntries", () => {
     const body = {
       error: {
         field_errors: [
-          { field: "cantidad", code: "CANTIDAD_INVALIDA", message: "La cantidad no es válida." },
+          {
+            field: "cantidad",
+            code: "CANTIDAD_INVALIDA",
+            message: "La cantidad no es válida.",
+          },
         ],
       },
     };
@@ -148,7 +164,9 @@ describe("parseFieldErrorEntries", () => {
   });
 
   it("returns an empty list when the body carries no field error", () => {
-    expect(parseFieldErrorEntries({ error: { message: "Fallo." } })).toEqual([]);
+    expect(parseFieldErrorEntries({ error: { message: "Fallo." } })).toEqual(
+      [],
+    );
     expect(parseFieldErrorEntries(undefined)).toEqual([]);
     expect(parseFieldErrorEntries("texto")).toEqual([]);
   });

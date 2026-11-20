@@ -1,56 +1,5 @@
-import {
-  CheckCircle2,
-  CircleSlash,
-  Clock,
-  Loader2,
-  TriangleAlert,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { ChipPago, CUBOS_PAGO } from "@/features/pagos/components";
 import type { RolPago, VeredictoPago } from "../types/pase.types";
-
-/**
- * The visual bucket of every payment verdict (`SH-01` §3.2).
- *
- * The bucket is PRESENTATIONAL: it says how the chip is painted, never what
- * the verdict means. The meaning lives in the label the backend sent, which
- * the chip prints verbatim.
- *
- * The colour never carries the meaning alone (`SH-02` A11Y-11): every bucket
- * has its own ICON SHAPE and its own TEXT.
- */
-const CUBOS: Record<
-  RolPago,
-  { icono: LucideIcon; superficie: string; trazo: string }
-> = {
-  pendiente: {
-    icono: Clock,
-    superficie: "border-warning/45 bg-warning/12",
-    trazo: "text-warning",
-  },
-  verificando: {
-    icono: Loader2,
-    superficie: "border-warning/45 bg-warning/12",
-    trazo: "text-warning",
-  },
-  confirmado: {
-    icono: CheckCircle2,
-    superficie: "border-success/45 bg-success/12",
-    trazo: "text-success",
-  },
-  "sin-confirmar": {
-    icono: CircleSlash,
-    superficie: "border-border bg-surface-recessed",
-    trazo: "text-foreground-muted",
-  },
-  atencion: {
-    icono: TriangleAlert,
-    superficie: "border-info/45 bg-info/12",
-    trazo: "text-info",
-  },
-};
 
 /**
  * The safe next step of each of the five presentable payment states.
@@ -95,6 +44,12 @@ export interface EstadoPagoPaseProps {
  * bucket and the LABEL of the backend. The label is printed verbatim: the
  * interface never rewrites the wording the server chose (`SH-03` §6).
  *
+ * The PAINT is not owned here. The buckets of the payment channel live in the
+ * payment area (`features/pagos/components`), because the visual payment
+ * component is shared by every checkout of the product (`GOV-02-RB-02a`). What
+ * belongs to this surface is the NEXT STEP of each state: the pass surface is
+ * the one that knows which action makes sense for a pass.
+ *
  * The client never derives a payment state from a modal close or a timeout
  * (`GOV-02-RB-02d`): it draws the verdict it is given.
  */
@@ -104,47 +59,18 @@ export function EstadoPagoPase({
   accion,
   className,
 }: EstadoPagoPaseProps) {
-  const cubo = CUBOS[veredicto.rol] ?? CUBOS["sin-confirmar"];
-  const Icono = cubo.icono;
+  const cubo = CUBOS_PAGO[veredicto.rol] ?? CUBOS_PAGO["sin-confirmar"];
   const etiquetaAccion = accion?.etiqueta ?? ACCIONES[veredicto.rol];
 
   return (
-    <span className={cn("inline-flex flex-col gap-1.5", className)}>
-      <span
-        className={cn(
-          "inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1",
-          cubo.superficie,
-        )}
-      >
-        <Icono className={cn("size-3.5 shrink-0", cubo.trazo)} aria-hidden="true" />
-        <span className="text-xs font-semibold text-foreground">
-          {veredicto.estado.etiqueta}
-        </span>
-      </span>
-
-      {conDescripcion ? (
-        <span className="text-caption text-muted-foreground">
-          {veredicto.estado.descripcion}
-        </span>
-      ) : null}
-
-      {accion ? (
-        accion.href ? (
-          <Button asChild variant="outline" size="sm" className="min-h-11 w-fit">
-            <Link href={accion.href}>{etiquetaAccion}</Link>
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="min-h-11 w-fit"
-            onClick={accion.onClick}
-          >
-            {etiquetaAccion}
-          </Button>
-        )
-      ) : null}
-    </span>
+    <ChipPago
+      etiqueta={veredicto.estado.etiqueta}
+      descripcion={conDescripcion ? veredicto.estado.descripcion : undefined}
+      icono={cubo.icono}
+      superficie={cubo.superficie}
+      trazo={cubo.trazo}
+      accion={accion ? { ...accion, etiqueta: etiquetaAccion } : undefined}
+      className={className}
+    />
   );
 }

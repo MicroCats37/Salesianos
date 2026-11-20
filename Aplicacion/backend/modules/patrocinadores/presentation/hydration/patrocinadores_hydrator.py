@@ -145,6 +145,14 @@ class PatrocinadorHydrator:
         )
 
     @classmethod
+    def hydrate_archivo(cls, request, token: str) -> ArchivoPatrocinadorUploadData:
+        """Resuelve y valida una única pieza de media para un reemplazo."""
+        crudo = cls.payload_crudo(request)
+        archivos = parsear_archivos_media(request.FILES)
+        resueltos = resolver_tokens_media(crudo, archivos)
+        return cls._upload(token, resueltos)
+
+    @classmethod
     def _hidratar_logo(cls, datos: CrearPatrocinadorIn, resueltos) -> LogoPatrocinadorData | None:
         """Hidrata el logo de identidad, si el payload lo declara."""
         if not datos.logo:

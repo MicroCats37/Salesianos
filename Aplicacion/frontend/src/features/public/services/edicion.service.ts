@@ -1,10 +1,10 @@
-import { ApiQueryError } from "@/hooks/callsApi/useApiQuery";
 import { handleApiError } from "@/errors";
+import { ApiQueryError } from "@/hooks/callsApi/useApiQuery";
 import { apiSend } from "@/lib/api";
 import { apiResponseSchema } from "@/types/api.types";
 import {
-  EdicionActualSchema,
   type EdicionActual,
+  EdicionActualSchema,
 } from "../schemas/edicion.schema";
 
 /**
@@ -28,7 +28,8 @@ export const EDICION_ACTUAL_PATH = "/ediciones/actual";
  * read by the shared error handler (`handleApiError`); the success branch is
  * parsed here, loudly.
  */
-const edicionActualResponseSchema = apiResponseSchema(EdicionActualSchema);
+export const edicionActualResponseSchema =
+  apiResponseSchema(EdicionActualSchema);
 
 /**
  * Reads the edition that the backend publishes as the current one.

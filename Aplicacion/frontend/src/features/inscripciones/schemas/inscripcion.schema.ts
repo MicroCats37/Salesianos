@@ -12,6 +12,33 @@ import { z } from "zod";
  * never a silently wrong field.
  */
 
+/**
+ * A reference to a record of the area (mirrors the `referencia` block).
+ *
+ * The band of a team and the cohort of a registration travel as a reference
+ * and not as a flat list of columns: the server publishes the identity and
+ * the name, and the browser prints both without deriving anything.
+ */
+export const referenciaEquipoSchema = z.object({
+  id: z.string(),
+  nombre: z.string(),
+});
+
+/**
+ * The cohort of a registration (mirrors `PromocionOut`).
+ *
+ * It is the year that the visitor EXPLICITLY selected. The secondary cohort
+ * of a fused registration (`fusion_promocion`) is DESCRIPTIVE metadata: it
+ * never changes the band, the cupos, the payment, the team or the
+ * eligibility.
+ */
+export const promocionInscripcionSchema = referenciaEquipoSchema.extend({
+  /** The year of the cohort. */
+  anio: z.number().int(),
+});
+
+export type PromocionInscripcion = z.infer<typeof promocionInscripcionSchema>;
+
 /** A team of a registration (mirrors `EquipoOut`). */
 export const equipoSchema = z.object({
   id: z.string(),
@@ -20,6 +47,14 @@ export const equipoSchema = z.object({
   disciplina_id: z.string(),
   disciplina_nombre: z.string(),
   nombre: z.string(),
+  /**
+   * The competitive band of the team, DERIVED by the server from the cohort
+   * of its registration.
+   *
+   * The client NEVER sends it and NEVER derives it: it prints the band that
+   * the server resolved (`RN-C02`, `QA-K01`).
+   */
+  categoria: referenciaEquipoSchema,
   /** `ACTIVO` or `RETIRADO`. */
   estado: z.string(),
 });
@@ -41,6 +76,15 @@ export const inscripcionDetalleSchema = z.object({
   responsable_id: z.string(),
   paquete_id: z.string(),
   paquete_nombre: z.string(),
+  /** The cohort that the visitor selected when the registration was created. */
+  promocion: promocionInscripcionSchema,
+  /**
+   * The secondary cohort of a fused registration.
+   *
+   * It is DESCRIPTIVE metadata: `null` when there is no fusion, and it never
+   * changes the band, the cupos, the payment, the team or the eligibility.
+   */
+  fusion_promocion: promocionInscripcionSchema.nullable(),
   /** `CREADA` or `CANCELADA`. */
   estado: z.string(),
   referencia: z.string(),
@@ -122,13 +166,46 @@ export type EquipoIn = z.infer<typeof equipoInSchema>;
  * authenticated account (`RN-U04`). The price does NOT travel either: the
  * server resolves it against the catalogue in force (`RN-C02`).
  *
- * The number of teams is NOT bounded here on purpose: the limit is a domain
- * rule that the server declares and enforces, and it answers 422 with its
- * field error when it is exceeded.
+ * The number of teams a registration may declare is NOT bounded here on
+ * purpose: the limit is a domain rule that the server declares and enforces,
+ * and it answers 422 with its field error when it is exceeded.
+ *
+ * ## The cohort
+ *
+ * `promocion_id` travels because the visitor EXPLICITLY selects it: it is
+ * the only input from which the server derives the competitive band of the
+ * teams. The client does NOT send the band (`equipos[].categoria_id` does not
+ * exist on the wire): the band is a SERVER-DERIVED fact.
+ *
+ * ## The quantity
+ *
+ * `cantidad` travels because it is the DECISION of the visitor: the number of
+ * cupos that the registration buys. It is not a price and not a total: the
+ * server resolves the money against the catalogue in force.
  */
 export const inscripcionInicialInSchema = z.object({
   edicion_id: z.string(),
   paquete_id: z.string(),
+  /** The cohort that the visitor selected. */
+  promocion_id: z.string(),
+  /** The number of cupos that the registration buys. */
+  cantidad: z.number().int().min(1),
+  /**
+   * The secondary cohort of a fused registration.
+   *
+   * It is OPTIONAL and it is DESCRIPTIVE: it names the visible label of a
+   * fused cohort and it never changes the band, the cupos, the payment, the
+   * team or the eligibility.
+   */
+  fusion_promocion_id: z.string().nullable().optional(),
+  /**
+   * The version of the price that the quotation resolved.
+   *
+   * It is the CONCURRENCY TOKEN of the quotation and it travels ONLY when a
+   * quotation exists. It is not a price: the server resolves the money again
+   * and rejects the alta when the catalogue moved (`RN-C02`).
+   */
+  cotizacion_version: z.number().int().nullable().optional(),
   equipos: z.array(equipoInSchema).min(1),
 });
 

@@ -14,7 +14,11 @@ import {
  * the server publishes and the mirror forgets, is a drift (`FR-07` §4).
  */
 
-const UUID = "11111111-2222-3333-4444-555555555555";
+// The identifiers of the domain are UUIDs: the mirror declares them as such
+// (`z.string().uuid()`), so the examples must be CANONICAL UUIDs (the
+// RFC-4122 version and variant bits included). A string with reserved bits is
+// not a UUID, and the presenter of the backend never publishes one.
+const UUID = "11111111-2222-4333-8444-555555555555";
 const OTRO_UUID = "66666666-7777-8888-9999-000000000000";
 
 const VISTA_PREVIA = {

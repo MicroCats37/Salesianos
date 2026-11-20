@@ -1,28 +1,22 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Eye,
-  EyeOff,
-  IdCard,
-  KeyRound,
-  Loader2,
-  LogIn,
-  Mail,
-  User,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { IdCard, KeyRound, Loader2, LogIn, Mail, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { type UseFormRegisterReturn, useForm } from "react-hook-form";
-import { toast } from "sonner";
+import type { UseFormRegisterReturn } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { FestBrandHeader } from "@/components/brand/FestBrandHeader";
+import { FormField } from "@/components/forms/FormField";
+import { FormGrid } from "@/components/forms/FormGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { handleApiError } from "@/errors/error-handler";
+import { handleApiError, notify } from "@/errors";
 import { AuthGlassCard } from "@/features/auth/components/AuthGlassCard";
 import { AuthShell } from "@/features/auth/components/AuthShell";
+import { ToggleContrasena } from "@/features/auth/components/ToggleContrasena";
 import { useLogin } from "@/features/auth/hooks";
 import {
   type LoginDniFormData,
@@ -52,73 +46,145 @@ const TAB_LABELS: Record<LoginTab, string> = {
 };
 
 const TAB_ICONS: Record<LoginTab, React.ReactNode> = {
-  dni: <IdCard className="h-4 w-4" aria-hidden="true" />,
-  email: <Mail className="h-4 w-4" aria-hidden="true" />,
-  username: <User className="h-4 w-4" aria-hidden="true" />,
+  dni: <IdCard className="size-4" aria-hidden="true" />,
+  email: <Mail className="size-4" aria-hidden="true" />,
+  username: <User className="size-4" aria-hidden="true" />,
 };
 
 // =============================================================================
-// PASSWORD INPUT
+// FIELDS
 // =============================================================================
 
-interface PasswordInputFieldProps {
+/**
+ * The identity of the person: the DNI, the email or the username.
+ *
+ * The label, the icon and the error are drawn ONCE, by `FormField`.
+ */
+function CampoIdentidad({
+  id,
+  etiqueta,
+  placeholder,
+  icono: Icono,
+  tipo = "text",
+  inputMode,
+  autoComplete,
+  maxLength,
+  registro,
+  error,
+}: {
   id: string;
-  registration: UseFormRegisterReturn;
+  etiqueta: string;
+  placeholder: string;
+  icono: LucideIcon;
+  tipo?: string;
+  inputMode?: "numeric" | "email" | "text";
+  autoComplete: string;
+  maxLength?: number;
+  registro: UseFormRegisterReturn;
   error?: string;
+}) {
+  return (
+    <FormField
+      id={id}
+      label={etiqueta}
+      required
+      icon={Icono}
+      span={12}
+      error={error}
+    >
+      {(control) => (
+        <Input
+          {...control}
+          {...registro}
+          type={tipo}
+          inputMode={inputMode}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          maxLength={maxLength}
+        />
+      )}
+    </FormField>
+  );
 }
 
-function PasswordInputField({
+/**
+ * The password of the access.
+ *
+ * It shares the toggle of the registration (`ToggleContrasena`): the same
+ * icon, the same size, the same accessible name and the same motion.
+ */
+function CampoContrasena({
   id,
-  registration,
+  registro,
   error,
-}: PasswordInputFieldProps) {
-  const [showPassword, setShowPassword] = useState(false);
+}: {
+  id: string;
+  registro: UseFormRegisterReturn;
+  error?: string;
+}) {
+  const [visible, setVisible] = useState(false);
 
   return (
-    <div className="space-y-1.5">
-      <Label
-        htmlFor={id}
-        className="text-xs font-bold uppercase tracking-wider text-foreground"
-      >
-        Contrasena
-      </Label>
-      <div className="relative">
-        <KeyRound
-          className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
-          aria-hidden="true"
-        />
-        <Input
-          id={id}
-          type={showPassword ? "text" : "password"}
-          placeholder="••••••••"
-          autoComplete="current-password"
-          className={cn(
-            "pl-9 pr-10",
-            error && "border-destructive ring-1 ring-destructive",
-          )}
-          {...registration}
-        />
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
-          aria-label={
-            showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-          }
-        >
-          {showPassword ? (
-            <EyeOff className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <Eye className="h-4 w-4" aria-hidden="true" />
-          )}
-        </button>
-      </div>
-      {error && (
-        <p className="flex items-center gap-1.5 text-xs text-destructive">
-          {error}
-        </p>
+    <FormField
+      id={id}
+      label="Contraseña"
+      required
+      icon={KeyRound}
+      span={12}
+      error={error}
+    >
+      {(control) => (
+        <div className="relative">
+          <Input
+            {...control}
+            {...registro}
+            type={visible ? "text" : "password"}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            className="pr-12"
+          />
+          <ToggleContrasena
+            visible={visible}
+            onToggle={() => setVisible((actual) => !actual)}
+            campo="contraseña"
+          />
+        </div>
       )}
-    </div>
+    </FormField>
+  );
+}
+
+/**
+ * The button of the access.
+ *
+ * It is the CTA of the brand: the gradient, without the sweep of light that
+ * never stops.
+ */
+function BotonAcceso({
+  pendiente,
+  etiqueta,
+}: {
+  pendiente: boolean;
+  etiqueta: string;
+}) {
+  return (
+    <Button
+      type="submit"
+      disabled={pendiente}
+      className="btn-brand-gradient h-14 w-full rounded-[1.5rem] text-base font-semibold"
+    >
+      {pendiente ? (
+        <>
+          <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+          <span>Verificando…</span>
+        </>
+      ) : (
+        <>
+          <LogIn className="size-5" aria-hidden="true" />
+          <span>{etiqueta}</span>
+        </>
+      )}
+    </Button>
   );
 }
 
@@ -143,75 +209,39 @@ function DniTabForm({ isLoading }: { isLoading: boolean }) {
     try {
       const result = await loginMutation.mutateAsync(data);
       setAuth(result.data);
-      if (result.message) toast.success(result.message);
+      if (result.message) notify.success(result.message);
       router.push(await resolverDeDestino());
     } catch (error) {
-      toast.error(handleApiError(error).message);
+      notify.error(handleApiError(error).message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      <div className="space-y-4">
-        <Label
-          htmlFor="tab-dni"
-          className="text-xs font-bold uppercase tracking-wider text-foreground"
-        >
-          DNI
-        </Label>
-        <div className="relative">
-          <IdCard
-            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
-            aria-hidden="true"
-          />
-          <Input
-            id="tab-dni"
-            type="text"
-            inputMode="numeric"
-            placeholder="12345678"
-            autoComplete="off"
-            maxLength={8}
-            className={cn(
-              "pl-9",
-              errors.dni?.message &&
-                "border-destructive ring-1 ring-destructive",
-            )}
-            {...register("dni")}
-          />
-        </div>
-        {errors.dni && (
-          <p className="text-[11px] font-bold text-destructive uppercase tracking-tight px-1 animate-in fade-in slide-in-from-top-1">
-            {errors.dni.message as string}
-          </p>
-        )}
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <FormGrid>
+        <CampoIdentidad
+          id="tab-dni"
+          etiqueta="DNI"
+          placeholder="12345678"
+          icono={IdCard}
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={8}
+          registro={register("dni")}
+          error={errors.dni?.message as string | undefined}
+        />
 
-      <PasswordInputField
-        id="tab-password-dni"
-        registration={register("password")}
-        error={errors.password?.message as string | undefined}
+        <CampoContrasena
+          id="tab-password-dni"
+          registro={register("password")}
+          error={errors.password?.message as string | undefined}
+        />
+      </FormGrid>
+
+      <BotonAcceso
+        pendiente={isSubmitting || isLoading || loginMutation.isPending}
+        etiqueta="Ingresar"
       />
-
-      <Button
-        type="submit"
-        disabled={isSubmitting || isLoading || loginMutation.isPending}
-        className="btn-brand-gradient btn-shine w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
-      >
-        {isSubmitting || isLoading || loginMutation.isPending ? (
-          <>
-            <Loader2
-              className="w-5 h-5 animate-spin"
-              aria-hidden="true"
-            />
-            <span>Verificando...</span>
-          </>
-        ) : (
-          <>
-            <LogIn className="w-5 h-5" aria-hidden="true" />
-            <span>Ingresar</span>
-          </>
-        )}
-      </Button>
     </form>
   );
 }
@@ -237,73 +267,39 @@ function EmailTabForm({ isLoading }: { isLoading: boolean }) {
     try {
       const result = await loginMutation.mutateAsync(data);
       setAuth(result.data);
-      if (result.message) toast.success(result.message);
+      if (result.message) notify.success(result.message);
       router.push(await resolverDeDestino());
     } catch (error) {
-      toast.error(handleApiError(error).message);
+      notify.error(handleApiError(error).message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      <div className="space-y-4">
-        <Label
-          htmlFor="tab-email"
-          className="text-xs font-bold uppercase tracking-wider text-foreground"
-        >
-          Email
-        </Label>
-        <div className="relative">
-          <Mail
-            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
-            aria-hidden="true"
-          />
-          <Input
-            id="tab-email"
-            type="email"
-            placeholder="ejemplo@correo.com"
-            autoComplete="email"
-            className={cn(
-              "pl-9",
-              errors.email?.message &&
-                "border-destructive ring-1 ring-destructive",
-            )}
-            {...register("email")}
-          />
-        </div>
-        {errors.email && (
-          <p className="text-[11px] font-bold text-destructive uppercase tracking-tight px-1 animate-in fade-in slide-in-from-top-1">
-            {errors.email.message as string}
-          </p>
-        )}
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <FormGrid>
+        <CampoIdentidad
+          id="tab-email"
+          etiqueta="Email"
+          placeholder="ejemplo@correo.com"
+          icono={Mail}
+          tipo="email"
+          inputMode="email"
+          autoComplete="email"
+          registro={register("email")}
+          error={errors.email?.message as string | undefined}
+        />
 
-      <PasswordInputField
-        id="tab-password-email"
-        registration={register("password")}
-        error={errors.password?.message as string | undefined}
+        <CampoContrasena
+          id="tab-password-email"
+          registro={register("password")}
+          error={errors.password?.message as string | undefined}
+        />
+      </FormGrid>
+
+      <BotonAcceso
+        pendiente={isSubmitting || isLoading || loginMutation.isPending}
+        etiqueta="Ingresar"
       />
-
-      <Button
-        type="submit"
-        disabled={isSubmitting || isLoading || loginMutation.isPending}
-        className="btn-brand-gradient btn-shine w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
-      >
-        {isSubmitting || isLoading || loginMutation.isPending ? (
-          <>
-            <Loader2
-              className="w-5 h-5 animate-spin"
-              aria-hidden="true"
-            />
-            <span>Verificando...</span>
-          </>
-        ) : (
-          <>
-            <LogIn className="w-5 h-5" aria-hidden="true" />
-            <span>Ingresar</span>
-          </>
-        )}
-      </Button>
     </form>
   );
 }
@@ -329,76 +325,44 @@ function UsernameTabForm({ isLoading }: { isLoading: boolean }) {
     try {
       const result = await loginMutation.mutateAsync(data);
       setAuth(result.data);
-      if (result.message) toast.success(result.message);
+      if (result.message) notify.success(result.message);
       router.push(await resolverDeDestino());
     } catch (error) {
-      toast.error(handleApiError(error).message);
+      notify.error(handleApiError(error).message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      <div className="space-y-4">
-        <Label
-          htmlFor="tab-username"
-          className="text-xs font-bold uppercase tracking-wider text-foreground"
-        >
-          Usuario
-        </Label>
-        <div className="relative">
-          <User
-            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
-            aria-hidden="true"
-          />
-          <Input
-            id="tab-username"
-            type="text"
-            placeholder="juan.perez"
-            autoComplete="username"
-            className={cn(
-              "pl-9",
-              errors.username?.message &&
-                "border-destructive ring-1 ring-destructive",
-            )}
-            {...register("username")}
-          />
-        </div>
-        {errors.username && (
-          <p className="text-[11px] font-bold text-destructive uppercase tracking-tight px-1 animate-in fade-in slide-in-from-top-1">
-            {errors.username.message as string}
-          </p>
-        )}
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <FormGrid>
+        <CampoIdentidad
+          id="tab-username"
+          etiqueta="Usuario"
+          placeholder="juan.perez"
+          icono={User}
+          autoComplete="username"
+          registro={register("username")}
+          error={errors.username?.message as string | undefined}
+        />
 
-      <PasswordInputField
-        id="tab-password-username"
-        registration={register("password")}
-        error={errors.password?.message as string | undefined}
+        <CampoContrasena
+          id="tab-password-username"
+          registro={register("password")}
+          error={errors.password?.message as string | undefined}
+        />
+      </FormGrid>
+
+      <BotonAcceso
+        pendiente={isSubmitting || isLoading || loginMutation.isPending}
+        etiqueta="Ingresar"
       />
-
-      <Button
-        type="submit"
-        disabled={isSubmitting || isLoading || loginMutation.isPending}
-        className="btn-brand-gradient btn-shine w-full h-14 rounded-[1.5rem] text-primary-foreground font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3"
-      >
-        {isSubmitting || isLoading || loginMutation.isPending ? (
-          <>
-            <Loader2
-              className="w-5 h-5 animate-spin"
-              aria-hidden="true"
-            />
-            <span>Verificando...</span>
-          </>
-        ) : (
-          <>
-            <LogIn className="w-5 h-5" aria-hidden="true" />
-            <span>Ingresar</span>
-          </>
-        )}
-      </Button>
     </form>
   );
 }
+
+// =============================================================================
+// LOGIN SHELL
+// =============================================================================
 
 export function LoginClientShell() {
   const [activeTab, setActiveTab] = useState<LoginTab>("dni");
@@ -428,14 +392,14 @@ function LoginBody({
           size="md"
           subtitle="Acceso a Salesianos FEST"
         />
-        <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground sm:text-sm">
+        <p className="mt-1 max-w-xs text-sm leading-relaxed text-muted-foreground">
           Inicia sesion para gestionar tu inscripcion, tus pagos y tu equipo.
         </p>
       </div>
 
-      <div className="relative flex items-center w-full bg-muted p-1 rounded-full mb-8">
+      <div className="relative mb-8 flex w-full items-center rounded-full bg-muted p-1">
         <div
-          className="absolute top-1 bottom-1 bg-primary rounded-full transition-all duration-300 ease-out shadow-md"
+          className="absolute top-1 bottom-1 rounded-full bg-primary shadow-md transition-transform duration-(--motion-duration-base) ease-out"
           style={{
             width: "calc(33.333% - 4px)",
             transform: `translateX(${
@@ -453,21 +417,19 @@ function LoginBody({
             type="button"
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "relative z-10 flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full transition-all duration-300",
+              "relative z-10 flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full px-2 py-3 transition-colors duration-(--motion-duration-fast)",
               activeTab === tab
-                ? "text-primary-foreground font-bold"
+                ? "font-semibold text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
             {TAB_ICONS[tab]}
-            <span className="text-xs uppercase tracking-wider font-semibold">
-              {TAB_LABELS[tab]}
-            </span>
+            <span className="text-xs font-semibold">{TAB_LABELS[tab]}</span>
           </button>
         ))}
       </div>
 
-      <div className="animate-in fade-in slide-in-from-right-4 duration-200">
+      <div>
         {activeTab === "dni" && <DniTabForm isLoading={false} />}
         {activeTab === "email" && <EmailTabForm isLoading={false} />}
         {activeTab === "username" && <UsernameTabForm isLoading={false} />}
@@ -478,7 +440,7 @@ function LoginBody({
           ¿No tienes cuenta?{" "}
           <Link
             href={RUTAS.auth.registro}
-            className="font-bold text-primary hover:underline"
+            className="font-semibold text-primary hover:underline"
           >
             Inscribe tu equipo
           </Link>
@@ -486,7 +448,7 @@ function LoginBody({
       </div>
 
       <div className="mt-6 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           Salesianos FEST — Asociacion Okinawense del Peru
         </p>
       </div>

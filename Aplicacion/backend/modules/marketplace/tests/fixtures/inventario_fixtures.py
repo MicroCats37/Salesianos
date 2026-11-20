@@ -83,7 +83,11 @@ def pedido_pagado(db, pedido_orchestrator, usuario_comprador, producto_con_stock
                     producto_id=producto_con_stock.id,
                     cantidad=1,
                 )
-            ]
+            ],
+            tipo_documento="DNI",
+            numero_documento="10000001",
+            nombres="Comprador",
+            apellidos="De Prueba",
         ),
     )
     pedido = Pedido.objects.get(id=resultado.id)

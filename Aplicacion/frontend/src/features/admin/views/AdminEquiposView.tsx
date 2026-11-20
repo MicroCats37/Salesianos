@@ -24,10 +24,9 @@ export function AdminEquiposView() {
       />
 
       <AdminNotice title="Dos hechos, no una fracción">
-        El mínimo y el máximo deportivo son dos hechos independientes: el
-        mínimo es lo que el equipo necesita para competir y el máximo es el
-        tope duro de la disciplina. La capacidad y la completitud los deriva
-        el servidor.
+        El mínimo y el máximo deportivo son dos hechos independientes: el mínimo
+        es lo que el equipo necesita para competir y el máximo es el tope duro
+        de la disciplina. La capacidad y la completitud los deriva el servidor.
       </AdminNotice>
 
       <AdminPanel

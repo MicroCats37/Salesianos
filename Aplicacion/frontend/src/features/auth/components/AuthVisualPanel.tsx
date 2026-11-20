@@ -1,15 +1,15 @@
 "use client";
 
+import { gsap } from "gsap";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
-import { cn } from "@/lib/utils";
 import {
+  type CyclingEntry,
   LOGIN_CYCLING_WORDS,
   REGISTER_CYCLING_WORDS,
-  type CyclingEntry,
   useCyclingText,
 } from "@/features/auth/hooks/useCyclingText";
+import { cn } from "@/lib/utils";
 
 // =============================================================================
 // DEFAULTS — reproduce the login visual panel
@@ -22,7 +22,13 @@ const DEFAULT_FEATURES = [
   "Premiacion Ekiden",
 ];
 
-const DEFAULT_EVENT_BADGE = {
+/**
+ * The date and the place of the edition, as the brand panel publishes them.
+ *
+ * It is exported so the collapsed header of the access —the one that replaces
+ * the panel below 1024— states the SAME fact and not a second version of it.
+ */
+export const EVENTO_FEST = {
   date: "21 NOV",
   place: "Av. Asturias 588 — Ate",
 };
@@ -174,8 +180,8 @@ function PartySparks() {
         const color = isYellow
           ? CHISPA_ORO
           : isBlue
-          ? CHISPA_CIAN
-          : CHISPA_AZUL;
+            ? CHISPA_CIAN
+            : CHISPA_AZUL;
         const size = i % 4 === 0 ? 6 : 4;
         return (
           <span
@@ -221,7 +227,9 @@ function VisualPanelInner({
   const panelRef = useRef<HTMLDivElement>(null);
   const keywordRef = useRef<HTMLSpanElement>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
   const { currentEntry, mounted } = useCyclingText(cyclingWords);
 
   const prevIndex = useRef(0);
@@ -433,7 +441,7 @@ function VisualPanelInner({
         {/* Eyebrow badge */}
         <div className="vp-stagger">
           <span
-            className="inline-flex items-center gap-2 rounded-full border border-surface-inverse-foreground/25 bg-surface-inverse-foreground/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-surface-inverse-foreground backdrop-blur-sm"
+            className="inline-flex items-center gap-2 rounded-full border border-surface-inverse-foreground/25 bg-surface-inverse-foreground/10 px-4 py-1.5 text-eyebrow-brand text-surface-inverse-foreground backdrop-blur-sm"
             style={TEXT_GLOW}
           >
             <span
@@ -447,7 +455,7 @@ function VisualPanelInner({
         {/* Headline with cycling word */}
         <div className="vp-stagger space-y-2">
           <h2
-            className="text-[2.6rem] font-black leading-[1.05] tracking-[-.04em] text-surface-inverse-foreground xl:text-[3.2rem]"
+            className="text-[2.6rem] font-bold leading-[1.05] text-surface-inverse-foreground xl:text-[3.2rem]"
             style={TEXT_GLOW}
           >
             Tu promocion vuelve a {currentEntry.article}{" "}
@@ -485,13 +493,13 @@ function VisualPanelInner({
           <div className="inline-flex items-center gap-3 rounded-2xl border border-surface-inverse-foreground/20 bg-surface-inverse-foreground/10 px-5 py-3 backdrop-blur-sm shadow-xl">
             <div className="flex flex-col items-center justify-center rounded-xl bg-accent/20 px-3 py-1">
               <span
-                className="text-[10px] font-bold uppercase tracking-wider text-accent"
+                className="text-eyebrow-brand text-accent"
                 style={TEXT_GLOW}
               >
                 {eventBadge.date.split(" ")[1]}
               </span>
               <span
-                className="text-xl font-black text-surface-inverse-foreground leading-none"
+                className="text-xl font-bold text-surface-inverse-foreground leading-none"
                 style={TEXT_GLOW}
               >
                 {eventBadge.date.split(" ")[0]}
@@ -499,7 +507,7 @@ function VisualPanelInner({
             </div>
             <div className="flex flex-col">
               <p
-                className="text-xs font-black uppercase tracking-[.1em] text-surface-inverse-foreground"
+                className="text-eyebrow-brand text-surface-inverse-foreground"
                 style={TEXT_GLOW}
               >
                 Evento principal
@@ -556,7 +564,7 @@ export function AuthVisualPanel({
   title: _title,
   subtitle,
   features = DEFAULT_FEATURES,
-  eventBadge = DEFAULT_EVENT_BADGE,
+  eventBadge = EVENTO_FEST,
   disableSparks = false,
 }: AuthVisualPanelProps) {
   const copy = COPY_BY_VARIANT[variant];

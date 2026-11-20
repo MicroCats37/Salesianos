@@ -48,7 +48,7 @@ from modules.pagos.domain.constants import (
     EstadoTransaccionPago,
     OrigenPago,
 )
-from modules.pagos.domain.models import TransaccionPago
+from modules.pagos.domain.models import AprobacionPagoManual, TransaccionPago
 from modules.pagos.domain.ports import (
     IActivacionCompraService,
     IEstadoCompraOrdenPagoService,
@@ -248,12 +248,13 @@ class EstadoOperativoPagoService:
     def _origen_pago(self, orden) -> str:
         """Procedencia de la evidencia de una orden.
 
-        `IZIPAY` cuando existe un intento `EXITO` **verificado**; `SIN_PAGO`
-        en cualquier otro caso. La aprobación manual (`MANUAL`) la decide un
-        administrador y la incorpora la ruta administrativa (A0).
+        `IZIPAY` cuando existe un intento `EXITO` **verificado** y `MANUAL`
+        cuando existe evidencia manual activa.
         """
         if orden is None:
             return OrigenPago.SIN_PAGO
+        if AprobacionPagoManual.objects.filter(orden_pago_id=orden.id).exists():
+            return OrigenPago.MANUAL
         existe = TransaccionPago.objects.filter(
             orden_pago_id=orden.id,
             estado=EstadoTransaccionPago.EXITO,

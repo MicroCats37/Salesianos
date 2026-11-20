@@ -1,4 +1,4 @@
-import { CompetenciaDetalleView } from "@/features/competencias/views";
+import { CompetenciaDetalleRuta } from "@/features/competencias/views";
 
 /**
  * ADM-11 - Ver la ficha operativa de una competencia
@@ -10,5 +10,5 @@ export default async function Page({
 }) {
   const { id } = await params;
 
-  return <CompetenciaDetalleView id={id} />;
+  return <CompetenciaDetalleRuta id={id} />;
 }

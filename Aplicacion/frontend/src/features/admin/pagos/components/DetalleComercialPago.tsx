@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronDown, CreditCard, ExternalLink, Stethoscope } from "lucide-react";
+import {
+  ChevronDown,
+  CreditCard,
+  ExternalLink,
+  Stethoscope,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -22,15 +27,6 @@ import type {
   AdminPagoDetalleOut,
   PagoOperativoOut,
 } from "../types/pagos-admin.types";
-
-const COLUMNAS_INTENTOS = [
-  { key: "intento", label: "Intento", prioridad: 1 as const, titular: true },
-  { key: "estado", label: "Estado", prioridad: 1 as const },
-  { key: "verificada", label: "Verificada", prioridad: 1 as const },
-  { key: "respuesta", label: "Código de respuesta", prioridad: 2 as const },
-  { key: "metodo", label: "Método", prioridad: 2 as const },
-  { key: "creada", label: "Creada", prioridad: 2 as const },
-];
 
 export interface DetalleComercialPagoProps {
   /** The purchase as the operational list published it. */
@@ -76,7 +72,8 @@ export function DetalleComercialPago({
         <SheetHeader>
           <SheetTitle>{pago.resumen_concepto}</SheetTitle>
           <SheetDescription>
-            Compra {pago.compra_id} · {pago.tipo_compra} · {pago.comprador.nombre}
+            Compra {pago.compra_id} · {pago.tipo_compra} ·{" "}
+            {pago.comprador.nombre}
           </SheetDescription>
         </SheetHeader>
 
@@ -89,7 +86,9 @@ export function DetalleComercialPago({
           </section>
 
           <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-foreground">Lo que obtuvo</h3>
+            <h3 className="text-sm font-semibold text-foreground">
+              Lo que obtuvo
+            </h3>
             <p className="text-sm leading-relaxed text-muted-foreground">
               {pago.entrega_derechos.etiqueta}
             </p>
@@ -125,8 +124,8 @@ export function DetalleComercialPago({
               <CollapsibleContent className="flex flex-col gap-4 pt-3">
                 {!detalle ? (
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    El detalle técnico de esta compra todavía no está
-                    conectado: su ruta no está registrada en el backend.
+                    El detalle técnico de esta compra todavía no está conectado:
+                    su ruta no está registrada en el backend.
                   </p>
                 ) : (
                   <DiagnosticoPago detalle={detalle} />
@@ -138,7 +137,9 @@ export function DetalleComercialPago({
 
         <SheetFooter className="flex-row justify-end">
           <SheetClose asChild>
-            <Button variant="outline">Cerrar</Button>
+            <Button variant="outline" className="min-h-11">
+              Cerrar
+            </Button>
           </SheetClose>
         </SheetFooter>
       </SheetContent>
@@ -159,8 +160,18 @@ function DiagnosticoPago({ detalle }: { detalle: AdminPagoDetalleOut }) {
       <dl className="grid grid-cols-2 gap-3">
         <Dato etiqueta="Orden de pago" valor={detalle.orden_pago_id ?? "—"} />
         <Dato etiqueta="Origen de la evidencia" valor={detalle.origen_pago} />
-        <Dato etiqueta="Estado de la compra" valor={detalle.compra.estado} />
-        <Dato etiqueta="Compra reutilizada" valor={detalle.compra.reutilizada ? "Sí" : "No"} />
+        <Dato
+          etiqueta="Estado de la compra"
+          valor={detalle.compra?.estado ?? "—"}
+        />
+        <Dato
+          etiqueta="Total de la compra"
+          valor={
+            detalle.compra
+              ? `${detalle.compra.total} ${detalle.compra.moneda}`
+              : "—"
+          }
+        />
       </dl>
 
       <div className="flex flex-col gap-2">
@@ -218,7 +229,9 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <div className="flex flex-col gap-0.5">
       <dt className="text-xs text-foreground-muted">{etiqueta}</dt>
-      <dd className="text-sm font-medium break-words text-foreground">{valor}</dd>
+      <dd className="text-sm font-medium break-words text-foreground">
+        {valor}
+      </dd>
     </div>
   );
 }

@@ -102,7 +102,7 @@ export const RegisterFormSchema = z
 
     /** Must be explicitly true — backend rejects if false */
     acceptedBases: z.literal(true, {
-      error: "Debe aceptar las bases del evento",
+      error: "Debes aceptar las bases del evento",
     }),
   })
   .strict()
@@ -141,3 +141,43 @@ export interface RegisterResponse {
     persona_id: string | null;
   };
 }
+
+/**
+ * The Zod mirror of the `user` of the registration (`SesionUsuarioOut`).
+ *
+ * Owner: `Aplicacion/backend/modules/usuarios/presentation/schemas/auth_schemas.py`
+ * (`LoginTokenOut.user`).
+ * Route: `POST /api/auth/register` — REGISTERED in
+ * `Aplicacion/backend/config/api.py` (`AuthController`).
+ *
+ * The wrapper is LOOSE on purpose: the presenter publishes MORE facts than the
+ * ones the form needs (`rol`, `nombres`, `capacidades`) and they travel in the
+ * cookie of the session. A strict mirror would DROP them and the shell would
+ * paint a session without role.
+ *
+ * `email` is NOT nullable HERE: the account is CREATED with an email (the input
+ * of the route requires it), so the presenter always publishes it. The generic
+ * session (`GET /auth/me`) is the one whose email may be null, and it has its
+ * own mirror (`features/auth/schemas/sesion.schema.ts`).
+ */
+export const RegisterUserSchema = z.looseObject({
+  id: z.string(),
+  username: z.string(),
+  email: z.string(),
+  is_staff: z.boolean(),
+  is_superuser: z.boolean(),
+  persona_id: z.string().nullable(),
+});
+
+/**
+ * The Zod mirror of the answer of the registration (`LoginTokenOut`).
+ *
+ * It is the SAME wrapper that the login publishes: the high of an account
+ * opens its session.
+ */
+export const RegisterResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string(),
+  expires_at: z.string(),
+  user: RegisterUserSchema,
+});

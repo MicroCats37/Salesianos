@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   agendaEnvelope,
   avancePreviewSchema,
+  competenciaCrearSchema,
   competenciaDetalleSchema,
   competenciaListadoSchema,
   correccionAplicarSchema,
@@ -40,6 +41,48 @@ describe("API-05 — el espejo del backend objetivo (competencias)", () => {
 
     expect(resultado.nombre).toBe("Copa Salesianos");
     expect(resultado.total_encuentros).toBe(7);
+  });
+
+  it("la categoría es parte de la IDENTIDAD de la competencia", () => {
+    const resultado = competenciaListadoSchema.parse(COMPETENCIA);
+
+    expect(resultado.categoria_nombre).toBe("JUNIOR");
+    expect(resultado.categoria_id).toBe(COMPETENCIA.categoria_id);
+
+    // Sin categoría NO hay competencia: el espejo es estricto.
+    const {
+      categoria_id: _categoria,
+      categoria_nombre: _nombre,
+      ...sinCategoria
+    } = COMPETENCIA;
+    expect(() => competenciaListadoSchema.parse(sinCategoria)).toThrow();
+  });
+
+  it("el alta de una competencia EXIGE la categoría", () => {
+    expect(() =>
+      competenciaCrearSchema.parse({
+        edicion_id: "ed-1",
+        disciplina_id: "dis-1",
+        nombre: "Copa Salesianos",
+        fecha: "2026-11-21",
+      }),
+    ).toThrow();
+
+    const payload = competenciaCrearSchema.parse({
+      edicion_id: "ed-1",
+      disciplina_id: "dis-1",
+      categoria_id: "cat-1",
+      nombre: "Copa Salesianos",
+      fecha: "2026-11-21",
+    });
+
+    expect(payload.categoria_id).toBe("cat-1");
+  });
+
+  it("el veredicto de elegibilidad viaja CON la categoría del candidato", () => {
+    const elegible = equipoElegibleSchema.parse(EQUIPO_ELEGIBLE);
+
+    expect(elegible.categoria_nombre).toBe("JUNIOR");
   });
 
   it("acepta la forma exacta de CompetenciaDetalleOut con sus rondas", () => {

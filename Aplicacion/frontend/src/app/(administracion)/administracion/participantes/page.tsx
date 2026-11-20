@@ -1,5 +1,5 @@
-import { ParticipantesAdminRuta } from "@/features/admin/participantes";
 import { parametrosDeConsulta } from "@/features/admin/operaciones/utils/parametros";
+import { ParticipantesAdminRuta } from "@/features/admin/participantes";
 
 /**
  * ADM-09 — Buscar personas y participaciones
@@ -15,7 +15,5 @@ export default async function Page({
 }) {
   const params = await searchParams;
 
-  return (
-    <ParticipantesAdminRuta parametros={parametrosDeConsulta(params)} />
-  );
+  return <ParticipantesAdminRuta parametros={parametrosDeConsulta(params)} />;
 }

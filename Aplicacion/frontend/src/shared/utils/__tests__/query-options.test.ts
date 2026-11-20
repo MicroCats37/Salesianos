@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  MIN_GC_TIME,
-  STALE_TIME,
   datasetQueryOptions,
   gcTimeFor,
+  MIN_GC_TIME,
+  STALE_TIME,
 } from "../query-options";
 
 describe("the staleness policy", () => {

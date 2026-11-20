@@ -1,7 +1,11 @@
 "use client";
 
-import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
+import { useState } from "react";
+import { FormField } from "@/components/forms/FormField";
+import { Input } from "@/components/ui/input";
+
 import { ConfirmacionIrreversible } from "@/features/admin/operaciones";
+import { RUTAS_ADMIN } from "@/features/admin/operaciones/services/admin.service";
 import {
   erroresDeCampoDeError,
   mensajeDeError,
@@ -51,9 +55,11 @@ export function DialogoAprobarPagoManual({
   ordenPagoId,
 }: DialogoAprobarPagoManualProps) {
   const aprobar = useAprobarPagoManualAdmin();
+  const [canal, setCanal] = useState("TRANSFERENCIA_BANCARIA");
+  const [referencia, setReferencia] = useState("");
 
   const conectado = RUTAS_ADMIN.aprobarPagoManual.registrado;
-  const listo = conectado && Boolean(ordenPagoId);
+  const listo = conectado && Boolean(ordenPagoId) && referencia.trim() !== "";
   const mensaje = aprobar.error ? mensajeDeError(aprobar.error) : undefined;
   const errorDeCampo = aprobar.error
     ? erroresDeCampoDeError(aprobar.error).motivo
@@ -65,6 +71,38 @@ export function DialogoAprobarPagoManual({
       onAbiertoChange={onAbiertoChange}
       titulo="Registrar el pago externo"
       efecto={`Registrar ${monto} ${moneda} de «${concepto}» habilita los derechos de esta compra y queda registrado en la auditoría con el motivo indicado.`}
+      contenido={
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField id="canal-pago-manual" label="Canal" required>
+            {(control) => (
+              <select
+                {...control}
+                value={canal}
+                className="h-8 w-full rounded-[var(--radius-md)] border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                onChange={(evento) => setCanal(evento.target.value)}
+              >
+                <option value="TRANSFERENCIA_BANCARIA">
+                  Transferencia bancaria
+                </option>
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="YAPE">Yape</option>
+                <option value="PLIN">Plin</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            )}
+          </FormField>
+          <FormField id="referencia-pago-manual" label="Referencia" required>
+            {(control) => (
+              <Input
+                {...control}
+                value={referencia}
+                placeholder="N.º de operación o recibo"
+                onChange={(evento) => setReferencia(evento.target.value)}
+              />
+            )}
+          </FormField>
+        </div>
+      }
       motivo={{
         etiqueta: "Motivo del registro",
         placeholder:
@@ -83,8 +121,8 @@ export function DialogoAprobarPagoManual({
 
         aprobar.mutate({
           orden_pago_id: ordenPagoId,
-          monto,
-          moneda,
+          canal,
+          referencia,
           motivo,
         });
       }}

@@ -49,6 +49,7 @@ class PatrocinadorResult(BaseModel):
     descripcion: str = Field("", description="Descripción de la ficha.")
     sitio_web: str = Field("", description="Sitio web del patrocinador.")
     visible: bool = Field(True, description="Visibilidad pública (ADM-21).")
+    orden: int = Field(0, description="Posición persistida del banner público.")
     logo: PatrocinadorLogoResult | None = Field(
         None,
         description="Logo de identidad; `None` si el patrocinador no tiene logo.",

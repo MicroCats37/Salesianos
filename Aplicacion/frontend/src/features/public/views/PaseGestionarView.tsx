@@ -26,7 +26,7 @@ export function PaseGestionarView({ token }: { token: string }) {
           </h2>
         </div>
         <ol className="grid gap-3 sm:grid-cols-3">
-          <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 transition-all duration-(--motion-duration-base) hover:-translate-y-0.5 hover:border-border-strong hover:shadow-[var(--elevation-sm)]">
+          <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 transition-colors duration-(--motion-duration-fast) hover:border-border-strong">
             <span className="flex items-center gap-2">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <UserRound className="size-4" aria-hidden="true" />
@@ -40,7 +40,7 @@ export function PaseGestionarView({ token }: { token: string }) {
             </p>
           </li>
 
-          <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 transition-all duration-(--motion-duration-base) hover:-translate-y-0.5 hover:border-border-strong hover:shadow-[var(--elevation-sm)]">
+          <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 transition-colors duration-(--motion-duration-fast) hover:border-border-strong">
             <span className="flex items-center gap-2">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <ShieldCheck className="size-4" aria-hidden="true" />
@@ -54,7 +54,7 @@ export function PaseGestionarView({ token }: { token: string }) {
             </p>
           </li>
 
-          <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 transition-all duration-(--motion-duration-base) hover:-translate-y-0.5 hover:border-border-strong hover:shadow-[var(--elevation-sm)]">
+          <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 transition-colors duration-(--motion-duration-fast) hover:border-border-strong">
             <span className="flex items-center gap-2">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <ShieldCheck className="size-4" aria-hidden="true" />

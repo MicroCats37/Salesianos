@@ -66,7 +66,8 @@ export const veredictoSinConfirmar: Veredicto = {
   estado: {
     codigo: "NO_COMPLETADO",
     etiqueta: "Pago no completado",
-    descripcion: "El intento de pago no se completó y la compra sigue pendiente.",
+    descripcion:
+      "El intento de pago no se completó y la compra sigue pendiente.",
   },
   rol: "sin-confirmar",
 };

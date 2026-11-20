@@ -29,6 +29,9 @@ const PARAMETROS_TEXTO = [
   "tipo",
   "desde",
   "hasta",
+  "estado_pago",
+  "plantilla",
+  "accion",
 ] as const;
 
 /** A positive integer, or `undefined`. */

@@ -2,12 +2,12 @@
 
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ChipVeredictoValidacion } from "./ChipVeredictoValidacion";
-import { formatearInstante } from "../utils/validaciones.fecha.utils";
 import type {
   ResultadoValidacion,
   VistaPreviaValidacion,
 } from "../types/validacion.types";
+import { formatearInstante } from "../utils/validaciones.fecha.utils";
+import { ChipVeredictoValidacion } from "./ChipVeredictoValidacion";
 
 /**
  * ConfirmacionValidacion - the explicit confirmation of a validation.
@@ -48,7 +48,11 @@ export function ConfirmacionValidacion({
       >
         <div className="flex flex-wrap items-center gap-2">
           <ShieldCheck
-            className={resultado.validado ? "size-4 text-success" : "size-4 text-destructive"}
+            className={
+              resultado.validado
+                ? "size-4 text-success"
+                : "size-4 text-destructive"
+            }
             aria-hidden="true"
           />
           <h3 className="text-sm font-semibold text-foreground">
@@ -88,8 +92,8 @@ export function ConfirmacionValidacion({
       >
         <p className="text-sm text-muted-foreground">
           Todavía no hay una vista previa: primero hay que comprobar la
-          credencial. Comprobar no consume, y sin una comprobación no se
-          ofrece la confirmación.
+          credencial. Comprobar no consume, y sin una comprobación no se ofrece
+          la confirmación.
         </p>
       </section>
     );
@@ -105,8 +109,8 @@ export function ConfirmacionValidacion({
           No se puede validar
         </p>
         <p className="text-caption text-muted-foreground">
-          {vistaPrevia.veredicto.estado.etiqueta}. No se ofrece la
-          confirmación porque el servidor no la admite.
+          {vistaPrevia.veredicto.estado.etiqueta}. No se ofrece la confirmación
+          porque el servidor no la admite.
         </p>
       </section>
     );
@@ -131,8 +135,8 @@ export function ConfirmacionValidacion({
       </Button>
       {!onConfirmar ? (
         <p className="text-caption text-muted-foreground">
-          El servicio de validación todavía no está conectado en el backend:
-          la confirmación no sale de este dispositivo.
+          El servicio de validación todavía no está conectado en el backend: la
+          confirmación no sale de este dispositivo.
         </p>
       ) : null}
     </section>

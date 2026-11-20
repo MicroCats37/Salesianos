@@ -3,13 +3,13 @@
 import { ArrowRight, Info } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PaqueteComercialCard } from "@/features/portada/components/PaqueteComercialCard";
+import { PortadaSection } from "@/features/portada/components/PortadaSection";
 import { PreventaBanner } from "@/features/portada/components/PreventaBanner";
 import type { EtapaPrecio } from "@/features/portada/components/paquete-copy";
-import { PortadaSection } from "@/features/portada/components/PortadaSection";
-import { useLandingPaquetes } from "@/features/portada/fixtures/useLandingPaquetes";
-import { ENLACES, SECCIONES } from "@/features/portada/fixtures/festival";
 import { COPY } from "@/features/portada/fixtures/copy";
+import { ENLACES, SECCIONES } from "@/features/portada/fixtures/festival";
 import { estado } from "@/features/portada/fixtures/pricing-stage";
+import { useLandingPaquetes } from "@/features/portada/fixtures/useLandingPaquetes";
 import { RUTAS } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -109,7 +109,7 @@ export function TicketsSection() {
                 className={cn(
                   "h-12 flex-1 whitespace-nowrap rounded-full px-5 text-xs font-black uppercase tracking-wider transition-colors sm:flex-none",
                   activa
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                    ? "bg-brand-gradient-deep text-brand-on-gradient"
                     : "text-primary hover:bg-primary/5",
                 )}
               >
@@ -163,7 +163,7 @@ export function TicketsSection() {
                   {...(ctaPrimario.externo
                     ? { target: "_blank", rel: "noopener noreferrer" }
                     : {})}
-                  className="btn-brand-gradient btn-shine flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-xs font-black uppercase tracking-wider"
+                  className="btn-shine flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-xs font-black uppercase tracking-wider text-accent-foreground shadow-glow-brand transition-colors hover:bg-accent-muted"
                 >
                   {ctaPrimario.label}
                   <ArrowRight className="size-4" aria-hidden="true" />

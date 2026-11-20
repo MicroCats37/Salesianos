@@ -6,8 +6,8 @@ import {
   Baby,
   Car,
   Dumbbell,
-  Music,
   Moon,
+  Music,
   ShieldCheck,
   Smile,
   Users,
@@ -99,7 +99,8 @@ function FestivalParticles() {
         }}
         className="absolute -left-32 top-10 h-[50vh] w-[50vh] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(236,72,153,0.55), transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(236,72,153,0.55), transparent 70%)",
         }}
       />
       <div
@@ -108,7 +109,8 @@ function FestivalParticles() {
         }}
         className="absolute -right-32 top-1/3 h-[45vh] w-[45vh] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(99,102,241,0.5), transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(99,102,241,0.5), transparent 70%)",
         }}
       />
       <div
@@ -117,7 +119,8 @@ function FestivalParticles() {
         }}
         className="absolute left-1/4 bottom-0 h-[40vh] w-[40vh] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(34,211,238,0.45), transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(34,211,238,0.45), transparent 70%)",
         }}
       />
       <div
@@ -126,20 +129,21 @@ function FestivalParticles() {
         }}
         className="absolute right-1/4 top-1/2 h-[35vh] w-[35vh] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(192,132,252,0.35), transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(192,132,252,0.35), transparent 70%)",
         }}
       />
 
       {/* Sparks */}
       {sparks.map((_, i) => {
         const colors = [
-          "rgba(236,72,153,0.9)",  // pink
-          "rgba(99,102,241,0.9)",  // purple
-          "rgba(34,211,238,0.9)",   // cyan
+          "rgba(236,72,153,0.9)", // pink
+          "rgba(99,102,241,0.9)", // purple
+          "rgba(34,211,238,0.9)", // cyan
           "rgba(192,132,252,0.85)", // violet
         ];
         const color = colors[i % colors.length];
-        const size = (i % 3 === 0) ? 5 : (i % 3 === 1) ? 4 : 3;
+        const size = i % 3 === 0 ? 5 : i % 3 === 1 ? 4 : 3;
         return (
           <span
             key={i}
@@ -175,15 +179,28 @@ const BLOCKS = [
     body: "Frente al formato tradicional de campeonato, el Festival Deportivo Salesianos transforma la competencia en una experiencia de hermandad. No es solo jugar — es volver a encontrarnos, compartir con nuestras familias y celebrar juntos lo que significa ser parte de esta comunidad.",
     ribbon: "Del torneo a la fiesta: así se vive el reencuentro en Salesianos.",
     bullets: [
-      { icon: Users, color: "#ec4899", text: "Reencuentro con compañeros de promoción" },
-      { icon: Smile, color: "#22d3ee", text: "Ambiente festivo, no competitivo excluyente" },
-      { icon: Music, color: "#6366f1", text: "Música, comida y espacio para todos" },
-      { icon: Baby, color: "#ec4899", text: "Actividades para niños y familiares" },
+      {
+        icon: Users,
+        color: "#ec4899",
+        text: "Reencuentro con compañeros de promoción",
+      },
+      {
+        icon: Smile,
+        color: "#22d3ee",
+        text: "Ambiente festivo, no competitivo excluyente",
+      },
+      {
+        icon: Music,
+        color: "#6366f1",
+        text: "Música, comida y espacio para todos",
+      },
+      {
+        icon: Baby,
+        color: "#ec4899",
+        text: "Actividades para niños y familiares",
+      },
     ],
-    images: [
-      "/images/fulbito-varones.webp",
-      "/images/voley-mixto.webp",
-    ],
+    images: ["/images/fulbito-varones.webp", "/images/voley-mixto.webp"],
   },
   {
     id: "familia-convivencia",
@@ -193,15 +210,28 @@ const BLOCKS = [
     body: "A diferencia de los torneos convencionales, el Festival Salesianos abre sus puertas a toda la familia. Habrá ambientes seguros para niños, actividades recreativas y un espacio diseñado para que nadie quede fuera de la celebración.",
     ribbon: "Porque el deporte que nos une, nos incluye a todos.",
     bullets: [
-      { icon: Baby, color: "#22d3ee", text: "Área de juegos infantiles vigilada" },
-      { icon: Users, color: "#ec4899", text: "Espacios seguros para toda la familia" },
-      { icon: Smile, color: "#6366f1", text: "Actividades recreativas intergeneracionales" },
-      { icon: ShieldCheck, color: "#22d3ee", text: "Protocolos de seguridad y bienestar" },
+      {
+        icon: Baby,
+        color: "#22d3ee",
+        text: "Área de juegos infantiles vigilada",
+      },
+      {
+        icon: Users,
+        color: "#ec4899",
+        text: "Espacios seguros para toda la familia",
+      },
+      {
+        icon: Smile,
+        color: "#6366f1",
+        text: "Actividades recreativas intergeneracionales",
+      },
+      {
+        icon: ShieldCheck,
+        color: "#22d3ee",
+        text: "Protocolos de seguridad y bienestar",
+      },
     ],
-    images: [
-      "/images/basket-varones.webp",
-      "/images/fulbito-varones.webp",
-    ],
+    images: ["/images/basket-varones.webp", "/images/fulbito-varones.webp"],
   },
   {
     id: "infraestructura",
@@ -211,15 +241,28 @@ const BLOCKS = [
     body: "Contamos con infraestructura deportiva adecuada para cada disciplina: campos de grass sintético,los mejoresstandares en iluminacion, camerinos limpios y un salón techado para actividades nocturnas y ceremonias. Todo pensado para la comodidad de los participantes.",
     ribbon: "Canchas en optimas condiciones: así se compite en Salesianos.",
     bullets: [
-      { icon: Dumbbell, color: "#6366f1", text: "Canchas de grass sintético de alta calidad" },
-      { icon: Moon, color: "#ec4899", text: "Iluminación LED para partidos nocturnos" },
-      { icon: ShieldCheck, color: "#22d3ee", text: "Camerinos y servicios higiene impecable" },
-      { icon: Music, color: "#6366f1", text: "Salón techado para ceremonias y eventos" },
+      {
+        icon: Dumbbell,
+        color: "#6366f1",
+        text: "Canchas de grass sintético de alta calidad",
+      },
+      {
+        icon: Moon,
+        color: "#ec4899",
+        text: "Iluminación LED para partidos nocturnos",
+      },
+      {
+        icon: ShieldCheck,
+        color: "#22d3ee",
+        text: "Camerinos y servicios higiene impecable",
+      },
+      {
+        icon: Music,
+        color: "#6366f1",
+        text: "Salón techado para ceremonias y eventos",
+      },
     ],
-    images: [
-      "/images/voley-mixto.webp",
-      "/images/basket-varones.webp",
-    ],
+    images: ["/images/voley-mixto.webp", "/images/basket-varones.webp"],
   },
   {
     id: "noche",
@@ -229,15 +272,20 @@ const BLOCKS = [
     body: "Una vez que el sol se esconde, el Festival Salesianos se transforma. BBQ, música en vivo, open bar para adultos y un ambiente de fraternidad que solo se vive en las grandes reuniones de exalumnos. No es torneo — es celebración.",
     ribbon: "Del campeonato a la fiesta: la noche es nuestra.",
     bullets: [
-      { icon: Music, color: "#ec4899", text: "Música en vivo y DJ toda la noche" },
-      { icon: Smile, color: "#22d3ee", text: "BBQ y comida tradicional peruana" },
+      {
+        icon: Music,
+        color: "#ec4899",
+        text: "Música en vivo y DJ toda la noche",
+      },
+      {
+        icon: Smile,
+        color: "#22d3ee",
+        text: "BBQ y comida tradicional peruana",
+      },
       { icon: Moon, color: "#6366f1", text: "Ambiente iluminado y seguro" },
       { icon: Users, color: "#ec4899", text: "Networking entre promociones" },
     ],
-    images: [
-      "/images/fulbito-varones.webp",
-      "/images/voley-mixto.webp",
-    ],
+    images: ["/images/fulbito-varones.webp", "/images/voley-mixto.webp"],
   },
   {
     id: "comodidad",
@@ -247,15 +295,28 @@ const BLOCKS = [
     body: "Sabemos que la experiencia completa empieza desde el arrival. Por eso gestionamos estacionamiento vigilado, servicios hygiene de primer nivel, atención médica de emergencia y un equipo de apoyo dedicado a que cada familia pueda disfrutar sin pensar en logística.",
     ribbon: "Llega, estaciona y disfruta: aquí pensamos en todo.",
     bullets: [
-      { icon: Car, color: "#22d3ee", text: "Estacionamiento vigilado gratuito" },
-      { icon: ShieldCheck, color: "#6366f1", text: "Primeros auxilios y ambulancia en sitio" },
-      { icon: Dumbbell, color: "#ec4899", text: "Baños limpios y suficientes para todos" },
-      { icon: Users, color: "#22d3ee", text: "Equipo de apoyo y coordinación en sitio" },
+      {
+        icon: Car,
+        color: "#22d3ee",
+        text: "Estacionamiento vigilado gratuito",
+      },
+      {
+        icon: ShieldCheck,
+        color: "#6366f1",
+        text: "Primeros auxilios y ambulancia en sitio",
+      },
+      {
+        icon: Dumbbell,
+        color: "#ec4899",
+        text: "Baños limpios y suficientes para todos",
+      },
+      {
+        icon: Users,
+        color: "#22d3ee",
+        text: "Equipo de apoyo y coordinación en sitio",
+      },
     ],
-    images: [
-      "/images/basket-varones.webp",
-      "/images/voley-mixto.webp",
-    ],
+    images: ["/images/basket-varones.webp", "/images/voley-mixto.webp"],
   },
 ];
 
@@ -408,11 +469,19 @@ function InfoBlock({
                 <li key={i} className="block-bullet flex items-start gap-3">
                   <span
                     className="mt-1 grid size-7 shrink-0 place-items-center rounded-full"
-                    style={{ backgroundColor: `${bullet.color}22`, border: `1px solid ${bullet.color}55` }}
+                    style={{
+                      backgroundColor: `${bullet.color}22`,
+                      border: `1px solid ${bullet.color}55`,
+                    }}
                   >
-                    <bullet.icon className="size-4" style={{ color: bullet.color }} />
+                    <bullet.icon
+                      className="size-4"
+                      style={{ color: bullet.color }}
+                    />
                   </span>
-                  <span className="text-sm leading-6 text-white/80">{bullet.text}</span>
+                  <span className="text-sm leading-6 text-white/80">
+                    {bullet.text}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -564,7 +633,9 @@ export function EventInfoBlocks() {
             <span className="rotate-word absolute text-gradient-festival">
               una comunidad
             </span>
-            <span className="rotate-word text-gradient-festival">un festival</span>
+            <span className="rotate-word text-gradient-festival">
+              un festival
+            </span>
           </span>
         </h2>
         <p className="mt-6 text-lg leading-8 text-white/70">

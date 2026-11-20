@@ -36,7 +36,7 @@ function paginasDeLaApp(): string[] {
 }
 
 describe("routes — el mapa de rutas", () => {
-  it("expone las 38 rutas del plan en una sola constante", () => {
+  it("expone las 37 rutas del plan en una sola constante", () => {
     const plan = [
       RUTAS.publico.inicio,
       RUTAS.publico.informacion,
@@ -50,7 +50,6 @@ describe("routes — el mapa de rutas", () => {
       RUTAS.cuenta.misCompras,
       RUTAS.cuenta.inscripcion,
       RUTAS.administracion.resumen,
-      RUTAS.administracion.ediciones,
       RUTAS.administracion.personas,
       RUTAS.administracion.usuarios,
       RUTAS.administracion.inscripciones,
@@ -72,7 +71,7 @@ describe("routes — el mapa de rutas", () => {
     // llevan un identificador en la ruta (inscripción, compra, equipo,
     // competencia y producto) y se prueban abajo.
     expect(new Set(plan).size).toBe(plan.length);
-    expect(plan).toHaveLength(28);
+    expect(plan).toHaveLength(27);
   });
 
   it("construye las rutas parametrizadas con el identificador dentro", () => {
@@ -100,9 +99,9 @@ describe("routes — el mapa y el router de la aplicación coinciden", () => {
   const fijas = paginas.filter((ruta) => !ruta.includes("["));
   const dinamicas = paginas.filter((ruta) => ruta.includes("["));
 
-  it("el router sirve las 38 rutas del plan", () => {
-    expect(paginas).toHaveLength(38);
-    expect(fijas).toHaveLength(28);
+  it("el router sirve las 37 rutas del plan", () => {
+    expect(paginas).toHaveLength(37);
+    expect(fijas).toHaveLength(27);
     expect(dinamicas).toHaveLength(10);
   });
 
@@ -120,7 +119,6 @@ describe("routes — el mapa y el router de la aplicación coinciden", () => {
       RUTAS.cuenta.misCompras,
       RUTAS.cuenta.inscripcion,
       RUTAS.administracion.resumen,
-      RUTAS.administracion.ediciones,
       RUTAS.administracion.personas,
       RUTAS.administracion.usuarios,
       RUTAS.administracion.inscripciones,
@@ -157,7 +155,6 @@ describe("routes — el mapa y el router de la aplicación coinciden", () => {
       RUTAS.cuenta.misCompras,
       RUTAS.cuenta.inscripcion,
       RUTAS.administracion.resumen,
-      RUTAS.administracion.ediciones,
       RUTAS.administracion.personas,
       RUTAS.administracion.usuarios,
       RUTAS.administracion.inscripciones,

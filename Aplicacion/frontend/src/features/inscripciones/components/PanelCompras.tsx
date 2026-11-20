@@ -2,7 +2,10 @@
 
 import { Receipt } from "lucide-react";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
-import type { CompraInscripcion, ComprasInscripcion } from "../types/inscripcion.types";
+import type {
+  CompraInscripcion,
+  ComprasInscripcion,
+} from "../types/inscripcion.types";
 
 export interface PanelComprasProps {
   /** The purchases of the registration, as the server published them. */

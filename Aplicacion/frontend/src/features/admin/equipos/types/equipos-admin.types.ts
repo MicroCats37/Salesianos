@@ -46,7 +46,13 @@ export interface EquipoOperativoOut {
   id: string;
   nombre: string;
   disciplina: { id: string; nombre: string };
-  categoria: { id: string; nombre: string };
+  /**
+   * The competitive band of the team, DERIVED by the server.
+   *
+   * It is absent while the administrative presenter does not publish it: the
+   * view says that it does not know it instead of guessing one.
+   */
+  categoria?: { id: string; nombre: string } | null;
   plantilla: PlantillaEquipoOut;
   /** The understandable state, with its cause. */
   estado_operativo: Veredicto;

@@ -25,9 +25,22 @@ describe("the key of a read", () => {
   });
 
   it("treats an undefined parameter as no parameter at all", () => {
-    expect(buildQueryKey(["catalogo", "list"], { page: 1, q: undefined })).toEqual(
-      buildQueryKey(["catalogo", "list"], { page: 1 }),
-    );
+    expect(
+      buildQueryKey(["catalogo", "list"], { page: 1, q: undefined }),
+    ).toEqual(buildQueryKey(["catalogo", "list"], { page: 1 }));
+  });
+
+  it("keeps the key of the family when EVERY parameter is absent", () => {
+    // `{ page: undefined }` is not a parameter object: the read is the read of
+    // the family, so it is ONE cache entry and not two.
+    expect(buildQueryKey(["catalogo", "list"], { page: undefined })).toEqual([
+      "catalogo",
+      "list",
+    ]);
+    expect(buildQueryKey(["catalogo", "list"], {})).toEqual([
+      "catalogo",
+      "list",
+    ]);
   });
 });
 

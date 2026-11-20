@@ -1,6 +1,9 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { CircleCheck, Ticket, TriangleAlert, Users } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 import type { PoolInscripcion } from "../types/inscripcion.types";
 
 export interface PanelPoolProps {
@@ -8,13 +11,36 @@ export interface PanelPoolProps {
   pool: PoolInscripcion | null;
 }
 
-function Numero(props: { valor: number; etiqueta: string }) {
+/**
+ * One of the three figures that the server declared.
+ *
+ * The figure is the HERO of the tile and the label is its caption: the
+ * visitor reads the balance of the cupos at a glance. The icon says which
+ * figure it is, so the three tiles are distinguishable without the colour.
+ */
+function Cifra(props: {
+  valor: number;
+  etiqueta: string;
+  Icono: LucideIcon;
+  tono: string;
+}) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="text-2xl font-bold tabular-nums text-foreground">
+    <div className="flex min-w-0 flex-col gap-1.5 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-3 sm:p-4">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-9 items-center justify-center rounded-full bg-muted",
+          props.tono,
+        )}
+      >
+        <props.Icono className="size-4" />
+      </span>
+      <span className="text-3xl font-bold leading-none tabular-nums text-foreground">
         {props.valor}
       </span>
-      <span className="text-caption text-muted-foreground">{props.etiqueta}</span>
+      <span className="text-caption text-muted-foreground">
+        {props.etiqueta}
+      </span>
     </div>
   );
 }
@@ -53,11 +79,26 @@ export function PanelPool(props: PanelPoolProps) {
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-border bg-surface-recessed p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <div className="grid grid-cols-3 gap-4">
-          <Numero valor={pool.cupos_pagados} etiqueta="cupos pagados" />
-          <Numero valor={pool.cupos_asignados} etiqueta="cupos asignados" />
-          <Numero valor={pool.cupos_disponibles} etiqueta="cupos disponibles" />
+      <div className="flex flex-col gap-4 rounded-[var(--radius-xl)] border border-border bg-surface-recessed p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Cifra
+            valor={pool.cupos_pagados}
+            etiqueta="cupos pagados"
+            Icono={CircleCheck}
+            tono="text-success"
+          />
+          <Cifra
+            valor={pool.cupos_asignados}
+            etiqueta="cupos asignados"
+            Icono={Users}
+            tono="text-primary"
+          />
+          <Cifra
+            valor={pool.cupos_disponibles}
+            etiqueta="cupos disponibles"
+            Icono={Ticket}
+            tono="text-info"
+          />
         </div>
 
         <p className="max-w-measure text-sm leading-relaxed text-foreground">
@@ -66,10 +107,16 @@ export function PanelPool(props: PanelPoolProps) {
       </div>
 
       {pool.cupos_pagados === 0 ? (
-        <p className="text-sm leading-relaxed text-foreground">
-          No hay ningún cupo habilitado todavía. Los cupos se habilitan
-          cuando el pago se confirme.
-        </p>
+        <Alert className="border-info/45 bg-info/12">
+          <TriangleAlert className="size-4 text-info" aria-hidden="true" />
+          <AlertTitle className="text-foreground">
+            Ningún cupo habilitado todavía
+          </AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            No hay ningún cupo habilitado todavía. Los cupos se habilitan cuando
+            el pago se confirme.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <p className="text-caption text-muted-foreground">

@@ -47,15 +47,15 @@ describe("API-05 — el espejo del backend objetivo (validaciones)", () => {
     expect(resultado.estado_entrega).toBe("PENDIENTE");
   });
 
-  it("la cola de recogidas es una LISTA de entregas pendientes", () => {
+  it("la cola de recogidas separa pendientes de entregadas", () => {
     const respuesta = entregasPendientesEnvelope.parse({
       success: true,
-      data: [ENTREGA_PENDIENTE],
+      data: { pendientes: [ENTREGA_PENDIENTE], entregadas: [] },
       error: null,
       message: null,
     });
 
-    expect(respuesta.data).toHaveLength(1);
+    expect(respuesta.data?.pendientes).toHaveLength(1);
   });
 
   it("acepta la forma exacta de EntregaConfirmadaOut", () => {
@@ -86,7 +86,7 @@ describe("API-05 — el espejo del backend objetivo (validaciones)", () => {
       pase_id: "6d0e1f2a-3b4c-5d6e-8f80-91a2b3c4d5e6",
       pase_nombre: "Pase general",
       edicion_id: "0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
-      persona_id: "7e1f2a3b-4c5d-6e7f-8091a2b3c4d5e6f",
+      persona_id: "7e1f2a3b-4c5d-6e7f-8091-a2b3c4d5e6f7",
       persona_nombres: "María",
       persona_apellidos: "Fernández",
       persona_tipo_documento: "DNI",

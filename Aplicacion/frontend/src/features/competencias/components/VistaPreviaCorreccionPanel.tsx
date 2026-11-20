@@ -1,6 +1,6 @@
 import { TriangleAlert } from "lucide-react";
-import { ChipBloqueo } from "./ChipEstadoCompetencia";
 import type { VistaPreviaCorreccion } from "../types/competencia.types";
+import { ChipBloqueo } from "./ChipEstadoCompetencia";
 
 /**
  * VistaPreviaCorreccionPanel - what a correction WOULD change.
@@ -38,7 +38,9 @@ export function VistaPreviaCorreccionPanel({
 
       <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div>
-          <dt className="text-caption text-muted-foreground">Ganador propuesto</dt>
+          <dt className="text-caption text-muted-foreground">
+            Ganador propuesto
+          </dt>
           <dd className="text-sm font-semibold text-foreground">
             {vistaPrevia.ganador_nuevo_equipo_nombre}
           </dd>
@@ -55,9 +57,7 @@ export function VistaPreviaCorreccionPanel({
 
       {vistaPrevia.requiere_override ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <ChipBloqueo
-            motivo="Un descendiente ya transcurrió: la corrección necesita autorización explícita y un motivo"
-          />
+          <ChipBloqueo motivo="Un descendiente ya transcurrió: la corrección necesita autorización explícita y un motivo" />
         </div>
       ) : null}
 
@@ -72,16 +72,12 @@ export function VistaPreviaCorreccionPanel({
                 {descendiente.encuentro_id} · {descendiente.slot}
               </p>
               <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-caption text-muted-foreground">
-                <li>
-                  Cambia de verdad: {descendiente.afecta ? "sí" : "no"}
-                </li>
+                <li>Cambia de verdad: {descendiente.afecta ? "sí" : "no"}</li>
                 <li>
                   Sustituye el valor propagado:{" "}
                   {descendiente.reemplaza ? "sí" : "no"}
                 </li>
-                <li>
-                  Vacía el slot: {descendiente.limpia_slot ? "sí" : "no"}
-                </li>
+                <li>Vacía el slot: {descendiente.limpia_slot ? "sí" : "no"}</li>
                 <li>
                   Anula el resultado derivado:{" "}
                   {descendiente.limpia_resultado ? "sí" : "no"}

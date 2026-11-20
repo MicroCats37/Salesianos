@@ -2,8 +2,9 @@
 
 **Artifact:** `evidence/api/API-02-inscription-integration.md` · **Packet:** API-02 (`wave-03-api-integration`)
 **Owner:** A7 · **Status:** `verification_required` (implementation pass applied, runtime verification deferred)
+**Sub-batches:** API-02 (2026-11-19, the implementation pass) · **API-02B** (2026-11-20, the corrective sub-batch — see §16)
 **Task of origin:** `T-072` · **Target:** `Aplicacion/frontend/src/features/inscripciones/**` only
-**Date:** 2026-11-19 · **Branch:** `master` · **Rollback point:** `fd1c4c123df3767ef6e86908565edf2d4c27c00a` (no commit created; `git stash` never invoked)
+**Date:** 2026-11-19 (API-02) · 2026-11-20 (API-02B) · **Branch:** `master` · **Rollback point:** `fd1c4c123df3767ef6e86908565edf2d4c27c00a` (no commit created; `git stash` never invoked)
 
 ---
 
@@ -615,3 +616,139 @@ after this packet**; the packet still depends on API-04, API-05 and XCT-01), and
 > before **API-03** closed; it is corrected here. The other two lines of this
 > section are unaffected: **API-03** consumed the money decision `D-API02-02`
 > (a string on the wire) and **API-04** still reads the same wrappers.
+
+---
+
+## 16. API-02B — Corrective sub-batch (2026-11-20): the focused suite was stale against the NEW target contract
+
+**Sub-batch:** API-02B · **Owner:** A7 · **Status:** `verification_required` (the
+implementation pass is applied; the runtime verification stays deferred)
+**Allowed roots:** `Aplicacion/frontend/src/features/inscripciones/**` (one focused
+test file) · **No other feature, no shared root, no backend, no contract touched.**
+**Rollback point:** `fd1c4c123df3767ef6e86908565edf2d4c27c00a` (no commit created;
+`git stash`/`reset`/`checkout` never invoked)
+
+### 16.1 The symptom
+
+`npx tsc --noEmit` reported **exactly two** errors, both in
+`features/inscripciones/__tests__/inscripcion-transporte.test.ts` (lines **446**
+and **487**), with the same shape:
+
+```
+TS2345: Argument of type '{ edicion_id: string; paquete_id: string;
+  equipos: { disciplina_id: string; nombre: string; }[]; }' is not assignable to
+  parameter of type '{ edicion_id: string; paquete_id: string;
+  promocion_id: string; cantidad: number; equipos: [...]; ... }'.
+  Type ... is missing the following properties: promocion_id, cantidad
+```
+
+The two errors were observed by **XCT-02** and by **XCT-03** as FOREIGN errors
+(STATE.md, rows `XCT-02` and `XCT-03`): both packets ran the project-wide gate,
+found the two errors outside their own roots, did **not** touch them and left the
+gate RED.
+
+### 16.2 The root cause
+
+**A later concurrent change of the TARGET contract moved the payload of the alta,
+and the focused suite of this packet was not migrated with it.**
+
+The backend change `restore-registration-promotion-catalog-flow` (2026-11-20)
+extended `InscripcionInicialIn` in
+`Aplicacion/backend/modules/salesianos_fest/presentation/schemas/inscripcion_schemas.py`:
+`promocion_id` became **REQUIRED** (the cohort that buys and that determines the
+band of the teams, `RN-C02`/`QA-K01`) and `cantidad` became **REQUIRED** (the
+number of participants, `ge=MIN_CANTIDAD_POR_INSCRIPCION`); `fusion_promocion_id`
+and `cotizacion_version` stayed OPTIONAL.
+
+The frontend mirror and the payload builder of this feature were migrated with
+that change (`schemas/inscripcion.schema.ts` → `inscripcionInicialInSchema`,
+`utils/inscripcion.payloads.utils.ts` → `construirPayloadAlta`), and the focused
+suite was migrated in **three of its five** alta call sites (lines 336, 369 and
+398 of `inscripcion-transporte.test.ts`). **Two call sites were left on the
+previous three-field payload**: the **422** case (the field errors reach the form)
+and the **409** case (the race is decided by the server). TypeScript rejected
+them because the hook's variable type is the mirror's.
+
+**The two errors were a STALE TEST, not a wrong contract.** The mirror, the
+payload builder and the hook were already correct against the backend.
+
+### 16.3 The fix (1 file, 2 call sites, 4 added lines)
+
+`features/inscripciones/__tests__/inscripcion-transporte.test.ts` — the two
+stale alta payloads now carry the fields that the target contract REQUIRES,
+with the same values as their three already-migrated siblings:
+
+```diff
+         await result.current.mutateAsync({
+           edicion_id: "ed-1",
+           paquete_id: "paq-1",
++          promocion_id: "pro-1",
++          cantidad: 10,
+           equipos: [{ disciplina_id: "dis-1", nombre: "Halcones" }],
+         });
+```
+
+**Nothing else was changed.** No mirror, no payload builder, no hook, no
+component, no view, no other test, no shared root, no backend and no contract.
+The fix **preserves the current intended target contract** (the cohort and the
+quantity are visitor decisions that the server resolves against the catalogue)
+and **reintroduces no frozen endpoint**.
+
+### 16.4 Commands / exit codes (workdir `Aplicacion/frontend`)
+
+| # | Command | Exit | Result |
+|---:|---|---:|---|
+| V1 | `npx tsc --noEmit` | **1** | **2 errors, BOTH in the roots of this packet**: `features/inscripciones/__tests__/inscripcion-transporte.test.ts` lines 446 and 487 (`TS2345`: the payload lacks `promocion_id` and `cantidad`). 0 errors anywhere else. |
+| V2 | `npx tsc --noEmit` | **0** | **CLEAN, project-wide.** The two errors of V1 are gone and **no other error appeared**: the fix did not touch a single line outside the focused test. |
+
+**NOT RUN** (forbidden by the launch contract and by the standing preference
+#11299): `vitest` · `biome check` · `next build` · `npm install` · any server ·
+any browser · any visual automation · `git stash` · `git commit` · `git reset` ·
+`git checkout`. The 6 suites of this feature stay **WRITTEN and NOT EXECUTED**
+and the five-width browser audit stays **NOT RUN**; the packet stays
+`verification_required`.
+
+### 16.5 The registration truth re-verified (and one gap that is NOT ours to fix)
+
+The two routes that the concurrent change added to this feature were checked
+against the **registered** controllers of the target backend
+(`Aplicacion/backend/config/api.py`):
+
+| Route | Controller | Registered? | Verdict |
+|---|---|---|---|
+| `GET /catalogo/promociones` | `CatalogoController.listar_promociones` | **YES** (`CatalogoController` is registered) | **EXISTS** — a legitimate target route |
+| `GET /catalogo/categorias` | `CatalogoController.listar_categorias` | **YES** (same controller) | **EXISTS** — a legitimate target route |
+| `POST /cotizaciones` | `CotizacionController.cotizar` | **NO** | **DOES NOT EXIST at runtime** |
+
+`CotizacionController` exists, is implemented and is exercised by the module's
+own e2e URL configuration
+(`modules/salesianos_fest/tests/urls_salesianos_fest.py`), but it is **NOT** in
+the `registrar_controladores(...)` block of `config/api.py` and its own
+docstring says so: *"Ledger: ruta PROVISIONAL — A0 tiene que registrar este
+controller en `config/api.py`"*. Per `FR-07` §3.1 regla 2, **a route does not
+exist until its controller is registered**: code written and not registered is
+dead code by design.
+
+**This sub-batch did NOT unbind it and did NOT touch the backend.** The binding
+is the concurrent agent's deliberate work against the new target contract, and
+the controller exists: the missing piece is the **registration**, which is a
+backend file (`Aplicacion/backend/config/api.py`) and therefore **outside the
+allowed roots** of this corrective apply. It is reported as an A0 request
+(`A0-API02-09`).
+
+### 16.6 Deviations and A0 requests of the sub-batch
+
+| ID | Type | What |
+|---|---|---|
+| `D-API02B-01` | decision | **The stale TEST was fixed, not the contract.** The mirror, the payload builder and the hook of the feature were already correct against `restore-registration-promotion-catalog-flow`; only the focused suite was behind. Reverting the contract to the three-field payload would have broken the target backend's own requirement. |
+| `D-API02B-02` | decision | The two call sites were aligned with their **three already-migrated siblings** (same field values), so the six suites of the feature speak **one** contract. |
+| `A0-API02-09` | A0 request | **Register `CotizacionController` in `Aplicacion/backend/config/api.py`** so `POST /api/cotizaciones` exists at runtime. Until then the quotation that the wizard requests has no route, and the concurrency token `cotizacion_version` can never arrive. Owner: A0 (backend root, outside this packet's roots). |
+
+### 16.7 Acceptance criteria of the sub-batch
+
+- [x] The **root cause** is identified and it is a stale focused suite, not a wrong contract.
+- [x] The fix touches **exactly one file** inside the allowed roots, and only the two stale call sites.
+- [x] The **current intended target contract is preserved** (the cohort and the quantity are required by the target backend) and **no frozen endpoint is reintroduced**.
+- [x] `npx tsc --noEmit` exits **0** and the **project-wide gate is GREEN** (V2).
+- [x] Nothing outside `features/inscripciones/**` was modified; the concurrent trees of API-03, API-04, API-05, UI-04, UI-05, XCT-01, XCT-02 and XCT-03 were **not** touched, reverted or merged.
+- [ ] The execution of the six suites, the lint pass and the five-width browser audit stay **DEFERRED** — the packet stays **`verification_required`**.

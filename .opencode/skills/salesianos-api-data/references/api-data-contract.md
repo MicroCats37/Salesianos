@@ -40,7 +40,24 @@ Build the transport payload inside the mutation hook and test exact keys, null/u
 
 ## Corrected Multipart Image Protocol
 
-Frontend replaces each `File` value with `file_<uuid>`, serializes the resulting object in FormData field `data`, and appends the file with name `<token>___<realname>`. Backend parses `data`, hydrates each token exactly once, and rejects missing or orphan files.
+Frontend replaces each `File` value with `file_<uuid>`, serializes the resulting object in FormData field `data`, and appends the file with name `<token>___<realname>`. Backend controllers declare `data: Form[DataForm]` and `files: File[list[UploadedFile]]`, then call `parse_form_json(data.data, files, InputSchema)`. That shared parser hydrates each token exactly once and rejects missing or orphan files.
+
+The controller boundary is mandatory:
+
+```python
+async def crear(
+    self,
+    request,
+    data: Form[DataForm],
+    files: File[list[UploadedFile]],
+):
+    payload = parse_form_json(data.data, files, RecursoIn)
+    domain_data = RecursoCreateData(...)
+    result = await self.orchestrator.crear(domain_data)
+    return success_response(RecursoPresenter.present(result))
+```
+
+Do not parse `request.POST`, `request.FILES`, or `request.body` directly. Do not introduce per-module request hydrators as an alternative HTTP boundary.
 
 For any adapted endpoint require:
 

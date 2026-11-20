@@ -37,7 +37,9 @@ describe("UI-01 — la cuenta no inventa colores literales (T-01)", () => {
 
     expect(fuente).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(fuente).not.toMatch(/\b(rgb|rgba|hsl|hsla)\(/);
-    expect(fuente).not.toMatch(/\b(text|bg|border)-(red|blue|green|yellow|amber|emerald|slate|gray|zinc|neutral|stone)-[0-9]{2,3}\b/);
+    expect(fuente).not.toMatch(
+      /\b(text|bg|border)-(red|blue|green|yellow|amber|emerald|slate|gray|zinc|neutral|stone)-[0-9]{2,3}\b/,
+    );
     expect(fuente).not.toMatch(/\b(text|bg|border)-\[#[0-9a-fA-F]/);
   });
 
@@ -61,9 +63,12 @@ describe("UI-01 — la tabla declara sus cabeceras (SH-02 2.2)", () => {
 });
 
 describe("UI-01 — el ancho de trabajo no desborda", () => {
-  it.each(FUENTES)("%s no empuja la página con un scroll horizontal", (ruta) => {
-    expect(FUENTE[ruta]).not.toMatch(/\boverflow-x-auto/);
-  });
+  it.each(FUENTES)(
+    "%s no empuja la página con un scroll horizontal",
+    (ruta) => {
+      expect(FUENTE[ruta]).not.toMatch(/\boverflow-x-auto/);
+    },
+  );
 
   it.each(["components/ListaCompras.tsx", "components/ListaInscripciones.tsx"])(
     "%s ofrece la tabla desde 1024 y las tarjetas por debajo",

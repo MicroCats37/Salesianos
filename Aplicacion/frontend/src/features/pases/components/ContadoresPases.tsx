@@ -29,19 +29,27 @@ export function ContadoresPases({ compra, className }: ContadoresPasesProps) {
     <section
       aria-labelledby="contadores-pases-titulo"
       className={cn(
-        "flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-recessed p-4",
+        "flex flex-col gap-4 rounded-[var(--radius-xl)] border border-border bg-surface-recessed p-5 shadow-[var(--elevation-sm)]",
         className,
       )}
     >
-      <h2 id="contadores-pases-titulo" className="text-section-title text-foreground">
+      <h2
+        id="contadores-pases-titulo"
+        className="text-section-title text-foreground"
+      >
         Tus pases
       </h2>
 
-      <dl className="grid grid-cols-3 gap-3">
+      <dl className="grid grid-cols-3 gap-2 sm:gap-3">
         {cifras.map((cifra) => (
-          <div key={cifra.etiqueta} className="flex flex-col gap-0.5">
-            <dt className="text-caption text-muted-foreground">{cifra.etiqueta}</dt>
-            <dd className="text-title-section font-semibold tabular-nums text-foreground">
+          <div
+            key={cifra.etiqueta}
+            className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-border bg-surface-raised p-3"
+          >
+            <dt className="text-caption text-muted-foreground">
+              {cifra.etiqueta}
+            </dt>
+            <dd className="text-2xl font-bold tabular-nums text-foreground">
               {cifra.valor}
             </dd>
           </div>

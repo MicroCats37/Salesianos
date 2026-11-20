@@ -1,5 +1,5 @@
-import { PagosAdminRuta } from "@/features/admin/pagos";
 import { parametrosDeConsulta } from "@/features/admin/operaciones/utils/parametros";
+import { PagosAdminRuta } from "@/features/admin/pagos";
 
 /**
  * ADM-14 — Investigar compras, órdenes y pagos

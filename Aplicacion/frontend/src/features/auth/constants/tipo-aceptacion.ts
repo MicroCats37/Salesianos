@@ -10,7 +10,8 @@ export const TIPO_ACEPTACION = {
   IMAGEN: "IMAGEN",
 } as const;
 
-export type TipoAceptacion = (typeof TIPO_ACEPTACION)[keyof typeof TIPO_ACEPTACION];
+export type TipoAceptacion =
+  (typeof TIPO_ACEPTACION)[keyof typeof TIPO_ACEPTACION];
 
 /**
  * TipoDocumento — document type identifiers used in registration.
@@ -21,7 +22,8 @@ export const TIPO_DOCUMENTO = {
   PAS: "PAS",
 } as const;
 
-export type TipoDocumento = (typeof TIPO_DOCUMENTO)[keyof typeof TIPO_DOCUMENTO];
+export type TipoDocumento =
+  (typeof TIPO_DOCUMENTO)[keyof typeof TIPO_DOCUMENTO];
 
 /**
  * Genero — gender identifiers used in registration.

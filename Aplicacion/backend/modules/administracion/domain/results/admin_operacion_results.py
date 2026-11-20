@@ -353,6 +353,7 @@ class AdminPagoListItemAdminResultado:
 
     compra_id: str
     orden_pago_id: Optional[str]
+    inscripcion_id: Optional[str]
     tipo_compra: str
     resumen_concepto: str
     comprador: CompradorAdminResultado

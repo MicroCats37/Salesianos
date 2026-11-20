@@ -174,6 +174,10 @@ export interface ResultadoValidacion {
  */
 export interface EntregaPendiente {
   pedido_id: string;
+  /** Civil identity shown to the store operator. */
+  comprador_nombres: string;
+  comprador_apellidos: string;
+  comprador_documento: string;
   /** The state of the order. */
   estado: string;
   /** The state of the delivery. */

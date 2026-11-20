@@ -1,14 +1,11 @@
-import Link from "next/link";
 import { ScrollText } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  AdminDataTable,
-  AdminEmptyState,
-} from "@/features/admin/components";
-import { ChipVeredictoValidacion } from "./ChipVeredictoValidacion";
+import { AdminDataTable, AdminEmptyState } from "@/features/admin/components";
+import type { RegistroValidacion } from "../types/validacion.types";
 import { CODIGOS_VALIDACION } from "../utils/validaciones.estados.utils";
 import { formatearInstante } from "../utils/validaciones.fecha.utils";
-import type { RegistroValidacion } from "../types/validacion.types";
+import { ChipVeredictoValidacion } from "./ChipVeredictoValidacion";
 
 /**
  * FiltrosAuditoria - the filters of the audit (`ADM-22`).
@@ -197,7 +194,9 @@ export function TablaAuditoriaValidaciones({
                   </span>
                 ),
                 punto: (
-                  <span className="text-muted-foreground">{registro.punto}</span>
+                  <span className="text-muted-foreground">
+                    {registro.punto}
+                  </span>
                 ),
                 operador: (
                   <span className="text-muted-foreground">

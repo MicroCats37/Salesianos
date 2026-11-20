@@ -32,7 +32,15 @@ export function buildQueryKey<T extends Record<string, unknown>>(
   params?: T,
 ): QueryKey {
   if (params === undefined) return [...baseKey];
-  return [...baseKey, queryParams(params)];
+
+  const limpios = queryParams(params);
+
+  // A read whose EVERY parameter is absent is the read of the family: its key
+  // carries NO parameter object. `{ page: undefined }` and no parameters at all
+  // are the SAME cache entry, never two.
+  if (Object.keys(limpios).length === 0) return [...baseKey];
+
+  return [...baseKey, limpios];
 }
 
 /**

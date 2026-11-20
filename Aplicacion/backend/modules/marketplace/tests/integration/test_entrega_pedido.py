@@ -69,7 +69,11 @@ def test_no_se_entrega_un_pedido_no_pagado(
                     producto_id=producto_con_stock.id,
                     cantidad=1,
                 )
-            ]
+            ],
+            tipo_documento="DNI",
+            numero_documento="10000002",
+            nombres="Comprador",
+            apellidos="Pendiente",
         ),
     )
 
@@ -151,3 +155,26 @@ def test_la_entrega_no_vuelve_a_mover_el_stock(
 
     producto_con_stock.refresh_from_db()
     assert producto_con_stock.stock == stock_antes
+
+
+@pytest.mark.django_db
+def test_el_listado_separa_recogidas_pendientes_y_entregadas(
+    inventario_orchestrator,
+    pedido_orchestrator,
+    usuario_admin,
+    pedido_pagado,
+):
+    """La tienda ve ambas colas con el nombre y apellido del comprador."""
+    async_to_sync(pedido_orchestrator.confirmar_entrega)(
+        usuario_admin,
+        str(pedido_pagado.id),
+    )
+
+    resultado = async_to_sync(inventario_orchestrator.listar_entregas)()
+
+    assert resultado.pendientes == []
+    assert len(resultado.entregadas) == 1
+    assert resultado.entregadas[0].pedido_id == pedido_pagado.id
+    assert resultado.entregadas[0].comprador_nombres == pedido_pagado.comprador.nombres
+    assert resultado.entregadas[0].comprador_apellidos == pedido_pagado.comprador.apellidos
+    assert resultado.entregadas[0].comprador_documento == pedido_pagado.comprador.numero_documento

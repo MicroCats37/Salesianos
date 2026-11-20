@@ -65,12 +65,19 @@ export function AccountTopbar({
 }: AccountTopbarProps) {
   const pathname = usePathname();
 
-  /** Whether a destination is the one the visitor is on right now. */
-  const esActivo = (href: string) => pathname === href;
+  /**
+   * Whether a destination is the one the visitor is on right now.
+   *
+   * A DETAIL route belongs to its list: `/mis-compras/123` is still "Tus
+   * compras". The prefix counts as the same destination, so the bar never
+   * loses the context of where the visitor is, and the mark of the current
+   * location (`aria-current`) follows the same rule.
+   */
+  const esActivo = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   const seccionActual =
-    seccion ??
-    SECCIONES.find((destino) => destino.href === pathname)?.label;
+    seccion ?? SECCIONES.find((destino) => esActivo(destino.href))?.label;
 
   return (
     <header className="sticky top-0 z-(--z-sticky) flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
@@ -99,97 +106,97 @@ export function AccountTopbar({
         <ThemeToggle />
 
         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="min-h-11 gap-2 rounded-full px-3"
-                aria-label="Abrir menú de cuenta"
-              >
-                <span className="inline-flex size-8 items-center justify-center rounded-full bg-muted text-sm font-bold text-primary">
-                  <UserRound className="size-4" aria-hidden="true" />
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="min-h-11 gap-2 rounded-full px-3"
+              aria-label="Abrir menú de cuenta"
+            >
+              <span className="inline-flex size-8 items-center justify-center rounded-full bg-muted text-sm font-bold text-primary">
+                <UserRound className="size-4" aria-hidden="true" />
+              </span>
+              {usuario ? (
+                <span className="hidden max-w-[18ch] truncate text-sm font-medium sm:inline">
+                  {usuario}
                 </span>
-                {usuario ? (
-                  <span className="hidden max-w-[18ch] truncate text-sm font-medium sm:inline">
-                    {usuario}
-                  </span>
-                ) : null}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link
-                  href={RUTAS.cuenta.miCuenta}
-                  aria-current={
-                    esActivo(RUTAS.cuenta.miCuenta) ? "page" : undefined
-                  }
-                  className={cn(
-                    esActivo(RUTAS.cuenta.miCuenta) &&
-                      "border-l-2 border-accent pl-3 font-semibold",
-                  )}
-                >
-                  Mi cuenta
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link
-                  href={RUTAS.cuenta.misInscripciones}
-                  aria-current={
-                    esActivo(RUTAS.cuenta.misInscripciones) ? "page" : undefined
-                  }
-                  className={cn(
-                    esActivo(RUTAS.cuenta.misInscripciones) &&
-                      "border-l-2 border-accent pl-3 font-semibold",
-                  )}
-                >
-                  Mis inscripciones
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link
-                  href={RUTAS.cuenta.misCompras}
-                  aria-current={
-                    esActivo(RUTAS.cuenta.misCompras) ? "page" : undefined
-                  }
-                  className={cn(
-                    esActivo(RUTAS.cuenta.misCompras) &&
-                      "border-l-2 border-accent pl-3 font-semibold",
-                  )}
-                >
-                  Mis compras
-                </Link>
-              </DropdownMenuItem>
-              {esAdmin ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={RUTAS.administracion.resumen}
-                      aria-current={
-                        esActivo(RUTAS.administracion.resumen)
-                          ? "page"
-                          : undefined
-                      }
-                      className={cn(
-                        esActivo(RUTAS.administracion.resumen) &&
-                          "border-l-2 border-accent pl-3 font-semibold",
-                      )}
-                    >
-                      Administración
-                    </Link>
-                  </DropdownMenuItem>
-                </>
               ) : null}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <a href="/api/auth/logout">
-                  <LogOut className="size-4" aria-hidden="true" />
-                  Cerrar sesión
-                </a>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link
+                href={RUTAS.cuenta.miCuenta}
+                aria-current={
+                  esActivo(RUTAS.cuenta.miCuenta) ? "page" : undefined
+                }
+                className={cn(
+                  esActivo(RUTAS.cuenta.miCuenta) &&
+                    "border-l-2 border-accent pl-3 font-semibold",
+                )}
+              >
+                Mi cuenta
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href={RUTAS.cuenta.misInscripciones}
+                aria-current={
+                  esActivo(RUTAS.cuenta.misInscripciones) ? "page" : undefined
+                }
+                className={cn(
+                  esActivo(RUTAS.cuenta.misInscripciones) &&
+                    "border-l-2 border-accent pl-3 font-semibold",
+                )}
+              >
+                Mis inscripciones
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href={RUTAS.cuenta.misCompras}
+                aria-current={
+                  esActivo(RUTAS.cuenta.misCompras) ? "page" : undefined
+                }
+                className={cn(
+                  esActivo(RUTAS.cuenta.misCompras) &&
+                    "border-l-2 border-accent pl-3 font-semibold",
+                )}
+              >
+                Mis compras
+              </Link>
+            </DropdownMenuItem>
+            {esAdmin ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={RUTAS.administracion.resumen}
+                    aria-current={
+                      esActivo(RUTAS.administracion.resumen)
+                        ? "page"
+                        : undefined
+                    }
+                    className={cn(
+                      esActivo(RUTAS.administracion.resumen) &&
+                        "border-l-2 border-accent pl-3 font-semibold",
+                    )}
+                  >
+                    Administración
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            ) : null}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/api/auth/logout">
+                <LogOut className="size-4" aria-hidden="true" />
+                Cerrar sesión
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

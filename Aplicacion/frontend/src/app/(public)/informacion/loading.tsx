@@ -26,11 +26,14 @@ export default function Loading() {
 
         <div className="flex flex-col gap-10">
           <div className="flex flex-col gap-4">
+            {/* La firma de oro que abre cada bloque. */}
+            <Skeleton className="h-0.5 w-10 rounded-full" />
             <Skeleton className="h-5 w-64" />
             <Skeleton className="h-20 w-full rounded-[var(--radius-lg)]" />
             <Skeleton className="h-20 w-full rounded-[var(--radius-lg)]" />
           </div>
           <div className="flex flex-col gap-4">
+            <Skeleton className="h-0.5 w-10 rounded-full" />
             <Skeleton className="h-5 w-56" />
             <Skeleton className="h-20 w-full rounded-[var(--radius-lg)]" />
             <Skeleton className="h-20 w-full rounded-[var(--radius-lg)]" />

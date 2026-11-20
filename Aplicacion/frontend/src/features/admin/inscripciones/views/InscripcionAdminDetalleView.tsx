@@ -1,18 +1,17 @@
 import { ClipboardList, History, ShoppingCart, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AdminEmptyState,
   AdminNotice,
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
+import type {
+  ColumnaOperativa,
+  FilaOperativa,
+} from "@/features/admin/operaciones";
 import {
   CifrasCupos,
   EsqueletoOperativo,
@@ -20,10 +19,6 @@ import {
   MarcoOperativo,
   VeredictoConCausa,
   VeredictoOperativo,
-} from "@/features/admin/operaciones";
-import type {
-  ColumnaOperativa,
-  FilaOperativa,
 } from "@/features/admin/operaciones";
 import { RUTAS } from "@/lib/routes";
 import { PanelPoolInscripcion } from "../components/PanelPoolInscripcion";
@@ -36,12 +31,23 @@ const COLUMNAS_EQUIPOS: ColumnaOperativa[] = [
   { key: "equipo", label: "Equipo", prioridad: 1, titular: true },
   { key: "disciplina", label: "Disciplina", prioridad: 1 },
   { key: "estado", label: "Estado", prioridad: 1 },
-  { key: "participantes", label: "Participantes", prioridad: 2, numerico: true },
+  {
+    key: "participantes",
+    label: "Participantes",
+    prioridad: 2,
+    numerico: true,
+  },
   { key: "estado_equipo", label: "Estado del equipo", prioridad: 2 },
 ];
 
 const COLUMNAS_COMPRAS: ColumnaOperativa[] = [
-  { key: "compra", label: "Compra", prioridad: 1, titular: true, identificador: true },
+  {
+    key: "compra",
+    label: "Compra",
+    prioridad: 1,
+    titular: true,
+    identificador: true,
+  },
   { key: "estado", label: "Estado del pago", prioridad: 1 },
   { key: "total", label: "Total", prioridad: 2, numerico: true },
   { key: "moneda", label: "Moneda", prioridad: 2 },
@@ -163,7 +169,9 @@ export function InscripcionAdminDetalleView({
                         estado: equipo.estado,
                         participantes: equipo.participantes.length,
                         estado_equipo: (
-                          <VeredictoConCausa veredicto={equipo.estado_operativo} />
+                          <VeredictoConCausa
+                            veredicto={equipo.estado_operativo}
+                          />
                         ),
                       },
                     }),
@@ -239,7 +247,9 @@ export function InscripcionAdminDetalleView({
                       celdas: {
                         compra: compra.compra_id,
                         estado: (
-                          <VeredictoOperativo veredicto={compra.estado_operativo} />
+                          <VeredictoOperativo
+                            veredicto={compra.estado_operativo}
+                          />
                         ),
                         total: compra.total,
                         moneda: compra.moneda,
@@ -280,7 +290,12 @@ export function InscripcionAdminDetalleView({
                 <ListaOperativa
                   caption="Historial de la inscripción"
                   columnas={[
-                    { key: "fecha", label: "Fecha", prioridad: 1, titular: true },
+                    {
+                      key: "fecha",
+                      label: "Fecha",
+                      prioridad: 1,
+                      titular: true,
+                    },
                     { key: "tipo", label: "Hecho", prioridad: 1 },
                     { key: "descripcion", label: "Detalle", prioridad: 1 },
                     { key: "actor", label: "Actor", prioridad: 2 },

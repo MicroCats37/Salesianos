@@ -45,9 +45,7 @@ export function isSameFormValue(a: unknown, b: unknown): boolean {
     const bKeys = Object.keys(b).filter((key) => b[key] !== undefined);
     if (aKeys.length !== bKeys.length) return false;
     return aKeys.every(
-      (key) =>
-        Object.prototype.hasOwnProperty.call(b, key) &&
-        isSameFormValue(a[key], b[key]),
+      (key) => Object.hasOwn(b, key) && isSameFormValue(a[key], b[key]),
     );
   }
 

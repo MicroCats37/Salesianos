@@ -64,6 +64,7 @@ const CATALOGO = {
       descripcion: "Paquete de ejemplo.",
       estado: "VIGENTE",
       cupos_incluidos: 10,
+      minimo_compra_inicial: 7,
       precio: {
         monto: "750.00",
         moneda: "PEN",
@@ -76,6 +77,52 @@ const CATALOGO = {
   ],
 };
 
+const CATALOGO_PROMOCIONES = {
+  edicion_id: "ed-1",
+  edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+  promociones: [
+    {
+      id: "pro-1",
+      created_at: "2026-11-19T10:00:00+00:00",
+      updated_at: "2026-11-19T10:00:00+00:00",
+      anio: 2012,
+      nombre: "PROMOCIÓN 2012",
+      estado: "ACTIVA",
+    },
+  ],
+};
+
+const CATALOGO_CATEGORIAS = {
+  edicion_id: "ed-1",
+  edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+  categorias: [
+    {
+      id: "cat-1",
+      created_at: "2026-11-19T10:00:00+00:00",
+      updated_at: "2026-11-19T10:00:00+00:00",
+      edicion_id: "ed-1",
+      edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+      nombre: "JUNIOR",
+      promocion_desde: 2012,
+      promocion_hasta: 2025,
+      estado: "ACTIVA",
+    },
+  ],
+};
+
+const COTIZACION = {
+  paquete_id: "paq-1",
+  paquete_nombre: "PAQUETE DE EJEMPLO",
+  minimo_cantidad: 7,
+  cantidad_cotizada: 7,
+  precio_unitario: "750.00",
+  total: "5250.00",
+  moneda: "PEN",
+  version: 2,
+  estado: "ACTIVA",
+  validez_hasta: "2026-11-21T10:00:00+00:00",
+};
+
 const INSCRIPCION = {
   id: "ins-1",
   created_at: "2026-11-19T10:00:00+00:00",
@@ -85,6 +132,8 @@ const INSCRIPCION = {
   responsable_id: "per-1",
   paquete_id: "paq-1",
   paquete_nombre: "PAQUETE DE EJEMPLO",
+  promocion: { id: "pro-1", nombre: "PROMOCIÓN 2012", anio: 2012 },
+  fusion_promocion: null,
   estado: "CREADA",
   referencia: "INSCRIPCION:ins-1:INICIAL",
   cupos_solicitados: 10,
@@ -107,6 +156,49 @@ function envelope(data: unknown, message: string | null = null) {
   return { success: true, data, error: null, message };
 }
 
+/**
+ * The answer of the server, routed by URL.
+ *
+ * The wizard reads FOUR datasets: the packages of the edition, the cohorts,
+ * the competitive bands and the quotation of the selected package and the
+ * selected quantity. The alta is the write.
+ */
+function responder(metodo: string, url: string) {
+  if (url === "/cotizaciones") {
+    return Promise.resolve({ status: 200, data: envelope(COTIZACION) });
+  }
+
+  if (metodo === "post") {
+    return Promise.resolve({
+      status: 201,
+      data: envelope(
+        {
+          inscripcion: INSCRIPCION,
+          compra: COMPRA,
+          causa_operativa: "INSCRIPCION_CREADA",
+        },
+        "Inscripción registrada correctamente.",
+      ),
+    });
+  }
+
+  if (url === "/catalogo/promociones") {
+    return Promise.resolve({
+      status: 200,
+      data: envelope(CATALOGO_PROMOCIONES),
+    });
+  }
+
+  if (url === "/catalogo/categorias") {
+    return Promise.resolve({
+      status: 200,
+      data: envelope(CATALOGO_CATEGORIAS),
+    });
+  }
+
+  return Promise.resolve({ status: 200, data: envelope(CATALOGO) });
+}
+
 function crearWrapper(client: ReturnType<typeof createQueryClient>) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -127,10 +219,9 @@ describe("SPORT-01 — el asistente de la inscripción", () => {
   it("mientras el catálogo viaja no finge que no hay catálogo", () => {
     apiSendMock.mockReturnValue(new Promise(() => undefined));
 
-    render(
-      <InscripcionWizardView edicionId="ed-1" />,
-      { wrapper: crearWrapper(client) },
-    );
+    render(<InscripcionWizardView edicionId="ed-1" />, {
+      wrapper: crearWrapper(client),
+    });
 
     expect(
       screen.getByText("Cargando los paquetes disponibles de la edición"),
@@ -138,13 +229,17 @@ describe("SPORT-01 — el asistente de la inscripción", () => {
   });
 
   it("con catálogo ofrece los paquetes que publica el servidor", async () => {
-    apiSendMock.mockResolvedValue({ status: 200, data: envelope(CATALOGO) });
+    apiSendMock.mockImplementation((metodo: string, url: string) =>
+      responder(metodo, url),
+    );
 
     render(<InscripcionWizardView edicionId="ed-1" />, {
       wrapper: crearWrapper(client),
     });
 
-    await waitFor(() => expect(screen.getByText("PAQUETE DE EJEMPLO")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("PAQUETE DE EJEMPLO")).toBeDefined(),
+    );
 
     // El precio se imprime tal como lo manda el servidor: 750.00 PEN.
     expect(screen.getByText("750.00")).toBeDefined();
@@ -204,10 +299,21 @@ describe("SPORT-01 — el asistente de la inscripción", () => {
 });
 
 describe("SPORT-01 — el alta", () => {
+  /**
+   * The wizard has FIVE steps: the package, the cohort, the teams, the
+   * summary and the confirmation. The helper walks the first four.
+   */
   async function llegarAlConfirmacion() {
-    await waitFor(() => expect(screen.getByText("PAQUETE DE EJEMPLO")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByText("PAQUETE DE EJEMPLO")).toBeDefined(),
+    );
 
     fireEvent.click(screen.getByRole("radio", { name: /PAQUETE DE EJEMPLO/ }));
+
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/ }));
+
+    const promocion = await screen.findByLabelText("Tu promoción");
+    fireEvent.change(promocion, { target: { value: "pro-1" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/ }));
 
@@ -225,7 +331,9 @@ describe("SPORT-01 — el alta", () => {
   }
 
   it("el resumen dice que los cupos se habilitan al confirmar el pago", async () => {
-    apiSendMock.mockResolvedValue({ status: 200, data: envelope(CATALOGO) });
+    apiSendMock.mockImplementation((metodo: string, url: string) =>
+      responder(metodo, url),
+    );
 
     render(<InscripcionWizardView edicionId="ed-1" />, {
       wrapper: crearWrapper(client),
@@ -236,28 +344,66 @@ describe("SPORT-01 — el alta", () => {
     expect(
       screen.getByText(/Se habilitan cuando el pago se confirme/),
     ).toBeDefined();
-    expect(
-      screen.getByText(/no tiene ningún cupo disponible/),
-    ).toBeDefined();
+    expect(screen.getByText(/no tiene ningún cupo disponible/)).toBeDefined();
+  });
+
+  it("la cantidad arranca en el mínimo que DECLARA el paquete", async () => {
+    apiSendMock.mockImplementation((metodo: string, url: string) =>
+      responder(metodo, url),
+    );
+
+    render(<InscripcionWizardView edicionId="ed-1" />, {
+      wrapper: crearWrapper(client),
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText("PAQUETE DE EJEMPLO")).toBeDefined(),
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /PAQUETE DE EJEMPLO/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/exige un mínimo de 7 personas/)).toBeDefined(),
+    );
+
+    // El botón de DISMINUIR está apagado en el mínimo del paquete.
+    const disminuir = screen.getByRole("button", {
+      name: "Disminuir la cantidad de personas",
+    });
+    await waitFor(() => expect(disminuir).toHaveProperty("disabled", true));
+  });
+
+  it("la promoción es EXPLÍCITA: sin elegirla el asistente no avanza", async () => {
+    apiSendMock.mockImplementation((metodo: string, url: string) =>
+      responder(metodo, url),
+    );
+
+    render(<InscripcionWizardView edicionId="ed-1" />, {
+      wrapper: crearWrapper(client),
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText("PAQUETE DE EJEMPLO")).toBeDefined(),
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /PAQUETE DE EJEMPLO/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/ }));
+
+    await screen.findByLabelText("Tu promoción");
+
+    // Sin promoción no se avanza al paso de los equipos.
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Elige tu promoción")).toBeDefined(),
+    );
+    expect(screen.queryByLabelText("Disciplina")).toBeNull();
   });
 
   it("el alta manda el payload exacto y publica el resultado del servidor", async () => {
-    apiSendMock.mockImplementation((metodo: string) => {
-      if (metodo === "post") {
-        return Promise.resolve({
-          status: 201,
-          data: envelope(
-            {
-              inscripcion: INSCRIPCION,
-              compra: COMPRA,
-              causa_operativa: "INSCRIPCION_CREADA",
-            },
-            "Inscripción registrada correctamente.",
-          ),
-        });
-      }
-      return Promise.resolve({ status: 200, data: envelope(CATALOGO) });
-    });
+    apiSendMock.mockImplementation((metodo: string, url: string) =>
+      responder(metodo, url),
+    );
 
     render(<InscripcionWizardView edicionId="ed-1" />, {
       wrapper: crearWrapper(client),
@@ -268,7 +414,7 @@ describe("SPORT-01 — el alta", () => {
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/ }));
 
     await waitFor(() =>
-      expect(screen.getByText("Qué pasa al confirmar")).toBeDefined(),
+      expect(screen.getAllByText("Qué pasa al confirmar")[0]).toBeDefined(),
     );
 
     fireEvent.click(
@@ -279,18 +425,36 @@ describe("SPORT-01 — el alta", () => {
       expect(screen.getByText("Inscripción registrada")).toBeDefined(),
     );
 
-    expect(apiSendMock).toHaveBeenCalledWith("post", "/inscripciones", {
+    const llamada = apiSendMock.mock.calls.find(
+      (entrada) => entrada[1] === "/inscripciones",
+    );
+    const payload = llamada?.[2] as Record<string, unknown>;
+
+    expect(payload).toMatchObject({
       edicion_id: "ed-1",
       paquete_id: "paq-1",
+      promocion_id: "pro-1",
+      cantidad: 7,
       equipos: [{ disciplina_id: "dis-1", nombre: "Halcones" }],
     });
+
+    // El precio y el total NUNCA viajan: la verdad del dinero es del servidor.
+    expect(payload).not.toHaveProperty("precio");
+    expect(payload).not.toHaveProperty("precio_unitario");
+    expect(payload).not.toHaveProperty("precio_unitario_cotizado");
+    expect(payload).not.toHaveProperty("total");
+
+    // Y la categoría tampoco: la deriva el servidor.
+    expect(payload.equipos).toEqual([
+      { disciplina_id: "dis-1", nombre: "Halcones" },
+    ]);
 
     // La compra sigue PENDIENTE: el browser no dice que haya cupos.
     expect(screen.getByText(/Estado de la compra: PENDIENTE/)).toBeDefined();
   });
 
   it("un reintento NO crea una segunda inscripción: el servidor devuelve la misma", async () => {
-    apiSendMock.mockImplementation((metodo: string) => {
+    apiSendMock.mockImplementation((metodo: string, url: string) => {
       if (metodo === "post") {
         return Promise.resolve({
           status: 201,
@@ -301,7 +465,7 @@ describe("SPORT-01 — el alta", () => {
           }),
         });
       }
-      return Promise.resolve({ status: 200, data: envelope(CATALOGO) });
+      return responder(metodo, url);
     });
 
     render(<InscripcionWizardView edicionId="ed-1" />, {
@@ -313,7 +477,7 @@ describe("SPORT-01 — el alta", () => {
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/ }));
 
     await waitFor(() =>
-      expect(screen.getByText("Qué pasa al confirmar")).toBeDefined(),
+      expect(screen.getAllByText("Qué pasa al confirmar")[0]).toBeDefined(),
     );
 
     fireEvent.click(
@@ -325,13 +489,15 @@ describe("SPORT-01 — el alta", () => {
     );
 
     expect(
-      screen.getByText(/no se ha creado una segunda ni se ha abierto otra compra/),
+      screen.getByText(
+        /no se ha creado una segunda ni se ha abierto otra compra/,
+      ),
     ).toBeDefined();
   });
 
   it("un 422 deja el formulario intacto y muestra el error del campo", async () => {
-    apiSendMock.mockImplementation((metodo: string) => {
-      if (metodo === "post") {
+    apiSendMock.mockImplementation((metodo: string, url: string) => {
+      if (metodo === "post" && url === "/inscripciones") {
         return Promise.reject({
           response: {
             status: 422,
@@ -355,7 +521,7 @@ describe("SPORT-01 — el alta", () => {
           },
         });
       }
-      return Promise.resolve({ status: 200, data: envelope(CATALOGO) });
+      return responder(metodo, url);
     });
 
     render(<InscripcionWizardView edicionId="ed-1" />, {
@@ -367,7 +533,7 @@ describe("SPORT-01 — el alta", () => {
     fireEvent.click(screen.getByRole("button", { name: /Siguiente/ }));
 
     await waitFor(() =>
-      expect(screen.getByText("Qué pasa al confirmar")).toBeDefined(),
+      expect(screen.getAllByText("Qué pasa al confirmar")[0]).toBeDefined(),
     );
 
     fireEvent.click(
@@ -381,7 +547,9 @@ describe("SPORT-01 — el alta", () => {
     );
 
     // El error del campo viaja al control que lo posee: al volver al paso
-    // de los equipos, el control muestra el mensaje del servidor.
+    // de los equipos, el control muestra el mensaje del servidor. El paso de
+    // los equipos es el TERCERO: primero está el de la promoción.
+    fireEvent.click(screen.getByRole("button", { name: /Anterior/ }));
     fireEvent.click(screen.getByRole("button", { name: /Anterior/ }));
     fireEvent.click(screen.getByRole("button", { name: /Anterior/ }));
 

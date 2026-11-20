@@ -341,7 +341,6 @@ class CorreccionOut(Schema):
 class CompetenciaCrearIn(Schema):
     """Alta de una competencia."""
 
-    edicion_id: str = Field(..., description="Edición de la competencia.")
     disciplina_id: str = Field(..., description="Disciplina del torneo.")
     categoria_id: str = Field(
         ...,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
+import { FormField } from "@/components/forms/FormField";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,8 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export interface ConfirmacionIrreversibleProps {
@@ -59,6 +58,8 @@ export interface ConfirmacionIrreversibleProps {
    * `error.field_errors[]` (`FREEZE-ENV-1.0.0` §4.2).
    */
   errorDeCampo?: string;
+  /** Additional audited evidence fields required by this concrete command. */
+  contenido?: ReactNode;
 }
 
 /**
@@ -83,6 +84,7 @@ export function ConfirmacionIrreversible({
   onConfirmar,
   error,
   errorDeCampo,
+  contenido,
 }: ConfirmacionIrreversibleProps) {
   const idMotivo = useId();
   const [valorMotivo, setValorMotivo] = useState("");
@@ -107,33 +109,35 @@ export function ConfirmacionIrreversible({
           <AlertDialogDescription>{efecto}</AlertDialogDescription>
         </AlertDialogHeader>
 
+        {contenido}
+
         {motivo ? (
           <div className="flex flex-col gap-2">
-            <Label htmlFor={idMotivo} className="text-sm font-medium">
-              {motivo.etiqueta}
-            </Label>
-            <Textarea
+            <FormField
               id={idMotivo}
-              value={valorMotivo}
-              placeholder={motivo.placeholder}
-              rows={3}
-              aria-required={motivo.requerido ? true : undefined}
-              aria-invalid={tocado && faltaMotivo ? true : undefined}
-              aria-describedby={describedBy}
-              onChange={(evento) => setValorMotivo(evento.target.value)}
-              onBlur={() => setTocado(true)}
-            />
-            {tocado && faltaMotivo ? (
-              <p
-                id={`${idMotivo}-error`}
-                role="alert"
-                className="text-sm text-destructive"
-              >
-                Escribe el motivo: queda registrado en la auditoría.
-              </p>
-            ) : null}
+              label={motivo.etiqueta}
+              required={motivo.requerido}
+              error={
+                tocado && faltaMotivo
+                  ? "Escribe el motivo: queda registrado en la auditoría."
+                  : undefined
+              }
+            >
+              {(control) => (
+                <Textarea
+                  {...control}
+                  value={valorMotivo}
+                  placeholder={motivo.placeholder}
+                  rows={3}
+                  aria-required={motivo.requerido ? true : undefined}
+                  aria-describedby={describedBy}
+                  onChange={(evento) => setValorMotivo(evento.target.value)}
+                  onBlur={() => setTocado(true)}
+                />
+              )}
+            </FormField>
             {errorDeCampo ? (
-              <p id={idErrorServidor} className="text-sm text-destructive">
+              <p id={idErrorServidor} className="text-caption text-destructive">
                 {errorDeCampo}
               </p>
             ) : null}
@@ -154,8 +158,9 @@ export function ConfirmacionIrreversible({
         ) : null}
 
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel className="min-h-11">Cancelar</AlertDialogCancel>
           <AlertDialogAction
+            className="min-h-11"
             disabled={bloqueado}
             onClick={(evento) => {
               if (bloqueado) {

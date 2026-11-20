@@ -7,12 +7,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "@/lib/query-client";
 import {
+  useCatalogoCategorias,
+  useCatalogoPaquetes,
+  useCatalogoPromociones,
+} from "../hooks/useCatalogo";
+import { useCotizacion } from "../hooks/useCotizacion";
+import {
+  useInscripcionDetalle,
+  useInscripcionPool,
+} from "../hooks/useInscripcion";
+import {
   useAgregarParticipante,
   useAltaInscripcion,
   useCompraCupos,
 } from "../hooks/useInscripcionMutaciones";
-import { useCatalogoPaquetes } from "../hooks/useCatalogo";
-import { useInscripcionDetalle, useInscripcionPool } from "../hooks/useInscripcion";
 import {
   clavesCatalogoPaquetes,
   clavesInscripcionDetalle,
@@ -54,6 +62,7 @@ const CATALOGO = {
       descripcion: "Paquete de ejemplo.",
       estado: "VIGENTE",
       cupos_incluidos: 10,
+      minimo_compra_inicial: 7,
       precio: {
         monto: "750.00",
         moneda: "PEN",
@@ -66,6 +75,52 @@ const CATALOGO = {
   ],
 };
 
+const CATALOGO_PROMOCIONES = {
+  edicion_id: "ed-1",
+  edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+  promociones: [
+    {
+      id: "pro-1",
+      created_at: "2026-11-19T10:00:00+00:00",
+      updated_at: "2026-11-19T10:00:00+00:00",
+      anio: 2012,
+      nombre: "PROMOCIÓN 2012",
+      estado: "ACTIVA",
+    },
+  ],
+};
+
+const CATALOGO_CATEGORIAS = {
+  edicion_id: "ed-1",
+  edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+  categorias: [
+    {
+      id: "cat-1",
+      created_at: "2026-11-19T10:00:00+00:00",
+      updated_at: "2026-11-19T10:00:00+00:00",
+      edicion_id: "ed-1",
+      edicion_nombre: "EDICIÓN DE EJEMPLO 2026",
+      nombre: "JUNIOR",
+      promocion_desde: 2012,
+      promocion_hasta: 2025,
+      estado: "ACTIVA",
+    },
+  ],
+};
+
+const COTIZACION = {
+  paquete_id: "paq-1",
+  paquete_nombre: "PAQUETE DE EJEMPLO",
+  minimo_cantidad: 7,
+  cantidad_cotizada: 10,
+  precio_unitario: "750.00",
+  total: "7500.00",
+  moneda: "PEN",
+  version: 2,
+  estado: "ACTIVA",
+  validez_hasta: "2026-11-21T10:00:00+00:00",
+};
+
 const INSCRIPCION = {
   id: "ins-1",
   created_at: "2026-11-19T10:00:00+00:00",
@@ -75,6 +130,8 @@ const INSCRIPCION = {
   responsable_id: "per-1",
   paquete_id: "paq-1",
   paquete_nombre: "PAQUETE DE EJEMPLO",
+  promocion: { id: "pro-1", nombre: "PROMOCIÓN 2012", anio: 2012 },
+  fusion_promocion: null,
   estado: "CREADA",
   referencia: "INSCRIPCION:ins-1:INICIAL",
   cupos_solicitados: 10,
@@ -109,11 +166,7 @@ function envelope(data: unknown, message: string | null = null) {
 
 function crearWrapper(client: ReturnType<typeof createQueryClient>) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(
-      QueryClientProvider,
-      { client },
-      children,
-    );
+    return createElement(QueryClientProvider, { client }, children);
   };
 }
 
@@ -138,9 +191,14 @@ describe("API-02 — las rutas que se llaman", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(apiSendMock).toHaveBeenCalledWith("get", "/catalogo/paquetes", undefined, {
-      params: { edicion_id: "ed-1" },
-    });
+    expect(apiSendMock).toHaveBeenCalledWith(
+      "get",
+      "/catalogo/paquetes",
+      undefined,
+      {
+        params: { edicion_id: "ed-1" },
+      },
+    );
   });
 
   it("la edición viaja en la clave, no sólo en la petición", async () => {
@@ -154,7 +212,9 @@ describe("API-02 — las rutas que se llaman", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(
-      client.getQueryData(clavesCatalogoPaquetes.listPage({ edicion_id: "ed-1" })),
+      client.getQueryData(
+        clavesCatalogoPaquetes.listPage({ edicion_id: "ed-1" }),
+      ),
     ).toBeDefined();
     expect(
       client.getQueryData(clavesCatalogoPaquetes.listPage({})),
@@ -169,9 +229,12 @@ describe("API-02 — las rutas que se llaman", () => {
       return Promise.resolve({ status: 200, data: envelope(INSCRIPCION) });
     });
 
-    const { result: detalle } = renderHook(() => useInscripcionDetalle("ins-1"), {
-      wrapper: crearWrapper(client),
-    });
+    const { result: detalle } = renderHook(
+      () => useInscripcionDetalle("ins-1"),
+      {
+        wrapper: crearWrapper(client),
+      },
+    );
     const { result: pool } = renderHook(() => useInscripcionPool("ins-1"), {
       wrapper: crearWrapper(client),
     });
@@ -180,7 +243,10 @@ describe("API-02 — las rutas que se llaman", () => {
     await waitFor(() => expect(pool.current.isSuccess).toBe(true));
 
     expect(apiSendMock).toHaveBeenCalledWith("get", "/inscripciones/ins-1");
-    expect(apiSendMock).toHaveBeenCalledWith("get", "/inscripciones/ins-1/pool");
+    expect(apiSendMock).toHaveBeenCalledWith(
+      "get",
+      "/inscripciones/ins-1/pool",
+    );
   });
 
   it("NINGUNA llamada va a una ruta del backend congelado", async () => {
@@ -195,11 +261,74 @@ describe("API-02 — las rutas que se llaman", () => {
     const urls = apiSendMock.mock.calls.map((llamada) => String(llamada[1]));
 
     for (const url of urls) {
-      expect(url).not.toContain("/cotizaciones");
+      // La inscripción atómica del backend congelado no existe en el objetivo.
       expect(url).not.toContain("/inscripciones/completa");
-      expect(url).not.toContain("/catalogo/promociones");
-      expect(url).not.toContain("/catalogo/categorias");
+      // Las rutas restauradas existen, pero SIN la barra final del árbol
+      // congelado: el estilo del backend objetivo es sin barra.
+      expect(url).not.toContain("/cotizaciones/");
+      expect(url).not.toContain("/catalogo/promociones/");
+      expect(url).not.toContain("/catalogo/categorias/");
     }
+  });
+
+  it("las promociones y las categorías se leen en sus rutas del catálogo", async () => {
+    apiSendMock.mockImplementation((_metodo: string, url: string) => {
+      if (url === "/catalogo/categorias") {
+        return Promise.resolve({
+          status: 200,
+          data: envelope(CATALOGO_CATEGORIAS),
+        });
+      }
+      return Promise.resolve({
+        status: 200,
+        data: envelope(CATALOGO_PROMOCIONES),
+      });
+    });
+
+    const { result: promociones } = renderHook(
+      () => useCatalogoPromociones({ edicion_id: "ed-1" }),
+      { wrapper: crearWrapper(client) },
+    );
+    const { result: categorias } = renderHook(
+      () => useCatalogoCategorias({ edicion_id: "ed-1" }),
+      { wrapper: crearWrapper(client) },
+    );
+
+    await waitFor(() => expect(promociones.current.isSuccess).toBe(true));
+    await waitFor(() => expect(categorias.current.isSuccess).toBe(true));
+
+    expect(apiSendMock).toHaveBeenCalledWith(
+      "get",
+      "/catalogo/promociones",
+      undefined,
+      { params: { edicion_id: "ed-1" } },
+    );
+    expect(apiSendMock).toHaveBeenCalledWith(
+      "get",
+      "/catalogo/categorias",
+      undefined,
+      { params: { edicion_id: "ed-1" } },
+    );
+  });
+
+  it("la cotización se pide en su ruta, con el paquete y la cantidad", async () => {
+    apiSendMock.mockResolvedValue({ status: 200, data: envelope(COTIZACION) });
+
+    const { result } = renderHook(() => useCotizacion(), {
+      wrapper: crearWrapper(client),
+    });
+
+    await act(async () => {
+      result.current.cotizar("paq-1", 10);
+    });
+
+    await waitFor(() => expect(result.current.cotizacion).not.toBeNull());
+
+    expect(apiSendMock).toHaveBeenCalledWith("post", "/cotizaciones", {
+      paquete_id: "paq-1",
+      cantidad: 10,
+    });
+    expect(result.current.cotizacion?.version).toBe(2);
   });
 });
 
@@ -225,6 +354,8 @@ describe("API-02 — el alta", () => {
       await result.current.mutateAsync({
         edicion_id: "ed-1",
         paquete_id: "paq-1",
+        promocion_id: "pro-1",
+        cantidad: 10,
         equipos: [{ disciplina_id: "dis-1", nombre: "Halcones" }],
       });
     });
@@ -232,6 +363,8 @@ describe("API-02 — el alta", () => {
     expect(apiSendMock).toHaveBeenCalledWith("post", "/inscripciones", {
       edicion_id: "ed-1",
       paquete_id: "paq-1",
+      promocion_id: "pro-1",
+      cantidad: 10,
       equipos: [{ disciplina_id: "dis-1", nombre: "Halcones" }],
     });
   });
@@ -254,11 +387,15 @@ describe("API-02 — el alta", () => {
       await result.current.mutateAsync({
         edicion_id: "ed-1",
         paquete_id: "paq-1",
+        promocion_id: "pro-1",
+        cantidad: 10,
         equipos: [{ disciplina_id: "dis-1", nombre: "Halcones" }],
       });
     });
 
-    expect(client.getQueryData(clavesInscripcionDetalle.detail("ins-1"))).toBeUndefined();
+    expect(
+      client.getQueryData(clavesInscripcionDetalle.detail("ins-1")),
+    ).toBeUndefined();
   });
 
   it("invalida el detalle de las inscripciones que ya estaban leídas", async () => {
@@ -281,12 +418,15 @@ describe("API-02 — el alta", () => {
       await result.current.mutateAsync({
         edicion_id: "ed-1",
         paquete_id: "paq-1",
+        promocion_id: "pro-1",
+        cantidad: 10,
         equipos: [{ disciplina_id: "dis-1", nombre: "Halcones" }],
       });
     });
 
     expect(
-      client.getQueryState(clavesInscripcionDetalle.detail("otra"))?.isInvalidated,
+      client.getQueryState(clavesInscripcionDetalle.detail("otra"))
+        ?.isInvalidated,
     ).toBe(true);
   });
 
@@ -327,6 +467,8 @@ describe("API-02 — el alta", () => {
         await result.current.mutateAsync({
           edicion_id: "ed-1",
           paquete_id: "paq-1",
+          promocion_id: "pro-1",
+          cantidad: 10,
           equipos: [{ disciplina_id: "dis-1", nombre: "Halcones" }],
         });
       } catch (error) {
@@ -368,6 +510,8 @@ describe("API-02 — el alta", () => {
         .mutateAsync({
           edicion_id: "ed-1",
           paquete_id: "paq-1",
+          promocion_id: "pro-1",
+          cantidad: 10,
           equipos: [{ disciplina_id: "dis-1", nombre: "Halcones" }],
         })
         .catch(() => undefined);
@@ -425,7 +569,9 @@ describe("API-02 — el pool", () => {
       });
     });
 
-    expect(client.getQueryData(clavesInscripcionPool.detail("ins-1"))).toBeUndefined();
+    expect(
+      client.getQueryData(clavesInscripcionPool.detail("ins-1")),
+    ).toBeUndefined();
   });
 
   it("la compra de cupos NO escribe el pool: invalida y listo", async () => {
@@ -461,9 +607,12 @@ describe("API-02 — el pool", () => {
       { cantidad: 3 },
     );
     // El pool NO se reescribe: la respuesta NO es un pool.
-    expect(client.getQueryData(clavesInscripcionPool.detail("ins-1"))).toEqual(POOL);
+    expect(client.getQueryData(clavesInscripcionPool.detail("ins-1"))).toEqual(
+      POOL,
+    );
     expect(
-      client.getQueryState(clavesInscripcionPool.detail("ins-1"))?.isInvalidated,
+      client.getQueryState(clavesInscripcionPool.detail("ins-1"))
+        ?.isInvalidated,
     ).toBe(true);
   });
 });

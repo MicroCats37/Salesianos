@@ -18,35 +18,42 @@ export interface ResumenCompraProps {
  * the current catalogue (`RN-C02`) and the browser never computes a price
  * (`frontend/03` PASS-01, "el precio lo fija el servidor").
  */
-export function ResumenCompra({ pase, cantidad, className }: ResumenCompraProps) {
+export function ResumenCompra({
+  pase,
+  cantidad,
+  className,
+}: ResumenCompraProps) {
   return (
     <section
       aria-labelledby="resumen-compra-titulo"
       className={cn(
-        "flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface-raised p-4",
+        "flex min-h-11 flex-col gap-4 rounded-[var(--radius-xl)] border border-border bg-surface-elevated p-5 shadow-[var(--elevation-md)]",
         className,
       )}
     >
-      <h3 id="resumen-compra-titulo" className="text-section-title text-foreground">
+      <h3
+        id="resumen-compra-titulo"
+        className="text-section-title text-foreground"
+      >
         Tu compra
       </h3>
 
-      <dl className="grid gap-3 sm:grid-cols-3">
-        <div className="flex flex-col gap-0.5">
-          <dt className="text-caption text-muted-foreground">Pase</dt>
-          <dd className="text-sm font-semibold text-foreground">{pase.nombre}</dd>
+      <dl className="grid gap-4 sm:grid-cols-3">
+        <div className="flex flex-col gap-1">
+          <dt className="text-eyebrow-brand text-muted-foreground">Pase</dt>
+          <dd className="text-base font-bold text-foreground">{pase.nombre}</dd>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <dt className="text-caption text-muted-foreground">Cantidad</dt>
-          <dd className="text-sm font-semibold tabular-nums text-foreground">
+        <div className="flex flex-col gap-1">
+          <dt className="text-eyebrow-brand text-muted-foreground">Cantidad</dt>
+          <dd className="text-base font-bold tabular-nums text-foreground">
             {cantidad}
           </dd>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <dt className="text-caption text-muted-foreground">
+        <div className="flex flex-col gap-1">
+          <dt className="text-eyebrow-brand text-muted-foreground">
             Precio unitario
           </dt>
-          <dd className="text-sm font-semibold tabular-nums text-foreground">
+          <dd className="text-base font-bold tabular-nums text-foreground">
             {formatearMonto(pase.precio.monto, pase.precio.moneda)}
           </dd>
         </div>

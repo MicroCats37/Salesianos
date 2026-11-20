@@ -1,8 +1,8 @@
 "use client";
 
 import { gsap } from "gsap";
-import { useEffect, useLayoutEffect, useRef } from "react";
 import type { RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 /**
  * `useLayoutEffect` in the browser, `useEffect` in the server.

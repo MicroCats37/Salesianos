@@ -51,6 +51,7 @@ export function MarcoOperativo<T>({
             <ShellErrorState
               title="No pudimos cargar esta información"
               description={estado.mensaje}
+              className="min-h-11"
             />
           )}
         </>

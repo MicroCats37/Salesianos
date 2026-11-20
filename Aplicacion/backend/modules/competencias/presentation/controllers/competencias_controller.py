@@ -49,6 +49,7 @@ registrado en `config/api.py`. Ese registro es de A0 y este paquete NO edita
 
 from datetime import date
 
+from asgiref.sync import sync_to_async
 from injector import inject
 from ninja_extra import api_controller, route
 
@@ -71,6 +72,9 @@ from modules.competencias.domain.schemas.competencias_schemas import (
 )
 from modules.competencias.domain.services.orchestrators.competencias_orchestrator import (
     CompetenciasOrchestrator,
+)
+from modules.competencias.infrastructure.services.alcance_edicion_eventos import (
+    AlcanceEdicionEventos,
 )
 from modules.competencias.presentation.presenters.competencias_presenter import (
     CompetenciasPresenter,
@@ -106,8 +110,13 @@ class CompetenciasController:
     """Superficie HTTP de las competencias, el cuadro y la agenda."""
 
     @inject
-    def __init__(self, orchestrator: CompetenciasOrchestrator):
+    def __init__(
+        self,
+        orchestrator: CompetenciasOrchestrator,
+        alcance_edicion: AlcanceEdicionEventos,
+    ):
         self.orchestrator = orchestrator
+        self.alcance_edicion = alcance_edicion
 
     # ── lecturas ───────────────────────────────────────────────────────────
 
@@ -225,17 +234,21 @@ class CompetenciasController:
         permissions=[RequireCompetenciasEscribir],
     )
     async def crear_competencia(self, request, payload: CompetenciaCrearIn):
-        """Crea la competencia en la edición declarada.
+        """Crea la competencia en la edición vigente.
 
         Route: POST /api/competencias
 
-        La identidad es (edición, disciplina, categoría, nombre) y el backend
+        La edición se resuelve en el servidor; el navegador no elige el
+        evento ni la edición. La identidad es (edición, disciplina, categoría, nombre) y el backend
         la comprueba: dos competencias con el mismo nombre en el mismo alcance
         y la MISMA categoría no pueden existir; con categorías DISTINTAS sí.
         """
+        edicion = await sync_to_async(self.alcance_edicion.resolver_actual)(
+            exigir_publicada=True,
+        )
         resultado = await self.orchestrator.crear_competencia(
             CompetenciaCreateData(
-                edicion_id=payload.edicion_id,
+                edicion_id=str(edicion.id),
                 disciplina_id=payload.disciplina_id,
                 categoria_id=payload.categoria_id,
                 nombre=payload.nombre,
@@ -314,6 +327,24 @@ class CompetenciasController:
         return success_response(
             CompetenciasPresenter.present_equipo(resultado),
             message="El equipo de la competencia se actualizó correctamente.",
+        )
+
+    @route.post(
+        "/{competencia_id}/cuadro/generar",
+        response={201: ApiResponse[CompetenciaDetalleOut]},
+        summary="Genera la llave inicial de eliminación simple",
+        auth=JWTAuth(),
+        permissions=[RequireCompetenciasEscribir],
+    )
+    async def generar_cuadro(self, request, competencia_id: str):
+        """Crea rondas, encuentros, byes y enlaces desde las semillas activas."""
+        resultado = await self.orchestrator.generar_cuadro(
+            competencia_id,
+            actor=request.auth,
+        )
+        return success_response(
+            CompetenciasPresenter.present_detalle(resultado),
+            message="El cuadro inicial se generó correctamente.",
         )
 
     @route.post(

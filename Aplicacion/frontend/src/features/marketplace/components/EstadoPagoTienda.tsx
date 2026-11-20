@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   CheckCircle2,
   CircleSlash,
@@ -5,7 +6,6 @@ import {
   Loader2,
   TriangleAlert,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -116,7 +116,10 @@ export function EstadoPagoTienda({
           cubo.superficie,
         )}
       >
-        <Icono className={cn("size-3.5 shrink-0", cubo.trazo)} aria-hidden="true" />
+        <Icono
+          className={cn("size-3.5 shrink-0", cubo.trazo)}
+          aria-hidden="true"
+        />
         <span className="text-xs font-semibold text-foreground">
           {veredicto.estado.etiqueta}
         </span>
@@ -130,7 +133,12 @@ export function EstadoPagoTienda({
 
       {accion ? (
         accion.href ? (
-          <Button asChild variant="outline" size="sm" className="min-h-11 w-fit">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="min-h-11 w-fit"
+          >
             <Link href={accion.href}>{etiquetaAccion}</Link>
           </Button>
         ) : (

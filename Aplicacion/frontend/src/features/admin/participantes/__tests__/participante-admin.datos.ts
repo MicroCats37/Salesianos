@@ -30,7 +30,7 @@ const PERSONA = {
   participaciones: [
     {
       id: "00000000-0000-4000-8000-000000000D1",
-      evento: {
+      edicion: {
         id: "00000000-0000-4000-8000-000000000001",
         nombre: "EDICION DE EJEMPLO",
       },

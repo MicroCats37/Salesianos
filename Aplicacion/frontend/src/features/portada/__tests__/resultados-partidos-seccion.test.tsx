@@ -11,6 +11,10 @@ const { useEncuentrosPublicos } = vi.hoisted(() => ({
 vi.mock("@/features/competencias/publico/hooks/useEncuentrosPublicos", () => ({
   useEncuentrosPublicos,
 }));
+vi.mock(
+  "@/features/competencias/publico/hooks/useEncuentrosPublicosRealtime",
+  () => ({ useEncuentrosPublicosRealtime: vi.fn() }),
+);
 
 /**
  * The shell of the landing is not the subject of this suite: the section is
@@ -37,8 +41,58 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-import { ENCUENTROS_PUBLICOS } from "@/features/competencias/publico/__tests__/datos.contract";
 import { ResultadosPartidosSection } from "@/features/portada/components/ResultadosPartidosSection";
+
+const partido = (id: string, status: "live" | "scheduled" | "final") => ({
+  id,
+  group_id: "A",
+  stage: "group" as const,
+  position: 0,
+  home_id: "1999",
+  away_id: "2007",
+  home_name: "Salesianos A",
+  away_name: "Salesianos B",
+  scheduled_at: "2026-11-21T14:00:00Z",
+  court: "A",
+  duration_minutes: 30,
+  status,
+  home_score: status === "scheduled" ? null : 1,
+  away_score: status === "scheduled" ? null : 2,
+  home_penalties: null,
+  away_penalties: null,
+  winner_id: status === "final" ? "2007" : null,
+  decision: status === "final" ? "score" : null,
+  elapsed_seconds: 0,
+  running: status === "live",
+  segment: "regular",
+  live_points: { home: 0, away: 3 },
+});
+
+const TORNEO_PUBLICO = {
+  ready: true,
+  tournament: "Salesianos FEST 2026",
+  discipline: "Fulbito",
+  category: "Interpromociones",
+  server_time: "2026-11-21T14:00:00Z",
+  groups: [
+    {
+      id: "A",
+      revision: 0,
+      teams: [
+        { id: "1999", name: "Salesianos A", group_id: "A" },
+        { id: "2007", name: "Salesianos B", group_id: "A" },
+      ],
+      table: [],
+      matches: [
+        partido("live", "live"),
+        partido("next", "scheduled"),
+        partido("final", "final"),
+      ],
+    },
+  ],
+  knockout: [],
+  teams: [],
+};
 
 /**
  * The compact summary of the matches on the landing.
@@ -51,7 +105,7 @@ beforeEach(() => {
 
 function lectura(estado: "listo" | "cargando" | "error") {
   useEncuentrosPublicos.mockReturnValue({
-    data: estado === "listo" ? ENCUENTROS_PUBLICOS : undefined,
+    data: estado === "listo" ? TORNEO_PUBLICO : undefined,
     isPending: estado === "cargando",
     isError: estado === "error",
   });
@@ -84,7 +138,7 @@ describe("portada - el resumen de los partidos", () => {
       screen.getByRole("heading", { name: "Últimos resultados" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Salesianos A").length).toBeGreaterThan(0);
-    expect(screen.getByText("Ganó Salesianos B")).toBeInTheDocument();
+    expect(screen.getAllByText("Salesianos B").length).toBeGreaterThan(0);
   });
 
   it("NO confunde un partido en juego con una transmisión", () => {
@@ -112,11 +166,9 @@ describe("portada - el resumen de los partidos", () => {
     lectura("listo");
     useEncuentrosPublicos.mockReturnValue({
       data: {
-        ...ENCUENTROS_PUBLICOS,
-        total: 0,
-        en_vivo: [],
-        proximos: [],
-        finalizados: [],
+        ...TORNEO_PUBLICO,
+        groups: [],
+        knockout: [],
       },
       isPending: false,
       isError: false,

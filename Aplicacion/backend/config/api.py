@@ -54,6 +54,7 @@ from modules.competencias.presentation.controllers.competencias_controller impor
 )
 from modules.competencias.presentation.controllers.competencias_publico_controller import (
     CompetenciasPublicoController,
+    TorneoAdminController,
 )
 from modules.competencias.presentation.controllers.mis_partidos_controller import (
     MisPartidosController,
@@ -253,6 +254,7 @@ registrar_controladores(
     AdminPaseController,
     CompetenciasController,
     CompetenciasPublicoController,
+    TorneoAdminController,
     MisPartidosController,
     PatrocinadorController,
     AdminPatrocinadoresController,

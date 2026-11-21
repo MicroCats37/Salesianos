@@ -18,6 +18,11 @@ from modules.competencias.domain.models.competencia import Competencia
 from modules.competencias.domain.models.competencia_equipo import CompetenciaEquipo
 from modules.competencias.domain.models.encuentro import Encuentro
 from modules.competencias.domain.models.ronda import Ronda
+from modules.competencias.domain.models.torneo import (
+    EquipoTorneo,
+    GrupoTorneo,
+    PartidoTorneo,
+)
 
 __all__ = [
     "AccionAuditada",
@@ -26,5 +31,8 @@ __all__ = [
     "CompetenciaBaseModel",
     "CompetenciaEquipo",
     "Encuentro",
+    "EquipoTorneo",
+    "GrupoTorneo",
+    "PartidoTorneo",
     "Ronda",
 ]

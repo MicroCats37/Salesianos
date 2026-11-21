@@ -1,4 +1,4 @@
-import { CompetenciasListaRuta } from "@/features/competencias/views";
+import { TorneoAdminRuta } from "@/features/competencias/publico/views/TorneoAdminRuta";
 
 /**
  * ADM-10 - Seleccionar y administrar competencias
@@ -22,34 +22,6 @@ import { CompetenciasListaRuta } from "@/features/competencias/views";
  *   que la resuelve (reintentar);
  * - si la lectura llega vacía, la vista dibuja su estado vacío honesto.
  */
-export default async function Page({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    estado?: string | string[];
-    categoria_id?: string | string[];
-  }>;
-}) {
-  const { estado, categoria_id } = await searchParams;
-
-  return (
-    <CompetenciasListaRuta
-      filtroEstado={primerValor(estado)}
-      filtroCategoria={primerValor(categoria_id)}
-    />
-  );
-}
-
-/**
- * The value of a filter of the URL, when there is exactly one.
- *
- * A repeated parameter (`?estado=a&estado=b`) is NOT a filter: the route
- * accepts ONE state and ONE band, so the extra values are dropped instead
- * of being sent as a comma-separated list that the server does not know.
- */
-function primerValor(valor: string | string[] | undefined): string | undefined {
-  if (typeof valor === "string") return valor;
-  if (Array.isArray(valor)) return valor[0];
-
-  return undefined;
+export default function Page() {
+  return <TorneoAdminRuta />;
 }

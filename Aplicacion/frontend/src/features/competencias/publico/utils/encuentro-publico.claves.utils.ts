@@ -24,3 +24,7 @@ const PUBLICO: QueryKey = [...COMPETENCIAS, "publico"];
 
 /** The key of the public encounters (`GET /publico/competencias/encuentros`). */
 export const claveEncuentrosPublicos = [...PUBLICO, "encuentros"] as const;
+
+/** A selected competition is a distinct HTTP snapshot below the shared family. */
+export const claveEncuentrosPublicosDe = (competitionId?: string) =>
+  [...claveEncuentrosPublicos, competitionId ?? "seleccionada"] as const;

@@ -1,6 +1,6 @@
 import { apiSend } from "@/lib/api";
-import type { EncuentrosPublicos } from "../schemas/encuentro-publico.schema";
-import { encuentrosPublicosEnvelope } from "../schemas/encuentro-publico.schema";
+import type { TorneoPublico } from "../schemas/torneo-publico.schema";
+import { torneoPublicoEnvelope } from "../schemas/torneo-publico.schema";
 
 /**
  * The ONE client of the PUBLIC surface of the encounters.
@@ -24,7 +24,7 @@ import { encuentrosPublicosEnvelope } from "../schemas/encuentro-publico.schema"
  */
 
 /** The route of the public surface of the encounters. */
-export const RUTA_ENCUENTROS_PUBLICOS = "/publico/competencias/encuentros";
+export const RUTA_ENCUENTROS_PUBLICOS = "/publico/competencias/estado";
 
 /**
  * The public encounters of the published edition.
@@ -32,7 +32,7 @@ export const RUTA_ENCUENTROS_PUBLICOS = "/publico/competencias/encuentros";
  * The answer is parsed with the Zod mirror of the wrapper: a body that does
  * not comply is a LOUD failure, never a partially trusted value.
  */
-export async function obtenerEncuentrosPublicos(): Promise<EncuentrosPublicos> {
+export async function obtenerEncuentrosPublicos(): Promise<TorneoPublico> {
   const { status, data } = await apiSend<unknown>(
     "get",
     RUTA_ENCUENTROS_PUBLICOS,
@@ -47,7 +47,7 @@ export async function obtenerEncuentrosPublicos(): Promise<EncuentrosPublicos> {
     );
   }
 
-  const envelope = encuentrosPublicosEnvelope.parse(data);
+  const envelope = torneoPublicoEnvelope.parse(data);
 
   if (!envelope.success || envelope.data === null) {
     throw new Error(

@@ -3,9 +3,12 @@
 import { apiQueryOptions, useApiQuery } from "@/hooks";
 import { datosDelEnvelope } from "@/shared/utils/api-envelope";
 import { gcTimeFor, STALE_TIME } from "@/shared/utils/query-options";
-import { encuentrosPublicosEnvelope } from "../schemas/encuentro-publico.schema";
+import { torneoPublicoEnvelope } from "../schemas/torneo-publico.schema";
 import { RUTA_ENCUENTROS_PUBLICOS } from "../services/encuentro-publico.service";
-import { claveEncuentrosPublicos } from "../utils/encuentro-publico.claves.utils";
+import {
+  claveEncuentrosPublicos,
+  claveEncuentrosPublicosDe,
+} from "../utils/encuentro-publico.claves.utils";
 
 /**
  * The public encounters of the published edition.
@@ -30,7 +33,7 @@ export const encuentrosPublicosQueryOptions = () =>
   apiQueryOptions({
     queryKey: claveEncuentrosPublicos,
     url: RUTA_ENCUENTROS_PUBLICOS,
-    schema: datosDelEnvelope(encuentrosPublicosEnvelope),
+    schema: datosDelEnvelope(torneoPublicoEnvelope),
     kind: "vivo",
   });
 
@@ -40,11 +43,13 @@ export const encuentrosPublicosQueryOptions = () =>
  * The route is ANONYMOUS: it publishes the state of the published edition to
  * a visitor without a session.
  */
-export function useEncuentrosPublicos() {
+export function useEncuentrosPublicos(competitionId?: string) {
   return useApiQuery({
-    queryKey: claveEncuentrosPublicos,
-    url: RUTA_ENCUENTROS_PUBLICOS,
-    schema: datosDelEnvelope(encuentrosPublicosEnvelope),
+    queryKey: claveEncuentrosPublicosDe(competitionId),
+    url: competitionId
+      ? `${RUTA_ENCUENTROS_PUBLICOS}?competition_id=${encodeURIComponent(competitionId)}`
+      : RUTA_ENCUENTROS_PUBLICOS,
+    schema: datosDelEnvelope(torneoPublicoEnvelope),
     queryOptions: {
       staleTime: STALE_TIME.vivo,
       gcTime: gcTimeFor(STALE_TIME.vivo),

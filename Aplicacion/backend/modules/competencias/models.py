@@ -12,6 +12,9 @@ from modules.competencias.domain.models import (
     CompetenciaBaseModel,
     CompetenciaEquipo,
     Encuentro,
+    EquipoTorneo,
+    GrupoTorneo,
+    PartidoTorneo,
     Ronda,
 )
 
@@ -22,5 +25,8 @@ __all__ = [
     "CompetenciaBaseModel",
     "CompetenciaEquipo",
     "Encuentro",
+    "EquipoTorneo",
+    "GrupoTorneo",
+    "PartidoTorneo",
     "Ronda",
 ]

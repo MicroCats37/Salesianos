@@ -124,7 +124,9 @@ LOCAL_APPS = [
     "modules.videos",
 ]
 
-INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+# Daphne must be first so its ASGI-aware `runserver` command owns local
+# development and routes WebSocket handshakes through `config.asgi`.
+INSTALLED_APPS = ["daphne"] + DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # ── Middleware ───────────────────────────────────────────────
 MIDDLEWARE = [

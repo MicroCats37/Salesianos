@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { handleApiError } from "@/errors";
 import { useEncuentrosPublicos } from "../hooks/useEncuentrosPublicos";
 import { useEncuentrosPublicosRealtime } from "../hooks/useEncuentrosPublicosRealtime";
@@ -20,8 +21,9 @@ import {
  * without an invitation and without a session.
  */
 export function EncuentrosPublicosRuta() {
-  const encuentros = useEncuentrosPublicos();
-  useEncuentrosPublicosRealtime();
+  const [competitionId, setCompetitionId] = useState<string>();
+  const encuentros = useEncuentrosPublicos(competitionId);
+  const realtime = useEncuentrosPublicosRealtime();
 
   const error = encuentros.error ? handleApiError(encuentros.error) : null;
 
@@ -38,6 +40,9 @@ export function EncuentrosPublicosRuta() {
       estado={estado}
       encuentros={encuentros.data}
       mensajeError={error?.message}
+      actualizacionEnVivo={realtime.actualizadoEn}
+      estadoRealtime={realtime.estado}
+      seleccionarCompetencia={setCompetitionId}
       reintentar={() => void encuentros.refetch()}
     />
   );

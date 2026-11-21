@@ -1,14 +1,8 @@
-import { CompetenciaCuadroRuta } from "@/features/competencias/views";
+import { redirect } from "next/navigation";
 
 /**
  * ADM-12 - Operar el cuadro de encuentros
  */
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-
-  return <CompetenciaCuadroRuta id={id} />;
+export default function Page() {
+  redirect("/administracion/competencias");
 }

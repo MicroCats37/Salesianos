@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title,
     description,
     type: "website",
-    images: ["/images/portada/og-portada.jpg"],
+    images: ["/images/section/Vista_previa_enlace_1200x630.jpg"],
   },
 };
 

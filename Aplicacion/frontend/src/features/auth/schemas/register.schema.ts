@@ -7,7 +7,7 @@ import type { TipoDocumento } from "../constants/tipo-aceptacion";
  * Validation rules per document type.
  * DNI = 8 digits, CE = 9 digits, PAS = min 4 alphanumeric (normalized to uppercase).
  */
-function buildNumeroDocumentoValidator(tipo: TipoDocumento) {
+export function buildNumeroDocumentoValidator(tipo: TipoDocumento) {
   if (tipo === "DNI") {
     return z
       .string()

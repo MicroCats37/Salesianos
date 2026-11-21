@@ -1,11 +1,10 @@
 "use client";
 
-import { Fingerprint, ShieldQuestion, UserPlus } from "lucide-react";
+import { ShieldQuestion, UserPlus } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useController } from "react-hook-form";
 import { FormField } from "@/components/forms/FormField";
 import { FormGrid } from "@/components/forms/FormGrid";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -13,13 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { AppFormModal } from "@/components-app/forms/AppFormModal";
 import { useAgregarParticipanteEquipo } from "../hooks/useAsistidoAdmin";
 import {
-  agregarParticipanteFormSchema,
   type AgregarParticipanteFormData,
+  agregarParticipanteFormSchema,
 } from "../schemas/asistido.schema";
+import { BloqueIdentidadAdministrativa } from "./BloqueIdentidadAdministrativa";
 
 export interface ModalAgregarParticipanteProps {
   /** Whether the modal is open. */
@@ -37,8 +36,12 @@ export interface ModalAgregarParticipanteProps {
 const valoresIniciales: AgregarParticipanteFormData = {
   tipo_documento: "DNI",
   numero_documento: "",
+  nombres: "",
+  apellidos: "",
+  genero: "",
+  estado_identidad: "SIN_CONSULTAR",
   rol: "JUGADOR",
-  motivo: "",
+  motivo: "Alta administrativa de participante en el equipo.",
 };
 
 /**
@@ -46,10 +49,10 @@ const valoresIniciales: AgregarParticipanteFormData = {
  *
  * ## The person is identified by her EXACT DOCUMENT
  *
- * The form asks for the document and NOTHING ELSE about the person: adding a
- * participant never creates a `Persona` and never edits one. If the document
- * is not in the padrón, the backend answers 404 and the modal shows that
- * message verbatim.
+ * The IDENTITY BLOCK resolves the document: if the padrón already has that
+ * person, her identity is REUSED and her names are not editable; if it does
+ * not have her, the block reveals the names, the surname and the gender and
+ * the command REGISTERS her —as a civil identity, NEVER as an account.
  *
  * ## The rules are NOT checked here
  *
@@ -71,7 +74,7 @@ export function ModalAgregarParticipante({
       open={open}
       onOpenChange={onOpenChange}
       title="Agregar participante al equipo"
-      description={`La persona se identifica por su documento exacto y debe estar en el padrón. El equipo "${equipoNombre}" aplica su capacidad, su disciplina y sus reglas de elegibilidad.`}
+      description={`La identidad se resuelve por su documento exacto: el padrón manda y, si la persona no está, se registra sin cuenta. El equipo "${equipoNombre}" aplica su capacidad, su disciplina y sus reglas de elegibilidad.`}
       eyebrow="Plantilla del equipo"
       icon={<UserPlus className="size-5" aria-hidden="true" />}
       primaryLabel="Agregar al equipo"
@@ -86,6 +89,9 @@ export function ModalAgregarParticipante({
           payload: {
             tipo_documento: datos.tipo_documento,
             numero_documento: datos.numero_documento,
+            nombres: datos.nombres,
+            apellidos: datos.apellidos,
+            genero: datos.genero,
             rol: datos.rol,
             motivo: datos.motivo,
           },
@@ -94,8 +100,8 @@ export function ModalAgregarParticipante({
         onAgregado?.();
       }}
       showErrorsAsToasts
-      size="lg"
-      bodyClassName="max-h-[70vh] overflow-y-auto"
+      size="md"
+      bodyClassName="max-h-[65vh] overflow-y-auto"
       formClassName="flex flex-col gap-4"
     >
       {({ methods, isSubmitting, submissionMessage }) => (
@@ -119,9 +125,10 @@ export function ModalAgregarParticipante({
  * The fields of the add of a participant.
  *
  * The form is the Mode 1 (`children`): the label, the icon and the error of
- * every field are drawn ONCE by `FormField`. The two selects read their
- * value with `useController`, ACOTADO a su campo: el formulario no se vuelve
- * a dibujar con cada tecla.
+ * every field are drawn ONCE by `FormField`. The identity lives in the
+ * SHARED BLOCK, so the three administrative forms resolve a document the same
+ * way. The select reads its value with `useController`, ACOTADO a su campo:
+ * el formulario no se vuelve a dibujar con cada tecla.
  */
 function CamposParticipante({
   methods,
@@ -131,15 +138,10 @@ function CamposParticipante({
   bloqueado: boolean;
 }) {
   const {
-    register,
     control: controlFormulario,
     formState: { errors },
   } = methods;
 
-  const { field: tipoDocumento } = useController({
-    control: controlFormulario,
-    name: "tipo_documento",
-  });
   const { field: rol } = useController({
     control: controlFormulario,
     name: "rol",
@@ -148,53 +150,10 @@ function CamposParticipante({
   return (
     <fieldset disabled={bloqueado} className="contents">
       <FormGrid>
-        <FormField
-          id="participante-tipo-documento"
-          label="Tipo de documento"
-          required
-          icon={Fingerprint}
-          span={4}
-          error={errors.tipo_documento?.message}
-        >
-          {(control) => (
-            <Select
-              value={tipoDocumento.value}
-              onValueChange={tipoDocumento.onChange}
-            >
-              <SelectTrigger
-                {...control}
-                onBlur={tipoDocumento.onBlur}
-                className="w-full"
-              >
-                <SelectValue placeholder="Elige el tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DNI">DNI</SelectItem>
-                <SelectItem value="CE">Carné de extranjería</SelectItem>
-                <SelectItem value="PAS">Pasaporte</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        </FormField>
-
-        <FormField
-          id="participante-numero-documento"
-          label="Número de documento"
-          required
-          icon={Fingerprint}
-          span={8}
-          helper="Debe coincidir exactamente con el documento registrado."
-          error={errors.numero_documento?.message}
-        >
-          {(control) => (
-            <Input
-              {...control}
-              {...register("numero_documento")}
-              autoFocus
-              inputMode="text"
-            />
-          )}
-        </FormField>
+        <BloqueIdentidadAdministrativa
+          idPrefijo="participante"
+          bloqueado={bloqueado}
+        />
 
         <FormField
           id="participante-rol"
@@ -207,7 +166,9 @@ function CamposParticipante({
           {(control) => (
             <Select value={rol.value} onValueChange={rol.onChange}>
               <SelectTrigger
-                {...control}
+                id={control.id}
+                aria-invalid={control["aria-invalid"]}
+                aria-describedby={control["aria-describedby"]}
                 onBlur={rol.onBlur}
                 className="w-full"
               >
@@ -222,18 +183,6 @@ function CamposParticipante({
           )}
         </FormField>
 
-        <FormField
-          id="participante-motivo"
-          label="Motivo"
-          required
-          span={12}
-          helper="Queda registrado en el acta de la acción sensible."
-          error={errors.motivo?.message}
-        >
-          {(control) => (
-            <Textarea {...control} {...register("motivo")} rows={3} />
-          )}
-        </FormField>
       </FormGrid>
     </fieldset>
   );

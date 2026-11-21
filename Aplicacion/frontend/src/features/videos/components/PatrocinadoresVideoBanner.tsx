@@ -1,10 +1,13 @@
 "use client";
 
 import { usePatrocinadoresPublicos } from "@/features/patrocinadores/hooks/usePatrocinadores";
-import { resolveImageUrl } from "@/lib/utils";
+import { cn, resolveImageUrl } from "@/lib/utils";
 
 export interface PatrocinadoresVideoBannerProps {
   invertido?: boolean;
+  orientacion?: "horizontal" | "vertical";
+  transparente?: boolean;
+  className?: string;
 }
 
 function externalUrl(value: string): string | null {
@@ -21,6 +24,9 @@ function externalUrl(value: string): string | null {
 /** Infinite sponsor rail framing the public live broadcast. */
 export function PatrocinadoresVideoBanner({
   invertido = false,
+  orientacion = "horizontal",
+  transparente = false,
+  className,
 }: PatrocinadoresVideoBannerProps) {
   const consulta = usePatrocinadoresPublicos();
   const patrocinadores = (consulta.data ?? []).flatMap((patrocinador) => {
@@ -39,7 +45,11 @@ export function PatrocinadoresVideoBanner({
 
   if (consulta.isPending || patrocinadores.length === 0) return null;
 
-  const cantidadRepeticiones = Math.max(1, Math.ceil(6 / patrocinadores.length));
+  const esVertical = orientacion === "vertical";
+  const cantidadRepeticiones = Math.max(
+    1,
+    Math.ceil((esVertical ? 8 : 6) / patrocinadores.length),
+  );
   const base = Array.from(
     { length: cantidadRepeticiones },
     () => patrocinadores,
@@ -49,50 +59,57 @@ export function PatrocinadoresVideoBanner({
   return (
     <aside
       aria-label="Patrocinadores de esta transmisión"
-      className="overflow-hidden rounded-[var(--radius-xl)] border border-brand-on-gradient-border bg-brand-gradient-deep py-3 shadow-[var(--elevation-sm)]"
+      className={cn(
+        "overflow-hidden py-1",
+        transparente
+          ? ""
+          : "rounded-[var(--radius-xl)] border border-brand-on-gradient-border bg-brand-gradient-deep",
+        esVertical && "min-h-[22rem]",
+        className,
+      )}
     >
       <div
-        className={`flex w-max gap-3 px-3 animate-[var(--animate-marquee)] hover:[animation-play-state:paused] motion-reduce:animate-none ${
-          invertido ? "[animation-direction:reverse]" : ""
-        }`}
+        className={cn(
+          "flex gap-8 hover:[animation-play-state:paused] motion-reduce:animate-none",
+          esVertical
+            ? "h-max flex-col px-3 animate-[var(--animate-marquee-vertical)]"
+            : "w-max px-3 animate-[var(--animate-marquee)]",
+          invertido && "[animation-direction:reverse]",
+        )}
       >
         {pista.map(({ patrocinador, medio }, indice) => {
           const sitioWeb = externalUrl(patrocinador.sitio_web);
-          const contenido = (
-            <>
-              <img
-                src={resolveImageUrl(medio)}
-                alt={patrocinador.nombre}
-                className="h-14 max-w-32 object-contain"
-              />
-              <span className="max-w-24 truncate text-caption font-semibold text-foreground">
-                {patrocinador.nombre}
-              </span>
-            </>
+          const logo = (
+            <img
+              src={resolveImageUrl(medio)}
+              alt={patrocinador.nombre}
+              className={cn(
+                "object-contain opacity-90 transition-opacity hover:opacity-100",
+                esVertical ? "h-12 max-w-28" : "h-16 max-w-48",
+              )}
+            />
           );
 
           return (
             <div
               key={`${patrocinador.id}-${indice}`}
-              className="flex w-44 shrink-0 items-center justify-center"
+              className="flex shrink-0 items-center justify-center"
             >
               {sitioWeb ? (
                 <a
                   href={sitioWeb}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex w-full flex-col items-center justify-center gap-1 rounded-[var(--radius-lg)] bg-background px-3 py-2 transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-cyan"
                 >
-                  {contenido}
+                  {logo}
                   <span className="sr-only">
                     Visitar el sitio web de {patrocinador.nombre} (abre en una
                     nueva pestaña)
                   </span>
                 </a>
               ) : (
-                <div className="flex w-full flex-col items-center justify-center gap-1 rounded-[var(--radius-lg)] bg-background px-3 py-2">
-                  {contenido}
-                </div>
+                logo
               )}
             </div>
           );

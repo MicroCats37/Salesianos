@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import {
+  RUTAS_ADMIN,
+  urlDeRutaAdmin,
+} from "@/features/admin/operaciones/services/admin.service";
 import { apiSend } from "@/lib/api";
-import { RUTAS_ADMIN, urlDeRutaAdmin } from "@/features/admin/operaciones/services/admin.service";
 import {
   agregarParticipanteFormSchema,
   compraParaClienteFormSchema,
@@ -82,12 +85,15 @@ describe("ACP — el ledger de los comandos asistidos", () => {
 });
 
 describe("ACP — el alta de un participante", () => {
-  it("el comando viaja con el documento EXACTO y el motivo auditado", async () => {
+  it("el comando viaja con el documento EXACTO, la identidad y el motivo auditado", async () => {
     apiSendMock.mockResolvedValue({ status: 201, data: PARTICIPANTE });
 
     const resultado = await agregarParticipanteEquipo("equipo-1", {
       tipo_documento: "DNI",
       numero_documento: "33333333",
+      nombres: "María",
+      apellidos: "Quispe",
+      genero: "F",
       rol: "JUGADOR",
       motivo: "Inscripción presencial.",
     });
@@ -98,8 +104,10 @@ describe("ACP — el alta de un participante", () => {
       string,
       string,
       {
-        cliente: { numero_documento: string };
-        evidencia: { referencia: string };
+        nombres: string;
+        apellidos: string;
+        genero: string;
+        rol: string;
       },
     ];
     expect(metodo).toBe("post");
@@ -107,15 +115,41 @@ describe("ACP — el alta de un participante", () => {
     expect(cuerpo).toEqual({
       tipo_documento: "DNI",
       numero_documento: "33333333",
+      nombres: "María",
+      apellidos: "Quispe",
+      genero: "F",
       rol: "JUGADOR",
       motivo: "Inscripción presencial.",
     });
+  });
+
+  it("una persona existente envía género nulo y deja que el padrón decida", async () => {
+    apiSendMock.mockResolvedValue({ status: 201, data: PARTICIPANTE });
+
+    await agregarParticipanteEquipo("equipo-1", {
+      tipo_documento: "DNI",
+      numero_documento: "33333333",
+      nombres: "María",
+      apellidos: "Quispe",
+      genero: "",
+      rol: "JUGADOR",
+      motivo: "Alta administrativa de participante en el equipo.",
+    });
+
+    const cuerpo = apiSendMock.mock.calls.at(-1)?.[2] as {
+      genero: string | null;
+    };
+    expect(cuerpo.genero).toBeNull();
   });
 
   it("el formulario EXIGE el motivo y el documento", () => {
     const sinMotivo = agregarParticipanteFormSchema.safeParse({
       tipo_documento: "DNI",
       numero_documento: "33333333",
+      nombres: "María",
+      apellidos: "Quispe",
+      genero: "F",
+      estado_identidad: "ENCONTRADA",
       rol: "JUGADOR",
       motivo: "",
     });
@@ -125,11 +159,122 @@ describe("ACP — el alta de un participante", () => {
     const sinDocumento = agregarParticipanteFormSchema.safeParse({
       tipo_documento: "DNI",
       numero_documento: "",
+      nombres: "María",
+      apellidos: "Quispe",
+      genero: "F",
+      estado_identidad: "ENCONTRADA",
       rol: "JUGADOR",
       motivo: "Inscripción presencial.",
     });
 
     expect(sinDocumento.success).toBe(false);
+  });
+
+  it("valida el formato del documento con las mismas reglas del registro", () => {
+    const identidadManual = {
+      nombres: "Elena",
+      apellidos: "Vega",
+      genero: "F",
+      estado_identidad: "NO_ENCONTRADA" as const,
+      rol: "JUGADOR",
+      motivo: "Inscripción presencial.",
+    };
+
+    expect(
+      agregarParticipanteFormSchema.safeParse({
+        ...identidadManual,
+        tipo_documento: "DNI",
+        numero_documento: "1234567",
+      }).success,
+    ).toBe(false);
+    expect(
+      agregarParticipanteFormSchema.safeParse({
+        ...identidadManual,
+        tipo_documento: "CE",
+        numero_documento: "12345678",
+      }).success,
+    ).toBe(false);
+    expect(
+      agregarParticipanteFormSchema.safeParse({
+        ...identidadManual,
+        tipo_documento: "PAS",
+        numero_documento: "A12",
+      }).success,
+    ).toBe(false);
+    expect(
+      agregarParticipanteFormSchema.safeParse({
+        ...identidadManual,
+        tipo_documento: "CE",
+        numero_documento: "123456789",
+      }).success,
+    ).toBe(true);
+    expect(
+      agregarParticipanteFormSchema.safeParse({
+        ...identidadManual,
+        tipo_documento: "PAS",
+        numero_documento: "AB12",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("el formulario EXIGE que la identidad se haya RESUELTO", () => {
+    const sinConsultar = agregarParticipanteFormSchema.safeParse({
+      tipo_documento: "DNI",
+      numero_documento: "33333333",
+      nombres: "",
+      apellidos: "",
+      genero: "",
+      estado_identidad: "SIN_CONSULTAR",
+      rol: "JUGADOR",
+      motivo: "Inscripción presencial.",
+    });
+
+    expect(sinConsultar.success).toBe(false);
+  });
+
+  it("una identidad ENCONTRADA NO exige los nombres: el padrón manda", () => {
+    const encontrada = agregarParticipanteFormSchema.safeParse({
+      tipo_documento: "DNI",
+      numero_documento: "33333333",
+      nombres: "María",
+      apellidos: "Quispe",
+      genero: "F",
+      estado_identidad: "ENCONTRADA",
+      rol: "JUGADOR",
+      motivo: "Inscripción presencial.",
+    });
+
+    expect(encontrada.success).toBe(true);
+  });
+
+  it("una identidad NO ENCONTRADA EXIGE los nombres, los apellidos y el género", () => {
+    const base = {
+      tipo_documento: "DNI",
+      numero_documento: "55555555",
+      nombres: "",
+      apellidos: "",
+      genero: "",
+      estado_identidad: "NO_ENCONTRADA" as const,
+      rol: "JUGADOR",
+      motivo: "Inscripción presencial.",
+    };
+
+    expect(agregarParticipanteFormSchema.safeParse(base).success).toBe(false);
+
+    const sinGenero = agregarParticipanteFormSchema.safeParse({
+      ...base,
+      nombres: "Elena",
+      apellidos: "Vega",
+    });
+    expect(sinGenero.success).toBe(false);
+
+    const completa = agregarParticipanteFormSchema.safeParse({
+      ...base,
+      nombres: "Elena",
+      apellidos: "Vega",
+      genero: "F",
+    });
+    expect(completa.success).toBe(true);
   });
 });
 
@@ -145,6 +290,7 @@ describe("ACP — la compra asistida", () => {
         numero_documento: "77777777",
         nombres: "Rosa",
         apellidos: "Díaz",
+        genero: "F",
         contacto_email: "rosa@example.com",
       },
       evidencia: {
@@ -160,13 +306,14 @@ describe("ACP — la compra asistida", () => {
       string,
       string,
       {
-        cliente: { numero_documento: string };
+        cliente: { numero_documento: string; genero: string };
         evidencia: { referencia: string };
       },
     ];
     expect(metodo).toBe("post");
     expect(url).toBe("/administracion/pases/compras-cliente");
     expect(cuerpo.cliente.numero_documento).toBe("77777777");
+    expect(cuerpo.cliente.genero).toBe("F");
     expect(cuerpo.evidencia.referencia).toBe("REC-0001");
     expect(Object.keys(cuerpo)).not.toContain("total");
     expect(Object.keys(cuerpo)).not.toContain("precio");
@@ -182,6 +329,7 @@ describe("ACP — la compra asistida", () => {
         numero_documento: "77777777",
         nombres: "Rosa",
         apellidos: "Díaz",
+        genero: "F",
         contacto_email: "rosa@example.com",
       },
       evidencia: {
@@ -196,6 +344,7 @@ describe("ACP — la compra asistida", () => {
       string,
       {
         items: Array<{ tipo: string; producto_id: string; cantidad: number }>;
+        cliente: { genero: string };
         evidencia: { canal: string };
       },
     ];
@@ -204,6 +353,7 @@ describe("ACP — la compra asistida", () => {
     expect(cuerpo.items).toEqual([
       { tipo: "PRODUCTO", producto_id: "producto-1", cantidad: 3 },
     ]);
+    expect(cuerpo.cliente.genero).toBe("F");
     expect(cuerpo.evidencia.canal).toBe("YAPE");
   });
 
@@ -213,6 +363,8 @@ describe("ACP — la compra asistida", () => {
       numero_documento: "77777777",
       nombres: "Rosa",
       apellidos: "Díaz",
+      genero: "F",
+      estado_identidad: "ENCONTRADA",
       contacto_email: "rosa@example.com",
       cantidad: 2,
       canal: "EFECTIVO",
@@ -227,6 +379,8 @@ describe("ACP — la compra asistida", () => {
       numero_documento: "77777777",
       nombres: "Rosa",
       apellidos: "Díaz",
+      genero: "F",
+      estado_identidad: "ENCONTRADA",
       contacto_email: "rosa@example.com",
       cantidad: 2,
       canal: "EFECTIVO",
@@ -241,6 +395,8 @@ describe("ACP — la compra asistida", () => {
       numero_documento: "77777777",
       nombres: "Rosa",
       apellidos: "Díaz",
+      genero: "F",
+      estado_identidad: "ENCONTRADA",
       contacto_email: "no-es-un-correo",
       cantidad: 2,
       canal: "EFECTIVO",
@@ -257,6 +413,8 @@ describe("ACP — la compra asistida", () => {
       numero_documento: "77777777",
       nombres: "Rosa",
       apellidos: "Díaz",
+      genero: "F",
+      estado_identidad: "ENCONTRADA",
       contacto_email: "",
       cantidad: 0,
       canal: "EFECTIVO",
@@ -265,5 +423,28 @@ describe("ACP — la compra asistida", () => {
     });
 
     expect(cero.success).toBe(false);
+  });
+
+  it("el correo de contacto es EXCLUSIVO de la compra: la Persona no lo lleva", () => {
+    const cuerpo = compraParaClienteFormSchema.safeParse({
+      tipo_documento: "DNI",
+      numero_documento: "77777777",
+      nombres: "Rosa",
+      apellidos: "Díaz",
+      genero: "F",
+      estado_identidad: "ENCONTRADA",
+      contacto_email: "rosa@example.com",
+      cantidad: 2,
+      canal: "EFECTIVO",
+      referencia: "REC-0001",
+      motivo: "Cobro en la boletería.",
+    });
+
+    expect(cuerpo.success).toBe(true);
+    if (!cuerpo.success) return;
+
+    // El correo viaja en el `cliente`, no en la identidad.
+    expect(cuerpo.data.contacto_email).toBe("rosa@example.com");
+    expect(Object.keys(cuerpo.data)).not.toContain("email");
   });
 });

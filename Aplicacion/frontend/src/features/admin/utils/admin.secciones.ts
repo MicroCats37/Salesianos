@@ -138,22 +138,6 @@ export const ADMIN_GRUPOS: AdminGrupo[] = [
         capacidad: ADMIN_CAPACIDADES.PAGOS_VER,
       },
       {
-        id: "pases",
-        title: "Pases",
-        icon: "pases",
-        href: RUTAS.administracion.pases,
-        description: "Pases de fiesta y cortesías",
-        capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
-      },
-      {
-        id: "ingreso",
-        title: "Control de ingreso",
-        icon: "ingreso",
-        href: RUTAS.administracion.pasesValidar,
-        description: "Validación de entradas",
-        capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
-      },
-      {
         id: "tienda",
         title: "Tienda",
         icon: "tienda",

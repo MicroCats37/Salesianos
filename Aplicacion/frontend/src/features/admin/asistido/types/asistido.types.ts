@@ -49,12 +49,22 @@ export interface CompraAsistidaOut {
   cantidad: number;
 }
 
-/** The civil identity of the client of an assisted purchase. */
+/**
+ * The civil identity of the client of an assisted purchase.
+ *
+ * `nombres`, `apellidos` and `genero` travel ONLY when the client has to be
+ * REGISTERED: when the identity already exists, the padrón is the authority
+ * and the server never rewrites its names. An empty string means "not
+ * declared": the backend reads it as `null`.
+ */
 export interface ClienteCompraIn {
   tipo_documento: string;
   numero_documento: string;
   nombres: string;
   apellidos: string;
+  /** `""`, `"M"` or `"F"`. */
+  genero: string;
+  /** A contact datum of the PURCHASE: it never reaches the `Persona`. */
   contacto_email: string;
 }
 
@@ -65,10 +75,19 @@ export interface EvidenciaPagoManualIn {
   motivo: string;
 }
 
-/** The command that adds an existing participant to a team. */
+/**
+ * The command that adds a participant to a team.
+ *
+ * The person is identified by her EXACT document. The names, the surnames
+ * and the gender are only used when she has to be REGISTERED.
+ */
 export interface AgregarParticipanteEquipoIn {
   tipo_documento: string;
   numero_documento: string;
+  nombres: string;
+  apellidos: string;
+  /** `""`, `"M"` or `"F"`. */
+  genero: string;
   rol: string;
   motivo: string;
 }

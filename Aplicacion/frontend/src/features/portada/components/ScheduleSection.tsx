@@ -3,6 +3,7 @@
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CalendarPlus, ChevronDown, ExternalLink } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useRef } from "react";
 import { useCatalogoCategorias } from "@/features/inscripciones/hooks/useCatalogo";
 import { PortadaSection } from "@/features/portada/components/PortadaSection";
@@ -18,6 +19,36 @@ gsap.registerPlugin(ScrollTrigger);
  */
 const CRONOGRAMA_FACEBOOK =
   "https://www.facebook.com/photo/?fbid=122118842211462108&set=pb.61593863260385.-2207520000";
+
+/**
+ * Los carteles oficiales de la jornada.
+ *
+ * Son la cartelera gráfica de la sección: cada bloque del día —las tres
+ * disciplinas y la fiesta— tiene su propio cartel, y cada uno abre la parte
+ * de la página donde ese bloque se cuenta.
+ */
+const CARTELERA = [
+  {
+    src: "/images/section/Tarjeta_Voley_960x540.webp",
+    alt: "Cartel del campeonato de vóley mixto interpromociones del Salesianos Fest",
+    href: "#campeonato",
+  },
+  {
+    src: "/images/section/Tarjeta_Fulbito_960x540.webp",
+    alt: "Cartel del campeonato de fúlbito interpromociones del Salesianos Fest",
+    href: "#campeonato",
+  },
+  {
+    src: "/images/section/Tarjeta_Basquet_960x540.webp",
+    alt: "Cartel del campeonato de básquet interpromociones del Salesianos Fest",
+    href: "#campeonato",
+  },
+  {
+    src: "/images/section/Tarjeta_Fiesta_960x540.webp",
+    alt: "Cartel de la fiesta en el auditorio de la Asociación Okinawense del Perú",
+    href: "#fiesta",
+  },
+];
 
 /**
  * Sección "21 NOVIEMBRE / ORGANIZA TU DÍA".
@@ -80,7 +111,28 @@ export function ScheduleSection() {
       destacado={destacado}
     >
       <div ref={rootRef} className="mt-10">
-        <div className="flex justify-end">
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {CARTELERA.map((cartel) => (
+            <li key={cartel.src}>
+              <a
+                href={cartel.href}
+                className="group block overflow-hidden rounded-[var(--radius-xl)] border border-border shadow-[var(--elevation-sm)] transition-[transform,box-shadow] duration-(--motion-duration-base) hover:-translate-y-1 hover:shadow-[var(--elevation-md)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <Image
+                  src={cartel.src}
+                  alt={cartel.alt}
+                  width={960}
+                  height={540}
+                  loading="lazy"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className="h-auto w-full"
+                />
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-10 flex justify-end">
           <a
             href={CRONOGRAMA_FACEBOOK}
             target="_blank"

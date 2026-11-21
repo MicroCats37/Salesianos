@@ -130,7 +130,7 @@ export function VideoDetalleView({
 
           {estado === "listo" && video ? (
             <div className="flex flex-col gap-6">
-              <div className="mx-auto flex w-full max-w-[70rem] flex-col gap-3">
+              <div className="mx-auto flex w-full max-w-[var(--container-wide)] flex-col gap-3">
                 <PatrocinadoresVideoBanner />
                 <div className="relative overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-surface-inverse shadow-[var(--elevation-lg)]">
                   <div className="aspect-video w-full">
@@ -148,7 +148,7 @@ export function VideoDetalleView({
                 <PatrocinadoresVideoBanner invertido />
               </div>
 
-              <div className="mx-auto flex w-full max-w-[70rem] flex-col gap-2">
+              <div className="mx-auto flex w-full max-w-[var(--container-wide)] flex-col gap-2">
                 {video.descripcion ? (
                   <p className="max-w-reading text-sm text-muted-foreground sm:text-base">
                     {video.descripcion}

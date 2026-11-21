@@ -47,6 +47,13 @@ export function SiteHeader({
 
   /** Whether a destination is the one the visitor is on right now. */
   const esActivo = (href: string) => pathname === href;
+  const mostrarCtaPase =
+    pathname !== RUTAS.publico.videos && pathname !== RUTAS.publico.pases;
+  const esRutaEnVivo =
+    pathname === RUTAS.publico.videos ||
+    pathname.startsWith(`${RUTAS.publico.videos}/`);
+
+  if (esRutaEnVivo) return null;
 
   return (
     <header className="sticky top-0 z-(--z-sticky) border-b border-border bg-background/90 backdrop-blur">
@@ -85,17 +92,19 @@ export function SiteHeader({
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button
-            asChild
-            className="hidden min-h-11 rounded-full bg-brand-gradient px-5 font-bold uppercase tracking-wider text-primary-foreground sm:inline-flex"
-          >
-            <Link
-              href={autenticado ? RUTAS.cuenta.miCuenta : RUTAS.publico.pases}
+          {mostrarCtaPase ? (
+            <Button
+              asChild
+              className="hidden min-h-11 rounded-full bg-brand-gradient px-5 font-bold uppercase tracking-wider text-primary-foreground sm:inline-flex"
             >
-              <Ticket className="size-4" aria-hidden="true" />
-              {autenticado ? "Mi cuenta" : "Conseguir pase"}
-            </Link>
-          </Button>
+              <Link
+                href={autenticado ? RUTAS.cuenta.miCuenta : RUTAS.publico.pases}
+              >
+                <Ticket className="size-4" aria-hidden="true" />
+                {autenticado ? "Mi cuenta" : "Conseguir pase"}
+              </Link>
+            </Button>
+          ) : null}
 
           {/*
             El selector de tema vive en la barra, no dentro del menú: cambiar
@@ -143,18 +152,20 @@ export function SiteHeader({
                   })}
                 </ul>
               </nav>
-              <Button
-                asChild
-                className="mt-6 min-h-11 w-full rounded-full bg-brand-gradient font-bold uppercase tracking-wider text-primary-foreground"
-              >
-                <Link
-                  href={
-                    autenticado ? RUTAS.cuenta.miCuenta : RUTAS.publico.pases
-                  }
+              {mostrarCtaPase ? (
+                <Button
+                  asChild
+                  className="mt-6 min-h-11 w-full rounded-full bg-brand-gradient font-bold uppercase tracking-wider text-primary-foreground"
                 >
-                  {autenticado ? "Mi cuenta" : "Conseguir pase"}
-                </Link>
-              </Button>
+                  <Link
+                    href={
+                      autenticado ? RUTAS.cuenta.miCuenta : RUTAS.publico.pases
+                    }
+                  >
+                    {autenticado ? "Mi cuenta" : "Conseguir pase"}
+                  </Link>
+                </Button>
+              ) : null}
             </SheetContent>
           </Sheet>
         </div>

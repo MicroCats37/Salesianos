@@ -1,14 +1,15 @@
 import { z } from "zod";
 import { envelopeAdmin } from "@/features/admin/operaciones/schemas/operaciones.schema";
+import { buildNumeroDocumentoValidator } from "@/features/auth/schemas/register.schema";
 
 /**
  * The Zod mirrors of the ADMINISTRATIVE ASSISTED commands.
  *
  * They are the 1:1 mirror of the presenters of the target backend
  * (`Aplicacion/backend/modules/administracion/presentation/schemas/admin_asistido_schemas.py`):
- * `ClienteCompraIn`, `EvidenciaPagoManualIn`, `AgregarParticipanteEquipoIn`,
- * `ItemPedidoClienteIn`, `ComprarPaseClienteIn`, `ComprarPedidoClienteIn`,
- * `ParticipanteAsistidoOut` and `CompraAsistidaOut`.
+ * `IdentidadCivilIn`, `ClienteCompraIn`, `EvidenciaPagoManualIn`,
+ * `AgregarParticipanteEquipoIn`, `ItemPedidoClienteIn`, `ComprarPaseClienteIn`,
+ * `ComprarPedidoClienteIn`, `ParticipanteAsistidoOut` and `CompraAsistidaOut`.
  *
  * The rules of the mirror:
  *
@@ -19,15 +20,20 @@ import { envelopeAdmin } from "@/features/admin/operaciones/schemas/operaciones.
  *   vocabulary and a new value must NOT break the whole read.
  * - **The amounts are STRINGS.** The backend serialises `Decimal` as a
  *   string in this wrapper, and the browser never recalculates a total.
+ * - **The identity is a BLOCK, not a loose field.** `nombres`, `apellidos`
+ *   and `genero` travel ONLY when the person has to be REGISTERED: when
+ *   the identity already exists, the padrón is the authority and the server
+ *   never rewrites its names.
  */
 
 /** The civil identity of the client of an assisted purchase. */
 export const clienteCompraSchema = z.object({
   tipo_documento: z.string().min(1).max(3),
   numero_documento: z.string().min(1).max(20),
-  nombres: z.string().min(1).max(255),
-  apellidos: z.string().max(255),
-  contacto_email: z.string().max(255),
+  nombres: z.string().max(255).nullable(),
+  apellidos: z.string().max(255).nullable(),
+  genero: z.enum(["M", "F"]).nullable(),
+  contacto_email: z.string().max(255).nullable(),
 });
 
 /** The evidence of the external payment that the administrator registers. */
@@ -37,10 +43,13 @@ export const evidenciaPagoManualSchema = z.object({
   motivo: z.string().min(1).max(1000),
 });
 
-/** The command that adds an existing participant to a team. */
+/** The command that adds a participant to a team. */
 export const agregarParticipanteEquipoSchema = z.object({
   tipo_documento: z.string().min(1).max(3),
   numero_documento: z.string().min(1).max(20),
+  nombres: z.string().max(255).nullable(),
+  apellidos: z.string().max(255).nullable(),
+  genero: z.enum(["M", "F"]).nullable(),
   rol: z.string().min(1).max(16),
   motivo: z.string().min(1).max(1000),
 });
@@ -120,13 +129,133 @@ export type ComprarPedidoCliente = z.infer<typeof comprarPedidoClienteSchema>;
 // Son la capa que el formulario valida. El COMANDO viaja al backend en el
 // espejo de arriba: el formulario no es el contrato.
 
-/** The form of the administrative add of a participant. */
-export const agregarParticipanteFormSchema = z.object({
-  tipo_documento: z.string().min(1, "Elige el tipo de documento."),
+/**
+ * The state of the ADMINISTRATIVE identity resolution.
+ *
+ * - `SIN_CONSULTAR`: the administrator has not searched the document yet.
+ * - `ENCONTRADA`: the padrón already has that person: her canonical names
+ *   are shown and the identity is REUSED.
+ * - `NO_ENCONTRADA`: the padrón does not have that person: the names, the
+ *   surnames and the gender have to be declared to REGISTER her.
+ */
+export const estadoIdentidadAdministrativaSchema = z.enum([
+  "SIN_CONSULTAR",
+  "ENCONTRADA",
+  "NO_ENCONTRADA",
+]);
+
+export type EstadoIdentidadAdministrativa = z.infer<
+  typeof estadoIdentidadAdministrativaSchema
+>;
+
+/**
+ * The BLOCK of the administrative identity, shared by every form that asks
+ * for a document.
+ *
+ * It is the same block for the participant and for the assisted purchases:
+ * the resolution of the identity is ONE behaviour, not three.
+ */
+export const identidadAdministrativaCamposSchema = z.object({
+  tipo_documento: z.enum(["DNI", "CE", "PAS"], {
+    error: "Elige el tipo de documento.",
+  }),
   numero_documento: z.string().min(1, "Escribe el número de documento."),
-  rol: z.string().min(1, "Elige el rol."),
-  motivo: z.string().min(1, "Escribe el motivo: queda en la auditoría."),
+  nombres: z.string().max(255, "Máximo 255 caracteres."),
+  apellidos: z.string().max(255, "Máximo 255 caracteres."),
+  genero: z
+    .string()
+    .refine(
+      (valor) => valor === "" || valor === "M" || valor === "F",
+      "Elige el género.",
+    ),
+  estado_identidad: estadoIdentidadAdministrativaSchema,
 });
+
+/** The identity fields every administrative form shares. */
+export type IdentidadAdministrativaCampos = z.infer<
+  typeof identidadAdministrativaCamposSchema
+>;
+
+/**
+ * The problems of an identity that has NOT been resolved yet.
+ *
+ * The list is EMPTY when the identity was found: the padrón brings the
+ * canonical names and the administrator does not have to declare anything.
+ */
+export function problemasDeIdentidadAdministrativa(
+  datos: IdentidadAdministrativaCampos,
+): { campo: string; mensaje: string }[] {
+  const documento = buildNumeroDocumentoValidator(
+    datos.tipo_documento,
+  ).safeParse(datos.numero_documento);
+
+  if (!documento.success) {
+    return [
+      {
+        campo: "numero_documento",
+        mensaje:
+          documento.error.issues[0]?.message ??
+          "Número de documento inválido.",
+      },
+    ];
+  }
+
+  if (datos.estado_identidad === "SIN_CONSULTAR") {
+    return [
+      {
+        campo: "numero_documento",
+        mensaje:
+          "Busca la identidad del documento antes de continuar: el servidor decide si se reutiliza o se registra.",
+      },
+    ];
+  }
+
+  if (datos.estado_identidad === "ENCONTRADA") {
+    return [];
+  }
+
+  const problemas: { campo: string; mensaje: string }[] = [];
+
+  if (!datos.nombres.trim()) {
+    problemas.push({
+      campo: "nombres",
+      mensaje: "Escribe los nombres: la persona se registrará en el padrón.",
+    });
+  }
+
+  if (!datos.apellidos.trim()) {
+    problemas.push({
+      campo: "apellidos",
+      mensaje: "Escribe los apellidos: la persona se registrará en el padrón.",
+    });
+  }
+
+  if (!datos.genero) {
+    problemas.push({
+      campo: "genero",
+      mensaje:
+        "Elige el género: la disciplina lo exige para admitir a la persona.",
+    });
+  }
+
+  return problemas;
+}
+
+/** The form of the administrative add of a participant. */
+export const agregarParticipanteFormSchema = identidadAdministrativaCamposSchema
+  .extend({
+    rol: z.string().min(1, "Elige el rol."),
+    motivo: z.string().min(1, "Escribe el motivo: queda en la auditoría."),
+  })
+  .superRefine((datos, ctx) => {
+    for (const problema of problemasDeIdentidadAdministrativa(datos)) {
+      ctx.addIssue({
+        code: "custom",
+        message: problema.mensaje,
+        path: [problema.campo],
+      });
+    }
+  });
 
 /**
  * The form of an assisted purchase.
@@ -135,25 +264,31 @@ export const agregarParticipanteFormSchema = z.object({
  * a string. The price NEVER travels: the server freezes it against the
  * catalogue (`RN-C02`).
  */
-export const compraParaClienteFormSchema = z.object({
-  tipo_documento: z.string().min(1, "Elige el tipo de documento."),
-  numero_documento: z.string().min(1, "Escribe el número de documento."),
-  nombres: z.string().min(1, "Escribe los nombres del cliente."),
-  apellidos: z.string(),
-  contacto_email: z
-    .string()
-    .refine(
-      (correo) => correo === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo),
-      "Escribe un correo válido.",
-    ),
-  cantidad: z.coerce
-    .number({ message: "Escribe la cantidad." })
-    .int("La cantidad es un número entero.")
-    .min(1, "La cantidad es al menos una unidad."),
-  canal: z.string().min(1, "Elige el canal del pago."),
-  referencia: z.string().min(1, "Escribe la referencia del pago."),
-  motivo: z.string().min(1, "Escribe el motivo: queda en la auditoría."),
-});
+export const compraParaClienteFormSchema = identidadAdministrativaCamposSchema
+  .extend({
+    contacto_email: z
+      .string()
+      .refine(
+        (correo) => correo === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo),
+        "Escribe un correo válido.",
+      ),
+    cantidad: z.coerce
+      .number({ message: "Escribe la cantidad." })
+      .int("La cantidad es un número entero.")
+      .min(1, "La cantidad es al menos una unidad."),
+    canal: z.string().min(1, "Elige el canal del pago."),
+    referencia: z.string().min(1, "Escribe la referencia del pago."),
+    motivo: z.string().min(1, "Escribe el motivo: queda en la auditoría."),
+  })
+  .superRefine((datos, ctx) => {
+    for (const problema of problemasDeIdentidadAdministrativa(datos)) {
+      ctx.addIssue({
+        code: "custom",
+        message: problema.mensaje,
+        path: [problema.campo],
+      });
+    }
+  });
 
 export type AgregarParticipanteFormData = z.infer<
   typeof agregarParticipanteFormSchema

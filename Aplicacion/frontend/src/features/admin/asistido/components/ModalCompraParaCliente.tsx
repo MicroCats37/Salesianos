@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Fingerprint,
-  Mail,
-  Receipt,
-  ShoppingBag,
-  Ticket,
-  User,
-} from "lucide-react";
+import { Mail, Receipt, ShoppingBag, Ticket } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useController } from "react-hook-form";
 import { FormField } from "@/components/forms/FormField";
@@ -27,9 +20,10 @@ import {
   useComprarPedidoCliente,
 } from "../hooks/useAsistidoAdmin";
 import {
-  compraParaClienteFormSchema,
   type CompraParaClienteFormData,
+  compraParaClienteFormSchema,
 } from "../schemas/asistido.schema";
+import { BloqueIdentidadAdministrativa } from "./BloqueIdentidadAdministrativa";
 
 /** What is being bought FOR the client. */
 export type ModoCompraCliente = "PASE" | "PRODUCTO";
@@ -64,6 +58,8 @@ const valoresIniciales: CompraParaClienteFormData = {
   numero_documento: "",
   nombres: "",
   apellidos: "",
+  genero: "",
+  estado_identidad: "SIN_CONSULTAR",
   contacto_email: "",
   cantidad: 1,
   canal: "EFECTIVO",
@@ -77,10 +73,11 @@ const valoresIniciales: CompraParaClienteFormData = {
  * ## WHO BUYS
  *
  * The form declares the CIVIL identity of the CLIENT: type of document,
- * number, names and contact email. The backend resolves that identity in the
- * padrón (registering it if it did not exist) and makes the CLIENT the owner
- * of the purchase. The administrator who fills this form is the ACTOR of the
- * operation, not its buyer.
+ * number, and —only when the padrón does not have that person— the names,
+ * the surname and the gender. The backend resolves that identity in the
+ * padrón (registering it if it did not exist, NEVER as an account) and makes
+ * the CLIENT the owner of the purchase. The administrator who fills this
+ * form is the ACTOR of the operation, not its buyer.
  *
  * ## WHAT IT COSTS
  *
@@ -106,9 +103,7 @@ export function ModalCompraParaCliente({
   const esPase = modo === "PASE";
   const comprarPase = useComprarPaseCliente();
   const comprarPedido = useComprarPedidoCliente();
-  const comprando = esPase
-    ? comprarPase.isPending
-    : comprarPedido.isPending;
+  const comprando = esPase ? comprarPase.isPending : comprarPedido.isPending;
 
   return (
     <AppFormModal<CompraParaClienteFormData>
@@ -136,6 +131,7 @@ export function ModalCompraParaCliente({
           numero_documento: datos.numero_documento,
           nombres: datos.nombres,
           apellidos: datos.apellidos,
+          genero: datos.genero,
           contacto_email: datos.contacto_email,
         };
         const evidencia = {
@@ -154,7 +150,11 @@ export function ModalCompraParaCliente({
         } else {
           await comprarPedido.mutateAsync({
             items: [
-              { tipo: "PRODUCTO", producto_id: itemId, cantidad: datos.cantidad },
+              {
+                tipo: "PRODUCTO",
+                producto_id: itemId,
+                cantidad: datos.cantidad,
+              },
             ],
             cliente,
             evidencia,
@@ -217,8 +217,10 @@ export function ModalCompraParaCliente({
  * The fields of the assisted purchase.
  *
  * The form is the Mode 1 (`children`): the label, the icon and the error of
- * every field are drawn ONCE by `FormField`. The two selects read their value
- * with `useController`, ACOTADO a su campo.
+ * every field are drawn ONCE by `FormField`. The IDENTITY lives in the
+ * SHARED BLOCK, so the participant and the two purchases resolve a document
+ * the same way. The two selects read their value with `useController`,
+ * ACOTADO a su campo.
  */
 function CamposCompraCliente({
   methods,
@@ -233,10 +235,6 @@ function CamposCompraCliente({
     formState: { errors },
   } = methods;
 
-  const { field: tipoDocumento } = useController({
-    control: controlFormulario,
-    name: "tipo_documento",
-  });
   const { field: canal } = useController({
     control: controlFormulario,
     name: "canal",
@@ -255,81 +253,18 @@ function CamposCompraCliente({
           Identidad del cliente
         </h3>
 
+        <BloqueIdentidadAdministrativa
+          idPrefijo="cliente"
+          bloqueado={bloqueado}
+        />
+
         <FormGrid>
-          <FormField
-            id="cliente-tipo-documento"
-            label="Tipo de documento"
-            required
-            icon={Fingerprint}
-            span={4}
-            error={errors.tipo_documento?.message}
-          >
-            {(control) => (
-              <Select
-                value={tipoDocumento.value}
-                onValueChange={tipoDocumento.onChange}
-              >
-                <SelectTrigger
-                  {...control}
-                  onBlur={tipoDocumento.onBlur}
-                  className="w-full"
-                >
-                  <SelectValue placeholder="Elige el tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DNI">DNI</SelectItem>
-                  <SelectItem value="CE">Carné de extranjería</SelectItem>
-                  <SelectItem value="PAS">Pasaporte</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          </FormField>
-
-          <FormField
-            id="cliente-numero-documento"
-            label="Número de documento"
-            required
-            icon={Fingerprint}
-            span={8}
-            error={errors.numero_documento?.message}
-          >
-            {(control) => (
-              <Input
-                {...control}
-                {...register("numero_documento")}
-                autoFocus
-                inputMode="text"
-              />
-            )}
-          </FormField>
-
-          <FormField
-            id="cliente-nombres"
-            label="Nombres"
-            required
-            icon={User}
-            span={6}
-            error={errors.nombres?.message}
-          >
-            {(control) => <Input {...control} {...register("nombres")} />}
-          </FormField>
-
-          <FormField
-            id="cliente-apellidos"
-            label="Apellidos"
-            icon={User}
-            span={6}
-            error={errors.apellidos?.message}
-          >
-            {(control) => <Input {...control} {...register("apellidos")} />}
-          </FormField>
-
           <FormField
             id="cliente-correo"
             label="Correo de contacto"
             icon={Mail}
             span={12}
-            helper="Es un dato de contacto: no habilita ningún derecho."
+            helper="Es un dato de contacto de la COMPRA: no habilita ningún derecho y no se guarda en la persona."
             error={errors.contacto_email?.message}
           >
             {(control) => (
@@ -386,7 +321,9 @@ function CamposCompraCliente({
             {(control) => (
               <Select value={canal.value} onValueChange={canal.onChange}>
                 <SelectTrigger
-                  {...control}
+                  id={control.id}
+                  aria-invalid={control["aria-invalid"]}
+                  aria-describedby={control["aria-describedby"]}
                   onBlur={canal.onBlur}
                   className="w-full"
                 >

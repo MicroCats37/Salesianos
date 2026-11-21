@@ -31,10 +31,12 @@ import type {
  */
 
 /**
- * Adds an EXISTING participant to the roster of a team.
+ * Adds a participant to the roster of a team.
  *
- * The person is identified by her EXACT document: the command NEVER creates
- * a `Persona`.
+ * The person is identified by her EXACT document. The names, the surnames
+ * and the gender travel ONLY when she has to be REGISTERED: when the
+ * identity already exists, the padrón is the authority and the server never
+ * rewrites its names. The command NEVER creates an ACCOUNT.
  */
 export async function agregarParticipanteEquipo(
   equipoId: string,
@@ -48,6 +50,9 @@ export async function agregarParticipanteEquipo(
       payload: {
         tipo_documento: payload.tipo_documento,
         numero_documento: payload.numero_documento,
+        nombres: payload.nombres,
+        apellidos: payload.apellidos,
+        genero: payload.genero || null,
         rol: payload.rol,
         motivo: payload.motivo,
       },

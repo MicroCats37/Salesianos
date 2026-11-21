@@ -1,3 +1,4 @@
+export { BloqueIdentidadAdministrativa } from "./components/BloqueIdentidadAdministrativa";
 export { ModalAgregarParticipante } from "./components/ModalAgregarParticipante";
 export {
   ModalCompraParaCliente,

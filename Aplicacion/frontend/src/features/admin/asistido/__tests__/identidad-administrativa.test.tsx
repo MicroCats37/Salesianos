@@ -70,10 +70,16 @@ function Formulario({
   return <FormProvider {...methods}>{children}</FormProvider>;
 }
 
-function renderBloque(tipoDocumento: "DNI" | "CE" | "PAS" = "DNI") {
+function renderBloque(
+  tipoDocumento: "DNI" | "CE" | "PAS" = "DNI",
+  permiteCorreccionGenero = true,
+) {
   return render(
     <Formulario tipoDocumento={tipoDocumento}>
-      <BloqueIdentidadAdministrativa idPrefijo="participante" />
+      <BloqueIdentidadAdministrativa
+        idPrefijo="participante"
+        permiteCorreccionGenero={permiteCorreccionGenero}
+      />
     </Formulario>,
   );
 }
@@ -86,6 +92,21 @@ async function buscar(documento: string) {
   fireEvent.click(
     screen.getByRole("button", { name: "Buscar la identidad del documento" }),
   );
+}
+
+/**
+ * Opens the gender select and picks one of its options.
+ *
+ * The dropdown of Radix opens with the KEYBOARD, so the shims of jsdom do
+ * not have to fake a pointer: the option is then chosen with a click.
+ */
+async function elegirGenero(etiqueta: string) {
+  const genero = screen.getByLabelText(/Género/);
+
+  fireEvent.keyDown(genero, { key: "ArrowDown" });
+
+  const opcion = await screen.findByRole("option", { name: etiqueta });
+  fireEvent.click(opcion);
 }
 
 beforeEach(() => {
@@ -151,6 +172,55 @@ describe("ACP — el bloque de identidad administrativa", () => {
     // El padrón manda: no se piden los datos de una persona ya registrada.
     expect(screen.queryByLabelText(/Nombres/)).toBeNull();
     expect(screen.queryByLabelText(/Apellidos/)).toBeNull();
+  });
+
+  it("una identidad ENCONTRADA ofrece CONSERVAR el género o corregirlo", async () => {
+    mutar.mockResolvedValue(ENCONTRADA);
+    renderBloque();
+
+    await buscar("33333333");
+
+    await waitFor(() => {
+      expect(screen.getByText("María Quispe")).toBeDefined();
+    });
+
+    // El género SÍ se ofrece: es la única corrección que el padrón admite
+    // sobre una identidad viva. Por defecto NO se corrige nada.
+    const genero = screen.getByLabelText(/Género/);
+    expect(genero.textContent).toContain("Conservar el género registrado");
+
+    await elegirGenero("Femenino");
+
+    expect(screen.getByLabelText(/Género/).textContent).toContain("Femenino");
+  });
+
+  it("una identidad NO ENCONTRADA EXIGE el género: no hay opción de conservar", async () => {
+    mutar.mockResolvedValue(NO_ENCONTRADA);
+    renderBloque();
+
+    await buscar("55555555");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Género/)).toBeDefined();
+    });
+
+    expect(screen.getByLabelText(/Género/).textContent).toContain(
+      "Elige el género",
+    );
+  });
+
+  it("un comando que NO corrige el género NO ofrece el control", async () => {
+    mutar.mockResolvedValue(ENCONTRADA);
+    renderBloque("DNI", false);
+
+    await buscar("33333333");
+
+    await waitFor(() => {
+      expect(screen.getByText("María Quispe")).toBeDefined();
+    });
+
+    // Ofrecer una corrección que el servidor ignora sería un NO-OP
+    // silencioso: el administrador creería haber corregido el género.
     expect(screen.queryByLabelText(/Género/)).toBeNull();
   });
 

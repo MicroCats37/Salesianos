@@ -153,6 +153,7 @@ function CamposParticipante({
         <BloqueIdentidadAdministrativa
           idPrefijo="participante"
           bloqueado={bloqueado}
+          permiteCorreccionGenero
         />
 
         <FormField
@@ -182,7 +183,6 @@ function CamposParticipante({
             </Select>
           )}
         </FormField>
-
       </FormGrid>
     </fieldset>
   );

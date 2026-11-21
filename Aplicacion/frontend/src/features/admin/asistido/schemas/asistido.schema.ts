@@ -194,8 +194,7 @@ export function problemasDeIdentidadAdministrativa(
       {
         campo: "numero_documento",
         mensaje:
-          documento.error.issues[0]?.message ??
-          "Número de documento inválido.",
+          documento.error.issues[0]?.message ?? "Número de documento inválido.",
       },
     ];
   }

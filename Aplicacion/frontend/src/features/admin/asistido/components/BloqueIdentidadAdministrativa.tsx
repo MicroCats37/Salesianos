@@ -33,12 +33,23 @@ import type { IdentidadAdministrativaCampos } from "../schemas/asistido.schema";
  * | `ENCONTRADA` | the padrón already has that person | the canonical names are SHOWN and the identity is REUSED |
  * | `NO_ENCONTRADA` | the padrón does not have that person | the name, the surname and the gender fields are REVEALED and required |
  *
+ * ## The GENDER of a person that already exists
+ *
+ * When the identity is FOUND, the gender is NOT editable: the padrón is the
+ * authority. But the administrator may need to CORRECT a gender that was
+ * registered wrong, and only an EXPLICIT declaration can do that: the block
+ * offers `Conservar el género registrado` (the default) plus `M` and `F`.
+ * Leaving it as it is sends NO correction; choosing one asks the server for
+ * a correction and only `genero` changes.
+ *
  * ## What it does NOT do
  *
  * - It NEVER creates an identity: it only READS the padrón. The command
  *   decides whether the person has to be registered.
  * - It NEVER asks for the names of a person that already exists: the padrón
  *   is the authority and its names are not editable from here.
+ * - It NEVER INVENTS a gender: it never derives it from the discipline or
+ *   from the team.
  * - It NEVER shows a LABEL twice and it never registers a field twice: every
  *   control of this block is bound ONCE, with `useController`.
  */
@@ -53,6 +64,16 @@ export interface BloqueIdentidadAdministrativaProps {
   idPrefijo: string;
   /** Whether the block is locked (a command in flight). */
   bloqueado?: boolean;
+  /**
+   * Whether the command BEHIND the form honours a gender CORRECTION of a
+   * person that already exists.
+   *
+   * The correction is OPT-IN because it is not universal: only the commands
+   * that ask the server for it can apply it. Offering it where the server
+   * ignores it would be a silent no-op, and the administrator would believe
+   * that the registered gender changed when it did not.
+   */
+  permiteCorreccionGenero?: boolean;
 }
 
 /** The vocabulary of the type of document. */
@@ -68,9 +89,19 @@ const GENEROS = [
   { etiqueta: "Femenino", valor: "F" },
 ];
 
+/**
+ * The value of the option that KEEPS the registered gender.
+ *
+ * It is a sentinel of the UI, not of the domain: the form keeps an EMPTY
+ * string when there is no correction, and the wire sends `null`. Radix does
+ * not accept an empty value in an item, hence the sentinel.
+ */
+const CONSERVAR_GENERO = "CONSERVAR";
+
 export function BloqueIdentidadAdministrativa({
   idPrefijo,
   bloqueado = false,
+  permiteCorreccionGenero = false,
 }: BloqueIdentidadAdministrativaProps) {
   const {
     control,
@@ -103,11 +134,7 @@ export function BloqueIdentidadAdministrativa({
   const [fallo, setFallo] = useState<string | null>(null);
 
   const esDni = tipoDocumento.value === "DNI";
-  const maximoDocumento = esDni
-    ? 8
-    : tipoDocumento.value === "CE"
-      ? 9
-      : 20;
+  const maximoDocumento = esDni ? 8 : tipoDocumento.value === "CE" ? 9 : 20;
   const placeholderDocumento = esDni
     ? "12345678"
     : tipoDocumento.value === "CE"
@@ -189,12 +216,16 @@ export function BloqueIdentidadAdministrativa({
       });
 
       if (resultado.persistida) {
+        // Una resolución NUEVA invalida cualquier declaración anterior: el
+        // género registrado se conserva salvo que el administrador lo
+        // corrija AHORA, y sólo si lo hace de forma explícita.
+        setValue("genero", "", { shouldDirty: true, shouldValidate: true });
         setValue("estado_identidad", "ENCONTRADA", {
           shouldDirty: true,
           shouldValidate: true,
         });
         setMensaje(
-          "El padrón ya tiene a esta persona: se reutiliza su identidad y sus datos no se modifican.",
+          "El padrón ya tiene a esta persona: se reutiliza su identidad y sus nombres no se modifican.",
         );
         return;
       }
@@ -224,6 +255,14 @@ export function BloqueIdentidadAdministrativa({
   const encontrada = estado === "ENCONTRADA";
   const registrar = estado === "NO_ENCONTRADA";
   const nombreRegistrado = `${nombresResueltos} ${apellidosResueltos}`.trim();
+
+  /**
+   * Whether the gender of a person that ALREADY EXISTS can be corrected.
+   *
+   * It needs BOTH facts: the identity was FOUND and the command behind the
+   * form honours the correction.
+   */
+  const puedeCorregirGenero = permiteCorreccionGenero && encontrada;
 
   return (
     <div className="col-span-12 flex flex-col gap-3">
@@ -284,11 +323,12 @@ export function BloqueIdentidadAdministrativa({
                 placeholder={placeholderDocumento}
                 maxLength={maximoDocumento}
                 onChange={(evento) => {
-                  const valor = esDni || tipoDocumento.value === "CE"
-                    ? evento.target.value.replace(/\D/g, "")
-                    : evento.target.value
-                        .replace(/[^a-zA-Z0-9]/g, "")
-                        .toUpperCase();
+                  const valor =
+                    esDni || tipoDocumento.value === "CE"
+                      ? evento.target.value.replace(/\D/g, "")
+                      : evento.target.value
+                          .replace(/[^a-zA-Z0-9]/g, "")
+                          .toUpperCase();
                   numeroDocumento.onChange(valor.slice(0, maximoDocumento));
                 }}
               />
@@ -341,8 +381,11 @@ export function BloqueIdentidadAdministrativa({
               {nombreRegistrado || "Persona registrada"}
             </p>
             <p className="text-caption text-muted-foreground">
-              Ya está en el padrón: se reutiliza su identidad y sus datos no se
-              modifican.
+              Ya está en el padrón: se reutiliza su identidad y sus nombres no
+              se modifican.
+              {puedeCorregirGenero
+                ? " El género sólo cambia si lo corriges."
+                : ""}
             </p>
           </div>
         ) : null}
@@ -387,42 +430,65 @@ export function BloqueIdentidadAdministrativa({
                 />
               )}
             </FormField>
-
-            <FormField
-              id={`${idPrefijo}-genero`}
-              label="Género"
-              required
-              icon={User}
-              span={12}
-              helper="La disciplina lo exige para admitir a la persona."
-              error={errors.genero?.message}
-            >
-              {(control) => (
-                <Select
-                  value={genero.value}
-                  onValueChange={genero.onChange}
-                  disabled={bloqueado}
-                >
-                  <SelectTrigger
-                    id={control.id}
-                    aria-invalid={control["aria-invalid"]}
-                    aria-describedby={control["aria-describedby"]}
-                    onBlur={genero.onBlur}
-                    className="w-full"
-                  >
-                    <SelectValue placeholder="Elige el género" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GENEROS.map((opcion) => (
-                      <SelectItem key={opcion.valor} value={opcion.valor}>
-                        {opcion.etiqueta}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </FormField>
           </>
+        ) : null}
+
+        {registrar || puedeCorregirGenero ? (
+          <FormField
+            id={`${idPrefijo}-genero`}
+            label="Género"
+            required={registrar}
+            icon={User}
+            span={12}
+            helper={
+              puedeCorregirGenero
+                ? "El género registrado se conserva salvo que elijas corregirlo."
+                : "La disciplina lo exige para admitir a la persona."
+            }
+            error={errors.genero?.message}
+          >
+            {(control) => (
+              <Select
+                value={
+                  puedeCorregirGenero
+                    ? genero.value || CONSERVAR_GENERO
+                    : genero.value
+                }
+                onValueChange={(valor) =>
+                  genero.onChange(valor === CONSERVAR_GENERO ? "" : valor)
+                }
+                disabled={bloqueado}
+              >
+                <SelectTrigger
+                  id={control.id}
+                  aria-invalid={control["aria-invalid"]}
+                  aria-describedby={control["aria-describedby"]}
+                  onBlur={genero.onBlur}
+                  className="w-full"
+                >
+                  <SelectValue
+                    placeholder={
+                      puedeCorregirGenero
+                        ? "Conservar el género registrado"
+                        : "Elige el género"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {puedeCorregirGenero ? (
+                    <SelectItem value={CONSERVAR_GENERO}>
+                      Conservar el género registrado
+                    </SelectItem>
+                  ) : null}
+                  {GENEROS.map((opcion) => (
+                    <SelectItem key={opcion.valor} value={opcion.valor}>
+                      {opcion.etiqueta}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </FormField>
         ) : null}
       </FormGrid>
     </div>

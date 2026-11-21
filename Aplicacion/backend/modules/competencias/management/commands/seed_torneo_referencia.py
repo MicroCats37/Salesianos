@@ -3,7 +3,6 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -240,15 +239,10 @@ COMPETITIONS = (
 
 
 class Command(BaseCommand):
-    help = "Carga el fixture de referencia con 33 equipos reales de desarrollo."
+    help = "Carga o reconcilia el fixture multideporte de referencia."
 
     @transaction.atomic
     def handle(self, *args, **options):
-        if not settings.DEBUG:
-            raise CommandError(
-                "seed_torneo_referencia solo puede ejecutarse en desarrollo."
-            )
-
         edicion = (
             Edicion.objects.filter(estado="PUBLICADA").first()
             or Edicion.objects.first()

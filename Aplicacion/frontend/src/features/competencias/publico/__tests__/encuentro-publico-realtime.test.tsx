@@ -63,7 +63,7 @@ beforeEach(() => {
 
 describe("el realtime de encuentros públicos", () => {
   it("invalida al abrir y fuerza el refetch al recibir un evento válido", async () => {
-    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:9001/api");
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test/api");
     vi.stubGlobal("WebSocket", SocketDouble);
     const client = new QueryClient();
     const invalidate = vi.spyOn(client, "invalidateQueries");
@@ -73,7 +73,7 @@ describe("el realtime de encuentros públicos", () => {
     });
 
     const socket = SocketDouble.instances[0];
-    expect(socket.url).toBe("ws://localhost:9001/ws/encuentros/");
+    expect(socket.url).toBe("wss://api.example.test/ws/encuentros/");
 
     await act(async () => socket.open());
     await waitFor(() => expect(result.current.estado).toBe("conectado"));
@@ -117,7 +117,7 @@ describe("el realtime de encuentros públicos", () => {
   });
 
   it("vuelve a pedir el snapshot HTTP al recibir un evento válido", async () => {
-    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:9001/api");
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test/api");
     vi.stubGlobal("WebSocket", SocketDouble);
     apiGet.mockResolvedValue({
       data: {

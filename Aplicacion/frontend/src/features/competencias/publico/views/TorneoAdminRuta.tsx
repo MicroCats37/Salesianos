@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock3, Flag, Save, Trophy, Users } from "lucide-react";
+import { Check, Clock3, Flag, MapPin, Save, Trophy, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { GenericForm } from "@/components/genericForm/GenericForm";
@@ -21,7 +21,23 @@ import {
   partidoDraft,
 } from "../services/torneo-admin.service";
 
-type Tab = "groups" | "bracket";
+type Tab = "groups" | "bracket" | "courts";
+
+const ALL_COURTS = "__all__";
+const UNASSIGNED_COURT = "__unassigned__";
+const courtCollator = new Intl.Collator("es-PE", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function courtValue(match: PartidoTorneo) {
+  return match.court?.trim() || UNASSIGNED_COURT;
+}
+
+function courtLabel(court: string) {
+  if (court === UNASSIGNED_COURT) return "Sin cancha asignada";
+  return /^cancha\b/i.test(court) ? court : `Cancha ${court}`;
+}
 
 export function TorneoAdminRuta() {
   const [competitionId, setCompetitionId] = useState<string>();
@@ -33,29 +49,32 @@ export function TorneoAdminRuta() {
   const [tab, setTab] = useState<Tab>("groups");
   const [groupId, setGroupId] = useState("A");
   const [matchId, setMatchId] = useState("round16-1");
+  const [courtFilter, setCourtFilter] = useState(ALL_COURTS);
   const [drafts, setDrafts] = useState<PartidoDraft[]>([]);
-  const [knockoutDraft, setKnockoutDraft] = useState<PartidoDraft | null>(null);
   const data = query.data;
   const group =
     data?.groups.find((item) => item.id === groupId) ?? data?.groups[0];
   const knockout =
     data?.knockout.find((item) => item.id === matchId) ?? data?.knockout[0];
+  const all: PartidoTorneo[] = data
+    ? [...data.groups.flatMap((item) => item.matches), ...data.knockout]
+    : [];
 
   useEffect(() => {
-    if (group) setDrafts(group.matches.map(partidoDraft));
-  }, [group]);
-  useEffect(() => {
-    setKnockoutDraft(knockout ? partidoDraft(knockout) : null);
-  }, [knockout]);
+    setDrafts(
+      data
+        ? [
+            ...data.groups.flatMap((item) => item.matches),
+            ...data.knockout,
+          ].map(partidoDraft)
+        : [],
+    );
+  }, [data]);
 
   if (query.isPending) return <p className="p-8">Cargando mesa de control…</p>;
   if (!data || !group)
     return <p className="p-8 text-destructive">No se pudo cargar el torneo.</p>;
 
-  const all = [
-    ...data.groups.flatMap((item) => item.matches),
-    ...data.knockout,
-  ];
   const busy =
     guardarGrupo.isPending ||
     guardarLlave.isPending ||
@@ -70,6 +89,23 @@ export function TorneoAdminRuta() {
         draft.id === id ? { ...draft, [field]: value } : draft,
       ),
     );
+  const draftFor = (match: PartidoTorneo) =>
+    drafts.find((item) => item.id === match.id) ?? partidoDraft(match);
+  const groupDrafts = group.matches.map(draftFor);
+  const knockoutDraft = knockout ? draftFor(knockout) : null;
+  const courtOptions = Array.from(new Set(all.map(courtValue))).sort(
+    (left, right) => {
+      if (left === UNASSIGNED_COURT) return 1;
+      if (right === UNASSIGNED_COURT) return -1;
+      return courtCollator.compare(left, right);
+    },
+  );
+  const visibleCourtGroups = courtOptions
+    .filter((court) => courtFilter === ALL_COURTS || court === courtFilter)
+    .map((court) => ({
+      court,
+      matches: all.filter((match) => courtValue(match) === court),
+    }));
   const competitionContext = [
     data.discipline,
     data.category,
@@ -120,7 +156,10 @@ export function TorneoAdminRuta() {
             COMPETENCIA
             <select
               value={data.competition_id ?? ""}
-              onChange={(event) => setCompetitionId(event.target.value)}
+              onChange={(event) => {
+                setCourtFilter(ALL_COURTS);
+                setCompetitionId(event.target.value);
+              }}
               className="mt-2 min-h-11 w-full rounded-lg border border-input bg-surface-raised px-3 text-sm font-bold text-foreground"
             >
               {data.competitions.map((competition) => (
@@ -152,11 +191,11 @@ export function TorneoAdminRuta() {
           />
           <Stat icon={Trophy} label="PARTIDOS TOTALES" value={all.length} />
         </div>
-        <div className="mt-8 flex border-b border-border">
+        <div className="mt-8 flex overflow-x-auto border-b border-border">
           <button
             type="button"
             onClick={() => setTab("groups")}
-            className={`min-h-12 border-b-2 px-5 font-black ${tab === "groups" ? "border-primary text-primary" : "border-transparent text-foreground-muted"}`}
+            className={`min-h-12 shrink-0 border-b-2 px-5 font-black ${tab === "groups" ? "border-primary text-primary" : "border-transparent text-foreground-muted"}`}
           >
             Fase de grupos
           </button>
@@ -164,11 +203,18 @@ export function TorneoAdminRuta() {
             <button
               type="button"
               onClick={() => setTab("bracket")}
-              className={`min-h-12 border-b-2 px-5 font-black ${tab === "bracket" ? "border-primary text-primary" : "border-transparent text-foreground-muted"}`}
+              className={`min-h-12 shrink-0 border-b-2 px-5 font-black ${tab === "bracket" ? "border-primary text-primary" : "border-transparent text-foreground-muted"}`}
             >
               Llaves finales
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => setTab("courts")}
+            className={`min-h-12 shrink-0 border-b-2 px-5 font-black ${tab === "courts" ? "border-primary text-primary" : "border-transparent text-foreground-muted"}`}
+          >
+            Por canchas
+          </button>
         </div>
         {tab === "groups" ? (
           <div className="mt-6 grid gap-6 lg:grid-cols-[220px_1fr]">
@@ -206,10 +252,7 @@ export function TorneoAdminRuta() {
                   <MatchEditor
                     key={match.id}
                     match={match}
-                    draft={
-                      drafts.find((item) => item.id === match.id) ??
-                      partidoDraft(match)
-                    }
+                    draft={draftFor(match)}
                     teams={group.teams}
                     number={index + 1}
                     busy={busy}
@@ -221,7 +264,7 @@ export function TorneoAdminRuta() {
                         id: group.id,
                         data: {
                           revision: group.revision,
-                          matches: drafts.map((item) =>
+                          matches: groupDrafts.map((item) =>
                             item.id === nextDraft.id ? nextDraft : item,
                           ),
                         },
@@ -246,7 +289,7 @@ export function TorneoAdminRuta() {
                 onClick={() =>
                   void guardarGrupo.mutate({
                     id: group.id,
-                    data: { revision: group.revision, matches: drafts },
+                    data: { revision: group.revision, matches: groupDrafts },
                   })
                 }
                 className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary font-black text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
@@ -256,7 +299,7 @@ export function TorneoAdminRuta() {
               </button>
             </section>
           </div>
-        ) : knockout ? (
+        ) : tab === "bracket" && knockout ? (
           <div className="mt-6 grid gap-6 lg:grid-cols-[240px_1fr]">
             <aside className="flex gap-2 overflow-x-auto rounded-xl border border-border bg-surface-recessed p-3 lg:flex-col">
               {data.knockout.map((item) => (
@@ -285,9 +328,7 @@ export function TorneoAdminRuta() {
                   number={knockout.position + 1}
                   busy={busy}
                   onChange={(field, value) =>
-                    setKnockoutDraft((current) =>
-                      current ? { ...current, [field]: value } : current,
-                    )
+                    updateDraft(knockout.id, field, value)
                   }
                   onSave={(nextDraft) =>
                     guardarLlave.mutateAsync({
@@ -324,7 +365,7 @@ export function TorneoAdminRuta() {
               </button>
             </section>
           </div>
-        ) : (
+        ) : tab === "bracket" ? (
           <div className="mt-6 rounded-xl border border-dashed border-border bg-surface-recessed p-8 text-center">
             <Trophy className="mx-auto size-8 text-foreground-muted" />
             <h2 className="mt-3 font-heading text-2xl font-black uppercase">
@@ -334,6 +375,137 @@ export function TorneoAdminRuta() {
               Administra sus encuentros desde la fase de grupos.
             </p>
           </div>
+        ) : (
+          <section className="mt-6 space-y-6" aria-labelledby="courts-title">
+            <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-recessed p-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <span className="text-xs font-black text-primary">
+                  AGENDA OPERATIVA
+                </span>
+                <h2
+                  id="courts-title"
+                  className="font-heading text-4xl font-black uppercase sm:text-5xl"
+                >
+                  Partidos por cancha
+                </h2>
+                <p className="mt-1 text-sm text-foreground-muted">
+                  Reúne fase de grupos y llaves para operar cada espacio sin
+                  cambiar de grupo.
+                </p>
+              </div>
+              <label className="block min-w-56 text-xs font-black text-foreground-muted">
+                FILTRAR POR CANCHA
+                <select
+                  aria-label="Filtrar por cancha"
+                  value={courtFilter}
+                  onChange={(event) => setCourtFilter(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-input bg-surface-raised px-3 text-sm font-bold text-foreground"
+                >
+                  <option value={ALL_COURTS}>Todas las canchas</option>
+                  {courtOptions.map((court) => (
+                    <option key={court} value={court}>
+                      {courtLabel(court)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {visibleCourtGroups.length > 0 ? (
+              visibleCourtGroups.map(({ court, matches }) => (
+                <section key={court} className="space-y-4">
+                  <header className="flex flex-wrap items-end justify-between gap-2 border-b border-border pb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-10 place-items-center rounded-full bg-primary text-primary-foreground">
+                        <MapPin className="size-5" aria-hidden="true" />
+                      </span>
+                      <div>
+                        <h3 className="font-heading text-3xl font-black uppercase">
+                          {courtLabel(court)}
+                        </h3>
+                        <p className="text-xs text-foreground-muted">
+                          {matches.length}{" "}
+                          {matches.length === 1 ? "partido" : "partidos"}
+                        </p>
+                      </div>
+                    </div>
+                  </header>
+                  <div className="space-y-4">
+                    {matches.map((match) => {
+                      const ownerGroup = data.groups.find((item) =>
+                        item.matches.some(
+                          (candidate) => candidate.id === match.id,
+                        ),
+                      );
+                      const number = ownerGroup
+                        ? ownerGroup.matches.findIndex(
+                            (candidate) => candidate.id === match.id,
+                          ) + 1
+                        : match.position + 1;
+
+                      return (
+                        <MatchEditor
+                          key={match.id}
+                          match={match}
+                          draft={draftFor(match)}
+                          teams={ownerGroup?.teams ?? data.teams ?? []}
+                          number={number}
+                          context={
+                            ownerGroup?.label ??
+                            match.title ??
+                            `Llave · ${match.stage}`
+                          }
+                          busy={busy}
+                          onChange={(field, value) =>
+                            updateDraft(match.id, field, value)
+                          }
+                          onSave={(nextDraft) =>
+                            ownerGroup
+                              ? guardarGrupo.mutateAsync({
+                                  id: ownerGroup.id,
+                                  data: {
+                                    revision: ownerGroup.revision,
+                                    matches: ownerGroup.matches.map(
+                                      (candidate) =>
+                                        candidate.id === nextDraft.id
+                                          ? nextDraft
+                                          : draftFor(candidate),
+                                    ),
+                                  },
+                                })
+                              : guardarLlave.mutateAsync({
+                                  id: nextDraft.id,
+                                  data: nextDraft,
+                                })
+                          }
+                          onAction={(action, winner, decision) =>
+                            controlarPartido.mutateAsync({
+                              id: match.id,
+                              data: {
+                                action,
+                                winner_id: winner,
+                                decision,
+                              },
+                            })
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              ))
+            ) : (
+              <div className="rounded-xl border border-dashed border-border bg-surface-recessed p-8 text-center">
+                <MapPin className="mx-auto size-8 text-foreground-muted" />
+                <h3 className="mt-3 font-heading text-2xl font-black uppercase">
+                  No hay partidos en esta cancha
+                </h3>
+                <p className="mt-2 text-sm text-foreground-muted">
+                  Elige otra cancha o vuelve a mostrar todas.
+                </p>
+              </div>
+            )}
+          </section>
         )}
       </div>
     </main>
@@ -366,6 +538,7 @@ function MatchEditor({
   draft,
   teams,
   number,
+  context,
   busy,
   onChange,
   onSave,
@@ -375,6 +548,7 @@ function MatchEditor({
   draft: PartidoDraft;
   teams: { id: string; name: string }[];
   number: number;
+  context?: string;
   busy: boolean;
   onChange: (field: keyof PartidoDraft, value: string | number | null) => void;
   onSave: (draft: PartidoTorneoFormData) => Promise<unknown>;
@@ -410,8 +584,15 @@ function MatchEditor({
     >
       {({ isSubmitting, submissionMessage }) => (
         <article className="overflow-hidden rounded-xl border border-border bg-surface-raised shadow-sm">
-          <div className="flex justify-between border-b border-border bg-surface-recessed p-4">
-            <strong>PARTIDO {number}</strong>
+          <div className="flex justify-between gap-4 border-b border-border bg-surface-recessed p-4">
+            <div>
+              <strong>PARTIDO {number}</strong>
+              {context ? (
+                <small className="mt-0.5 block text-xs font-medium text-foreground-muted">
+                  {context}
+                </small>
+              ) : null}
+            </div>
             <span className="text-xs font-black uppercase text-primary">
               {match.status}
             </span>

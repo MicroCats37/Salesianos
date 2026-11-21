@@ -52,15 +52,25 @@ def _standings(teams, matches):
         if match.estado != "final" or match.puntaje_local is None or match.puntaje_visitante is None:
             continue
         home, away = rows[match.local_id], rows[match.visitante_id]
-        home["pj"] += 1; away["pj"] += 1
-        home["gf"] += match.puntaje_local; home["gc"] += match.puntaje_visitante
-        away["gf"] += match.puntaje_visitante; away["gc"] += match.puntaje_local
+        home["pj"] += 1
+        away["pj"] += 1
+        home["gf"] += match.puntaje_local
+        home["gc"] += match.puntaje_visitante
+        away["gf"] += match.puntaje_visitante
+        away["gc"] += match.puntaje_local
         if match.puntaje_local > match.puntaje_visitante:
-            home["g"] += 1; away["p"] += 1; home["pts"] += 3
+            home["g"] += 1
+            away["p"] += 1
+            home["pts"] += 3
         elif match.puntaje_local < match.puntaje_visitante:
-            away["g"] += 1; home["p"] += 1; away["pts"] += 3
+            away["g"] += 1
+            home["p"] += 1
+            away["pts"] += 3
         else:
-            home["e"] += 1; away["e"] += 1; home["pts"] += 1; away["pts"] += 1
+            home["e"] += 1
+            away["e"] += 1
+            home["pts"] += 1
+            away["pts"] += 1
     for row in rows.values():
         row["dg"] = row["gf"] - row["gc"]
     return sorted(rows.values(), key=lambda row: (-row["pts"], -row["dg"], -row["gf"], row["name"]))
@@ -79,7 +89,38 @@ def _match_out(match, names):
     elapsed = match.segundos_transcurridos
     if match.ejecutando_desde:
         elapsed += max(0, int((timezone.now() - match.ejecutando_desde).total_seconds()))
-    return {"id": match.id, "group_id": match.grupo_id, "stage": match.etapa, "position": match.posicion, "home_id": match.local_id, "away_id": match.visitante_id, "home_name": names.get(match.local_id, "Por definir"), "away_name": names.get(match.visitante_id, "Por definir"), "scheduled_at": match.programado_en.isoformat() if match.programado_en else None, "court": match.cancha, "duration_minutes": match.duracion_minutos, "status": match.estado, "home_score": home_score, "away_score": away_score, "home_penalties": match.penales_local, "away_penalties": match.penales_visitante, "winner_id": match.ganador_id, "decision": match.decision, "elapsed_seconds": elapsed, "running": match.ejecutando_desde is not None, "segment": match.segmento, "live_points": live_points}
+    return {
+        "id": match.id,
+        "group_id": match.grupo_id,
+        "stage": match.etapa,
+        "category": match.categoria_fixture,
+        "title": match.titulo_fixture,
+        "position": match.posicion,
+        "home_id": match.local_id,
+        "away_id": match.visitante_id,
+        "home_name": names.get(match.local_id)
+        or match.etiqueta_local
+        or "Por definir",
+        "away_name": names.get(match.visitante_id)
+        or match.etiqueta_visitante
+        or "Por definir",
+        "scheduled_at": (
+            match.programado_en.isoformat() if match.programado_en else None
+        ),
+        "court": match.cancha,
+        "duration_minutes": match.duracion_minutos,
+        "status": match.estado,
+        "home_score": home_score,
+        "away_score": away_score,
+        "home_penalties": match.penales_local,
+        "away_penalties": match.penales_visitante,
+        "winner_id": match.ganador_id,
+        "decision": match.decision,
+        "elapsed_seconds": elapsed,
+        "running": match.ejecutando_desde is not None,
+        "segment": match.segmento,
+        "live_points": live_points,
+    }
 
 
 def _competencias_torneo():
@@ -142,8 +183,8 @@ def _estado_torneo(competition_id=None):
     for group in groups:
         members = [team for team in teams if team.grupo_id == group.id]
         games = sorted([match for match in matches if match.grupo_id == group.id], key=lambda match: (match.programado_en or timezone.now(), match.id))
-        group_data.append({"id": group.id, "revision": group.revision, "teams": [{"id": team.id, "name": _team_name(team), "group_id": group.id} for team in sorted(members, key=_team_name)], "table": _standings(members, games), "matches": [_match_out(match, names) for match in games]})
-    stage_order = {"round16": 0, "quarter": 1, "semi": 2, "final": 3}
+        group_data.append({"id": group.id, "label": group.etiqueta or group.id, "revision": group.revision, "teams": [{"id": team.id, "name": _team_name(team), "group_id": group.id} for team in sorted(members, key=_team_name)], "table": _standings(members, games), "matches": [_match_out(match, names) for match in games]})
+    stage_order = {"round16": 0, "quarter": 1, "semi": 2, "cross": 3, "final": 4, "third_place": 5}
     knockout = [_match_out(match, names) for match in matches if match.grupo_id is None]
     knockout.sort(key=lambda match: (stage_order.get(match["stage"], 9), match["position"]))
     return {

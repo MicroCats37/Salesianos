@@ -51,8 +51,18 @@ const stageLabels: Record<PartidoTorneo["stage"], string> = {
   round16: "Octavos de final",
   quarter: "Cuartos de final",
   semi: "Semifinales",
+  cross: "Cruces",
   final: "Final",
+  third_place: "Tercer puesto",
 };
+const stageOrder: PartidoTorneo["stage"][] = [
+  "round16",
+  "quarter",
+  "semi",
+  "cross",
+  "final",
+  "third_place",
+];
 
 const isLive = (match: PartidoTorneo) =>
   ["live", "halftime", "extra", "penalties"].includes(match.status);
@@ -152,9 +162,7 @@ function TorneoView({
   ];
   const live = all.filter(isLive).sort(scheduledSort);
   const upcoming = all
-    .filter(
-      (match) => match.status === "scheduled" && match.home_id && match.away_id,
-    )
+    .filter((match) => match.status === "scheduled")
     .sort(scheduledSort);
   const finished = all
     .filter((match) => match.status === "final")
@@ -328,10 +336,12 @@ function TorneoView({
               Los puntos oficiales se actualizan al finalizar cada partido.
             </p>
             <Pills
-              values={data.groups.map((item) => `Grupo ${item.id}`)}
-              selected={`Grupo ${group.id}`}
+              values={data.groups.map((item) => item.label)}
+              selected={group.label}
               onSelect={(value) =>
-                setSelectedGroup(value.replace("Grupo ", ""))
+                setSelectedGroup(
+                  data.groups.find((item) => item.label === value)?.id ?? value,
+                )
               }
             />
             <div className="grid items-start gap-6 lg:grid-cols-2">
@@ -354,9 +364,7 @@ function TorneoView({
             <SectionHeader
               kicker="LA JORNADA"
               title="Todos los partidos"
-              count={
-                all.filter((match) => match.home_id && match.away_id).length
-              }
+              count={all.length}
             />
             <p className="text-sm text-brand-on-gradient-muted">
               Horarios en hora de Perú.
@@ -374,7 +382,6 @@ function TorneoView({
             />
             <div className="space-y-3">
               {all
-                .filter((match) => match.home_id && match.away_id)
                 .filter(
                   (match) =>
                     scheduleFilter === "Todos" ||
@@ -397,13 +404,16 @@ function TorneoView({
           <div className="space-y-6 py-10">
             <SectionHeader kicker="CAMINO AL CAMPEÓN" title="Llaves finales" />
             <p className="text-sm text-brand-on-gradient-muted">
-              Los equipos de octavos se confirmarán al cerrar la fase de grupos.
-              Cada ganador avanzará automáticamente.
+              Los participantes se mostrarán con la clasificación oficial hasta
+              que cada equipo quede resuelto.
             </p>
             <div className="overflow-x-auto pb-4">
-              <div className="grid min-w-[1100px] grid-cols-4 gap-5">
-                {(["round16", "quarter", "semi", "final"] as const).map(
-                  (stage, index) => (
+              <div className="grid min-w-[760px] grid-flow-col auto-cols-[minmax(240px,1fr)] gap-5">
+                {stageOrder
+                  .filter((stage) =>
+                    data.knockout.some((match) => match.stage === stage),
+                  )
+                  .map((stage, index) => (
                     <div key={stage} className="space-y-4">
                       <div className="flex items-center gap-3 border-b border-brand-on-gradient-border pb-3">
                         <span className="font-heading text-3xl text-brand-cyan">
@@ -419,8 +429,7 @@ function TorneoView({
                           <BracketMatch key={match.id} match={match} />
                         ))}
                     </div>
-                  ),
-                )}
+                  ))}
               </div>
             </div>
             <div className="flex items-center gap-5 rounded-xl bg-brand-cyan p-6 text-brand-deep-navy">
@@ -574,8 +583,8 @@ function CompactMatch({
         <div className="col-span-full flex flex-wrap gap-4 border-t border-brand-on-gradient-border pt-3 text-[10px] text-brand-on-gradient-muted">
           <span>
             {match.group_id
-              ? `Grupo ${match.group_id}`
-              : stageLabels[match.stage]}
+              ? match.category
+              : `${stageLabels[match.stage]} · ${match.category}`}
           </span>
           <span>{match.duration_minutes} minutos</span>
         </div>
@@ -643,7 +652,9 @@ function StandingCard({ group }: { group: GrupoTorneo }) {
           <span className="text-[10px] font-black tracking-[.15em] text-brand-cyan">
             FASE DE GRUPOS
           </span>
-          <h3 className="font-heading text-3xl font-black">GRUPO {group.id}</h3>
+          <h3 className="font-heading text-3xl font-black uppercase">
+            {group.label}
+          </h3>
         </div>
         <span className="text-xs text-brand-on-gradient-muted">
           {group.teams.length} promociones · {group.matches.length} partidos
@@ -692,7 +703,7 @@ function BracketMatch({ match }: { match: PartidoTorneo }) {
   return (
     <article className="rounded-lg border border-brand-on-gradient-border bg-brand-deep-blue p-3">
       <div className="mb-2 flex justify-between text-[9px] font-black text-brand-on-gradient-muted">
-        <span>PARTIDO {match.position + 1}</span>
+        <span>{match.title || `PARTIDO ${match.position + 1}`}</span>
         <span>{statusLabels[match.status]}</span>
       </div>
       {(

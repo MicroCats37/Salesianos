@@ -180,7 +180,7 @@ export function TorneoAdminRuta() {
                   onClick={() => setGroupId(item.id)}
                   className={`min-w-24 rounded-lg p-3 text-left font-black transition-colors ${group.id === item.id ? "bg-primary text-primary-foreground" : "bg-surface-raised hover:bg-muted"}`}
                 >
-                  Grupo {item.id}
+                  {item.label}
                   <small className="block font-normal">
                     {item.matches.length} partidos
                   </small>
@@ -194,7 +194,7 @@ export function TorneoAdminRuta() {
                     EDITANDO FASE DE GRUPOS
                   </span>
                   <h2 className="font-heading text-5xl font-black uppercase">
-                    Grupo {group.id}
+                    {group.label}
                   </h2>
                 </div>
                 <span className="text-xs text-foreground-muted">
@@ -266,7 +266,7 @@ export function TorneoAdminRuta() {
                   onClick={() => setMatchId(item.id)}
                   className={`min-w-36 rounded-lg p-3 text-left text-xs font-black transition-colors ${knockout.id === item.id ? "bg-primary text-primary-foreground" : "bg-surface-raised hover:bg-muted"}`}
                 >
-                  {item.stage} · {item.position + 1}
+                  {item.title || `${item.stage} · ${item.position + 1}`}
                   <small className="block truncate font-normal">
                     {item.home_name} vs {item.away_name}
                   </small>
@@ -275,7 +275,7 @@ export function TorneoAdminRuta() {
             </aside>
             <section>
               <h2 className="mb-5 font-heading text-5xl font-black uppercase">
-                Llave · Partido {knockout.position + 1}
+                {knockout.title || `Llave · Partido ${knockout.position + 1}`}
               </h2>
               {knockoutDraft ? (
                 <MatchEditor
@@ -425,6 +425,7 @@ function MatchEditor({
               }
               className="min-h-11 rounded-lg border border-input bg-background px-3"
             >
+              <option value="">{match.home_name}</option>
               {teams.map((team) => (
                 <option key={team.id} value={team.id}>
                   {team.name}
@@ -472,6 +473,7 @@ function MatchEditor({
               }
               className="min-h-11 rounded-lg border border-input bg-background px-3"
             >
+              <option value="">{match.away_name}</option>
               {teams.map((team) => (
                 <option key={team.id} value={team.id}>
                   {team.name}

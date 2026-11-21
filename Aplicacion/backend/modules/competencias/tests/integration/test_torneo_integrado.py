@@ -5,11 +5,7 @@ from types import SimpleNamespace
 import pytest
 from django.test import Client
 
-from modules.competencias.management.commands.seed_torneo_referencia import (
-    BASKETBALL_GROUPS,
-    FOOTBALL_GROUPS,
-    VOLLEY_GROUPS,
-)
+from modules.competencias.data.fixture import load_reference_fixture
 from modules.competencias.domain.models import (
     EquipoTorneo,
     GrupoTorneo,
@@ -33,31 +29,43 @@ def _equipo(competencia, grupo, equipo_id):
 
 
 @pytest.mark.parametrize(
-    ("groups", "expected_groups", "expected_teams", "expected_matches", "courts"),
+    (
+        "competition_code",
+        "expected_groups",
+        "expected_teams",
+        "expected_matches",
+        "courts",
+    ),
     [
-        (FOOTBALL_GROUPS, 9, 33, 45, {"A", "B", "C", "D"}),
-        (VOLLEY_GROUPS, 4, 13, 15, {"E", "F"}),
-        (BASKETBALL_GROUPS, 6, 18, 20, {"G"}),
+        ("F7M", 9, 33, 45, {"A", "B", "C", "D"}),
+        ("VOL", 4, 13, 15, {"E", "F"}),
+        ("BAS", 6, 18, 20, {"G"}),
     ],
 )
 def test_el_fixture_total_separa_las_disciplinas_por_cancha(
-    groups,
+    competition_code,
     expected_groups,
     expected_teams,
     expected_matches,
     courts,
 ):
-    labels = {
-        label for group_labels, _matches in groups.values() for label in group_labels
-    }
+    fixture = load_reference_fixture()
+    groups = [
+        group
+        for group in fixture["groups"]
+        if group["competition_code"] == competition_code
+    ]
     matches = [
-        match for _labels, group_matches in groups.values() for match in group_matches
+        match
+        for match in fixture["matches"]
+        if match["competition_code"] == competition_code
+        and match["stage"] == "group"
     ]
 
     assert len(groups) == expected_groups
-    assert len(labels) == expected_teams
+    assert sum(len(group["teams"]) for group in groups) == expected_teams
     assert len(matches) == expected_matches
-    assert {match[4] for match in matches} == courts
+    assert {match["court"] for match in matches} == courts
 
 
 def test_el_snapshot_del_torneo_resuelve_la_competencia_seleccionada(

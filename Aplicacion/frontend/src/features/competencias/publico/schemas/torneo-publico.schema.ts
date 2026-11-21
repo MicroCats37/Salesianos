@@ -23,7 +23,17 @@ const standingSchema = z.object({
 export const partidoTorneoSchema = z.object({
   id: z.string(),
   group_id: z.string().nullable(),
-  stage: z.enum(["group", "round16", "quarter", "semi", "final"]),
+  stage: z.enum([
+    "group",
+    "round16",
+    "quarter",
+    "semi",
+    "cross",
+    "final",
+    "third_place",
+  ]),
+  category: z.string(),
+  title: z.string(),
   position: z.number().int(),
   home_id: z.string().nullable(),
   away_id: z.string().nullable(),
@@ -54,6 +64,7 @@ export const partidoTorneoSchema = z.object({
 
 const grupoTorneoSchema = z.object({
   id: z.string(),
+  label: z.string(),
   revision: z.number().int(),
   teams: z.array(teamSchema),
   table: z.array(standingSchema),

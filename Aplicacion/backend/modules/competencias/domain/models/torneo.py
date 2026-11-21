@@ -11,6 +11,7 @@ class GrupoTorneo(models.Model):
         related_name="grupos_torneo",
     )
     revision = models.PositiveIntegerField(default=0)
+    etiqueta = models.CharField(max_length=80, blank=True, default="")
 
     class Meta:
         db_table = "competencia_grupos_torneo"
@@ -64,6 +65,10 @@ class PartidoTorneo(models.Model):
         blank=True,
     )
     etapa = models.CharField(max_length=16)
+    categoria_fixture = models.CharField(max_length=80, blank=True, default="")
+    etiqueta_local = models.CharField(max_length=120, blank=True, default="")
+    etiqueta_visitante = models.CharField(max_length=120, blank=True, default="")
+    titulo_fixture = models.CharField(max_length=200, blank=True, default="")
     posicion = models.PositiveIntegerField(default=0)
     local = models.ForeignKey(
         EquipoTorneo,

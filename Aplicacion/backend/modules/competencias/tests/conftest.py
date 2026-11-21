@@ -53,6 +53,9 @@ from modules.competencias.tests.fixtures.competencias_fixtures import (  # noqa:
     usuario_admin,
     usuario_ajeno,
 )
+from modules.competencias.tests.fixtures.torneo_seed_fixtures import (  # noqa: F401
+    catalogo_torneo_referencia,
+)
 
 
 @pytest.fixture(autouse=True)

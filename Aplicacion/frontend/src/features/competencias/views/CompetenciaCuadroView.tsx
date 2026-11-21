@@ -1,5 +1,6 @@
 import { GitBranch } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 import {
   ShellErrorState,
   ShellPermissionDenied,
@@ -17,6 +18,7 @@ import { CuadroCompetencia } from "../components/CuadroCompetencia";
 import { GestionEquiposCompetencia } from "../components/GestionEquiposCompetencia";
 import type {
   CompetenciaEquipo,
+  Encuentro,
   EstadoVistaCompetencias,
   Ronda,
   VistaPreviaAvance,
@@ -53,6 +55,25 @@ export function CompetenciaCuadroView({
   vistaPreviaAvancePorEncuentro?: Record<string, VistaPreviaAvance>;
   vistaPreviaCorreccionPorEncuentro?: Record<string, VistaPreviaCorreccion>;
 }) {
+  /**
+   * The encounters that can receive the winner of each encounter.
+   *
+   * They are the encounters of the POSTERIOR rounds: the backend rejects a
+   * link that points backwards (`RN-K02`). The view knows the bracket, so
+   * it computes them and the panel receives them as a prop.
+   */
+  const destinosPorEncuentro = useMemo(() => {
+    const mapa: Record<string, Encuentro[]> = {};
+    for (const ronda of rondas) {
+      for (const encuentro of ronda.encuentros) {
+        mapa[encuentro.id] = rondas
+          .filter((otra) => otra.orden > ronda.orden)
+          .flatMap((otra) => otra.encuentros);
+      }
+    }
+    return mapa;
+  }, [rondas]);
+
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader
@@ -98,6 +119,7 @@ export function CompetenciaCuadroView({
         {estado === "listo" ? (
           <CuadroCompetencia
             rondas={rondas}
+            destinosPorEncuentro={destinosPorEncuentro}
             vistaPreviaAvancePorEncuentro={vistaPreviaAvancePorEncuentro}
             vistaPreviaCorreccionPorEncuentro={
               vistaPreviaCorreccionPorEncuentro

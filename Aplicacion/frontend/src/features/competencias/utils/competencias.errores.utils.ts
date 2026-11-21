@@ -35,6 +35,17 @@ export function mensajeDeError(error: unknown): string {
 }
 
 /**
+ * Whether the failure is a CONFLICT OF VERSION.
+ *
+ * The backend rejects a write whose `expected_version` is not the current
+ * one with `RESOURCE_CHANGED` (409) and writes NOTHING. The frontend
+ * branches on the STATUS, never on the machine code (`FR-01` §4).
+ */
+export function esConflictoDeVersion(error: unknown): boolean {
+  return statusDeError(error) === 409;
+}
+
+/**
  * Turns a failure of a READ into an `ApiQueryError`.
  *
  * The read carries the status so that the view can tell a PERMISSION answer

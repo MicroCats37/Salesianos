@@ -108,6 +108,90 @@ class RondaOut(Schema):
     )
 
 
+class EncuentroPublicoOut(Schema):
+    """El encuentro en su forma PÚBLICA.
+
+    Es la MISMA proyección canónica que la agenda, el cuadro y el detalle
+    (`EncuentroResult`), con DOS diferencias deliberadas: el estado que se
+    publica es el PÚBLICO —no el del flujo administrativo— y no viaja ninguna
+    acción de administración. La superficie pública es de SOLO LECTURA: no
+    ofrece operaciones.
+
+    **El ganador es la autoridad.** `puntaje_1`/`puntaje_2` son
+    INFORMATIVOS: el backend nunca deduce el ganador del marcador y el
+    cliente tampoco (`explore` §9).
+    """
+
+    id: str = Field(..., description="Identificador del encuentro.")
+    ronda_id: str = Field(..., description="Ronda del encuentro.")
+    ronda_etiqueta: str = Field(..., description="Etiqueta de la ronda.")
+    ronda_orden: int = Field(..., description="Orden de la ronda en el cuadro.")
+    competencia_id: str = Field(..., description="Competencia del encuentro.")
+    orden: int = Field(..., description="Orden del encuentro dentro de su ronda.")
+    estado_publico: str = Field(
+        ...,
+        description="`PROGRAMA`, `EN_VIVO` o `FINALIZADO`.",
+    )
+    es_bye: bool = Field(..., description="Si el encuentro es un pase libre manual.")
+    participantes: list[ParticipanteOut] = Field(
+        default_factory=list,
+        description="Los dos slots, en orden.",
+    )
+    inicio_programado: datetime | None = Field(
+        default=None,
+        description="Inicio programado del encuentro.",
+    )
+    fin_programado: datetime | None = Field(
+        default=None,
+        description="Fin programado del encuentro.",
+    )
+    iniciado_en: datetime | None = Field(default=None, description="Momento de inicio.")
+    finalizado_en: datetime | None = Field(default=None, description="Momento de fin.")
+    puntaje_1: int | None = Field(
+        default=None,
+        description="Puntaje del slot 1. Es INFORMATIVO: no decide el ganador.",
+    )
+    puntaje_2: int | None = Field(
+        default=None,
+        description="Puntaje del slot 2. Es INFORMATIVO: no decide el ganador.",
+    )
+    marcador_detalle: str = Field(default="", description="Detalle informativo del marcador.")
+    ganador_equipo_id: str | None = Field(
+        default=None,
+        description="Equipo ganador. Es la AUTORIDAD de la progresión.",
+    )
+    ganador_equipo_nombre: str | None = Field(default=None, description="Nombre del ganador.")
+    version: int = Field(..., description="Versión del bloqueo optimista.")
+
+
+class EncuentrosPublicosOut(Schema):
+    """Los encuentros publicables de la edición, en sus TRES cubos.
+
+    Los cubos son la presentación que consume el público: lo que está en
+    juego, lo que viene y lo que ya terminó. Los tres son disjuntos y su
+    unión es TODA la superficie pública de la edición.
+    """
+
+    edicion_id: str = Field(..., description="Edición de la que se publica.")
+    edicion_nombre: str = Field(default="", description="Nombre de la edición.")
+    total: int = Field(
+        default=0,
+        description="Encuentros publicables de la edición, en los tres cubos.",
+    )
+    en_vivo: list[EncuentroPublicoOut] = Field(
+        default_factory=list,
+        description="Encuentros en juego.",
+    )
+    proximos: list[EncuentroPublicoOut] = Field(
+        default_factory=list,
+        description="Encuentros del programa, los más próximos primero.",
+    )
+    finalizados: list[EncuentroPublicoOut] = Field(
+        default_factory=list,
+        description="Encuentros con resultado, los más recientes primero.",
+    )
+
+
 class CompetenciaEquipoOut(Schema):
     """La participación de un equipo en el cuadro."""
 
@@ -117,6 +201,38 @@ class CompetenciaEquipoOut(Schema):
     orden: int = Field(..., description="Semilla manual del equipo en el cuadro.")
     estado: str = Field(..., description="`ACTIVO` o `RETIRADO`.")
     version: int = Field(..., description="Versión del bloqueo optimista.")
+
+
+class MisPartidosOut(Schema):
+    """Los partidos de la CUENTA, en sus tres cubos.
+
+    Es la lectura autenticada de "MIS PARTIDOS": la identidad la resuelve el
+    servidor y el cliente no envía ninguna persona, usuario ni equipo.
+
+    El encuentro es el MISMO que publica la superficie pública —los equipos,
+    el marcador, el ganador explícito y la versión— porque la cuenta necesita
+    exactamente esos datos y ninguno de las afordancias de administración.
+    """
+
+    edicion_id: str = Field(default="", description="Edición de los partidos.")
+    edicion_nombre: str = Field(default="", description="Nombre de la edición.")
+    total: int = Field(default=0, description="Partidos de la cuenta.")
+    equipos: list[CompetenciaEquipoOut] = Field(
+        default_factory=list,
+        description="Los equipos de la cuenta en el cuadro.",
+    )
+    en_vivo: list[EncuentroPublicoOut] = Field(
+        default_factory=list,
+        description="Los partidos que se están jugando.",
+    )
+    proximos: list[EncuentroPublicoOut] = Field(
+        default_factory=list,
+        description="Los partidos del programa, los más próximos primero.",
+    )
+    finalizados: list[EncuentroPublicoOut] = Field(
+        default_factory=list,
+        description="Los partidos con resultado, los más recientes primero.",
+    )
 
 
 class CompetenciaListadoOut(Schema):
@@ -543,6 +659,8 @@ __all__ = [
     "EncuentroActualizarIn",
     "EncuentroCrearIn",
     "EncuentroOut",
+    "EncuentroPublicoOut",
+    "EncuentrosPublicosOut",
     "EquipoEditarIn",
     "EquipoElegibleOut",
     "EquipoIncorporarIn",

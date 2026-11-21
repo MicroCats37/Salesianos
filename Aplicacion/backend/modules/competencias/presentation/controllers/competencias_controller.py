@@ -79,6 +79,7 @@ from modules.competencias.infrastructure.services.alcance_edicion_eventos import
 from modules.competencias.presentation.presenters.competencias_presenter import (
     CompetenciasPresenter,
 )
+from modules.competencias.realtime.publisher import publicar_encuentro_actualizado
 from modules.competencias.presentation.schemas.competencias_schemas import (
     AgendaOut,
     AvanceConfirmarIn,
@@ -443,6 +444,7 @@ class CompetenciasController:
             expected_version=payload.expected_version,
             actor=request.auth,
         )
+        publicar_encuentro_actualizado(str(resultado.id))
         return success_response(
             CompetenciasPresenter.present_encuentro(resultado),
             message="El encuentro se actualizó correctamente.",
@@ -482,6 +484,7 @@ class CompetenciasController:
             expected_version=payload.expected_version,
             actor=request.auth,
         )
+        publicar_encuentro_actualizado(str(resultado.encuentro.id))
         return success_response(
             CompetenciasPresenter.present_resultado(resultado),
             message="El resultado se registró correctamente.",
@@ -541,6 +544,8 @@ class CompetenciasController:
             expected_version=payload.expected_version,
             actor=request.auth,
         )
+        publicar_encuentro_actualizado(str(resultado.encuentro_origen_id))
+        publicar_encuentro_actualizado(str(resultado.destino.id))
         return success_response(
             CompetenciasPresenter.present_avance(resultado),
             message="El avance se confirmó correctamente.",
@@ -610,6 +615,7 @@ class CompetenciasController:
             expected_version=payload.expected_version,
             actor=request.auth,
         )
+        publicar_encuentro_actualizado(str(resultado.encuentro.id))
         return success_response(
             CompetenciasPresenter.present_correccion(resultado),
             message="La corrección se aplicó correctamente.",

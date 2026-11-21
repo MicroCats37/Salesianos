@@ -1,4 +1,14 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: salesianos_redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     container_name: salesianos_db
@@ -52,10 +62,13 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       SCRAPER_URL: ${SCRAPER_URL}
+      CHANNEL_LAYER_REDIS_URL: ${CHANNEL_LAYER_REDIS_URL:-redis://redis:6379/0}
     depends_on:
       db:
         condition: service_healthy
       scraper:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - backend_static:/app/staticfiles

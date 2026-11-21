@@ -23,6 +23,7 @@ from core.pagination import PaginatedData
 from modules.salesianos_fest.domain.results.pase_result import (
     AdminCortesiaListItemResult,
     AdminCortesiaListaResult,
+    AdminCortesiaRevocadaResult,
     AdminPaseListItemResult,
     AdminPaseListaResult,
     CortesiaPaseResult,
@@ -30,6 +31,7 @@ from modules.salesianos_fest.domain.results.pase_result import (
 from modules.salesianos_fest.presentation.schemas.pase_schemas import (
     AdminCortesiaListItemOut,
     AdminCortesiaOut,
+    AdminCortesiaRevocadaOut,
     AdminPaseListItemOut,
 )
 
@@ -92,6 +94,7 @@ class AdminCortesiaListaPresenter:
         """Proyecta una fila del listado."""
         return AdminCortesiaListItemOut(
             id=UUID(item.id),
+            derecho_id=UUID(item.derecho_id) if item.derecho_id else None,
             pase_nombre=item.pase_nombre,
             edicion_nombre=item.edicion_nombre,
             persona_nombres=item.persona_nombres,
@@ -112,6 +115,7 @@ class AdminCortesiaCrearPresenter:
         """Proyecta el acta de cortesía al wrapper HTTP."""
         return AdminCortesiaOut(
             id=UUID(result.id),
+            derecho_id=UUID(result.derecho_id),
             edicion_id=UUID(result.edicion_id),
             edicion_nombre=result.edicion_nombre,
             pase_id=UUID(result.pase_id),
@@ -131,8 +135,38 @@ class AdminCortesiaCrearPresenter:
         )
 
 
+class AdminCortesiaRevocarPresenter:
+    """Transformador de la revocación de una cortesía."""
+
+    @staticmethod
+    def present(result: AdminCortesiaRevocadaResult) -> AdminCortesiaRevocadaOut:
+        """Proyecta el acta revocada al wrapper HTTP."""
+        return AdminCortesiaRevocadaOut(
+            id=UUID(result.id),
+            edicion_id=UUID(result.edicion_id),
+            edicion_nombre=result.edicion_nombre,
+            pase_id=UUID(result.pase_id),
+            pase_nombre=result.pase_nombre,
+            persona_id=UUID(result.persona_id),
+            persona_nombres=result.persona_nombres,
+            persona_tipo_documento=result.persona_tipo_documento,
+            persona_numero_documento=result.persona_numero_documento,
+            estado=result.estado,
+            motivo=result.motivo,
+            motivo_revocacion=result.motivo_revocacion,
+            actor_usuario_id=(
+                UUID(result.actor_usuario_id) if result.actor_usuario_id else None
+            ),
+            actor_nombres=result.actor_nombres,
+            concedido_en=result.concedido_en,
+            revocado_en=result.revocado_en,
+            ya_revocado=result.ya_revocado,
+        )
+
+
 __all__ = [
     "AdminCortesiaCrearPresenter",
     "AdminCortesiaListaPresenter",
+    "AdminCortesiaRevocarPresenter",
     "AdminPaseListaPresenter",
 ]

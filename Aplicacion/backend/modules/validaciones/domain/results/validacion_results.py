@@ -57,7 +57,24 @@ class TicketConfirmadoResult(BaseModel):
     repetido: bool = False
 
 
+class TicketEmitidoResult(BaseModel):
+    """La credencial emitida.
+
+    `codigo` es el SECRETO: viaja SÓLO en la respuesta de esta emisión. No se
+    publica en ningún listado, no se registra en la auditoría y no se escribe
+    en ningún log de aplicación (`FR-05` §1).
+    """
+
+    ticket_id: str
+    codigo: str
+    tipo_derecho: str
+    operacion: str
+    edicion_id: str
+    emitido_en: datetime
+
+
 __all__ = [
     "TicketConfirmadoResult",
+    "TicketEmitidoResult",
     "TicketPreviewResult",
 ]

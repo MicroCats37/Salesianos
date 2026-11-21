@@ -73,6 +73,26 @@ class EstadoEncuentro(models.TextChoices):
     CANCELADO = "CANCELADO", "Cancelado"
 
 
+class EstadoEncuentroPublico(models.TextChoices):
+    """Los TRES estados PÚBLICOS de un encuentro.
+
+    El estado del DOMINIO (`EstadoEncuentro`) describe el flujo de trabajo
+    administrativo; el estado PÚBLICO describe lo que ve el espectador. Son
+    vocabularios DISTINTOS: el backend publica el suyo y el cliente nunca
+    deduce el cubo de un encuentro.
+
+    `PROGRAMA` — el encuentro está en el programa (borrador o programado).
+    `EN_VIVO` — el encuentro está en juego.
+    `FINALIZADO` — el encuentro tiene resultado.
+
+    `CANCELADO` NO tiene cubo público: un encuentro cancelado no se publica.
+    """
+
+    PROGRAMA = "PROGRAMA", "Programa"
+    EN_VIVO = "EN_VIVO", "En vivo"
+    FINALIZADO = "FINALIZADO", "Finalizado"
+
+
 class SlotDestino(models.TextChoices):
     """Slot del encuentro enlazado que recibe al ganador propagado."""
 
@@ -121,6 +141,28 @@ CAMPOS_DE_SLOT: dict[str, str] = {
     SlotDestino.PARTICIPANTE_2: "participante_2",
 }
 
+#: El estado PÚBLICO que corresponde a cada estado del DOMINIO.
+#:
+#: Es la ÚNICA fuente de la regla: el backend publica el cubo y el cliente no
+#: lo adivina. `CANCELADO` NO aparece aquí —un encuentro cancelado no se
+#: publica— y por eso la tabla también decide lo que se EXCLUYE.
+ESTADO_PUBLICO_POR_ESTADO: dict[str, str] = {
+    EstadoEncuentro.BORRADOR: EstadoEncuentroPublico.PROGRAMA,
+    EstadoEncuentro.PROGRAMADO: EstadoEncuentroPublico.PROGRAMA,
+    EstadoEncuentro.EN_CURSO: EstadoEncuentroPublico.EN_VIVO,
+    EstadoEncuentro.FINALIZADO: EstadoEncuentroPublico.FINALIZADO,
+}
+
+#: Inverso: los estados del DOMINIO que componen cada cubo PÚBLICO.
+ESTADOS_POR_ESTADO_PUBLICO: dict[str, tuple[str, ...]] = {
+    EstadoEncuentroPublico.PROGRAMA: (
+        EstadoEncuentro.BORRADOR,
+        EstadoEncuentro.PROGRAMADO,
+    ),
+    EstadoEncuentroPublico.EN_VIVO: (EstadoEncuentro.EN_CURSO,),
+    EstadoEncuentroPublico.FINALIZADO: (EstadoEncuentro.FINALIZADO,),
+}
+
 #: Longitud mínima del motivo auditado de una operación protegida.
 MINIMO_MOTIVO = 5
 
@@ -145,6 +187,8 @@ MAXIMO_DETALLE_MARCADOR = 500
 
 __all__ = [
     "CAMPOS_DE_SLOT",
+    "ESTADO_PUBLICO_POR_ESTADO",
+    "ESTADOS_POR_ESTADO_PUBLICO",
     "MAXIMO_DETALLE_MARCADOR",
     "MAXIMO_ETIQUETA",
     "MAXIMO_MOTIVO",
@@ -155,6 +199,7 @@ __all__ = [
     "EstadoCompetencia",
     "EstadoCompetenciaEquipo",
     "EstadoEncuentro",
+    "EstadoEncuentroPublico",
     "EstadoRonda",
     "MotivoNoElegibilidad",
     "SlotDestino",

@@ -27,6 +27,7 @@ from django.db import transaction
 from modules.salesianos_fest.domain.constants import (
     EstadoCompraPase,
     EstadoDerechoPase,
+    OrigenDerechoPase,
 )
 from modules.salesianos_fest.domain.models import PaseBeneficiario
 from modules.validaciones.domain.constants import TipoDerechoChoices
@@ -133,8 +134,13 @@ class PaseVerificadorDerecho(IVerificadorDerecho):
         puede_canjear, motivo_codigo, motivo_mensaje = PaseVerificadorDerecho._motivo(
             derecho, disponible
         )
+        tipo_derecho = (
+            TipoDerechoChoices.ENTRADA_CORTESIA
+            if derecho.origen == OrigenDerechoPase.CORTESIA
+            else TipoDerechoChoices.PASE
+        )
         return VerificacionDerecho(
-            tipo_derecho=TipoDerechoChoices.PASE,
+            tipo_derecho=tipo_derecho,
             codigo=derecho.pase.slug,
             titular=TitularDerecho(
                 persona_id=str(derecho.persona_id),

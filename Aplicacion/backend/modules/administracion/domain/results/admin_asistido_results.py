@@ -17,6 +17,7 @@ HTTP: un result NO es un schema de la API.
   congeló el dueño de la compra.
 """
 
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -46,6 +47,10 @@ class CompraAsistidaResultado(BaseModel):
 
     El `comprador` es el CLIENTE, nunca el administrador: es el hecho que
     hace auditable el comando.
+
+    `monto_declarado` es el importe DECLARADO por el administrador: es
+    INFORMATIVO y AUDITADO, y NO participa en el total, en el estado del pago
+    ni en el de la compra. `None` significa "no declarado".
     """
 
     model_config = ConfigDict(frozen=True)
@@ -68,6 +73,41 @@ class CompraAsistidaResultado(BaseModel):
     comprador_persona_id: str
     comprador_nombre: str
     cantidad: int = Field(..., ge=1, description="Unidades compradas.")
+    monto_declarado: Decimal | None = Field(
+        default=None,
+        ge=0,
+        description="Importe declarado (informativo y auditado).",
+    )
 
 
-__all__ = ["CompraAsistidaResultado", "ParticipanteAsistidoResultado"]
+class CotizacionPaseClienteResultado(BaseModel):
+    """La COTIZACIÓN de un lote de pases, calculada por el servidor.
+
+    `version` es el token de concurrencia del precio: identifica la fila de
+    precio que rigió en la cotización. Si el catálogo se movió, el token
+    cambia y el alta se rechaza.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    pase_id: str = Field(..., description="El pase cotizado.")
+    edicion_id: str = Field(..., description="La edición del catálogo cotizado.")
+    pase_nombre: str = Field(..., description="El nombre del pase cotizado.")
+    cantidad: int = Field(..., ge=1, description="Unidades cotizadas.")
+    precio_unitario: Decimal = Field(
+        ...,
+        ge=0,
+        description="Precio unitario vigente del pase.",
+    )
+    total: Decimal = Field(..., ge=0, description="Total derivado por el servidor.")
+    moneda: str = Field(..., max_length=3, description="Moneda del precio vigente.")
+    version: str = Field(..., max_length=64, description="Token de concurrencia.")
+    estado: str = Field(..., description="Estado de la cotización.")
+    validez_hasta: datetime = Field(..., description="Fin de la validez de la cotización.")
+
+
+__all__ = [
+    "CompraAsistidaResultado",
+    "CotizacionPaseClienteResultado",
+    "ParticipanteAsistidoResultado",
+]

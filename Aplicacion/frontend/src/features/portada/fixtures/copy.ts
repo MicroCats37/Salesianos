@@ -337,6 +337,18 @@ export const COPY = {
     estado: "EN VIVO",
   },
 
+  partidos: {
+    eyebrow: "PARTIDOS Y RESULTADOS",
+    titulo: ["EN LA CANCHA", "Y EN EL", "RESULTADO."],
+    destacado: "RESULTADO.",
+    copy: "El estado real de los partidos: los que están en juego, los que vienen y los últimos resultados. Lo publica el comité deportivo, no esta página.",
+    cta: "VER TODOS LOS PARTIDOS",
+    vacio:
+      "Los partidos se publicarán aquí cuando el comité deportivo abra el cuadro.",
+    cargando: "Cargando el estado de los partidos...",
+    error: "No pudimos leer el estado de los partidos en este momento.",
+  },
+
   lugar: {
     eyebrow: "07 / NUESTRO PUNTO DE ENCUENTRO",
     titulo: ["UN LUGAR.", "TODA LA EXPERIENCIA."],

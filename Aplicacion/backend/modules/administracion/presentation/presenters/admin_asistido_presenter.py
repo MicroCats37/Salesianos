@@ -12,10 +12,12 @@ compra y el presenter sólo lo representa, sin recalcularlo.
 
 from modules.administracion.domain.results.admin_asistido_results import (
     CompraAsistidaResultado,
+    CotizacionPaseClienteResultado,
     ParticipanteAsistidoResultado,
 )
 from modules.administracion.presentation.schemas.admin_asistido_schemas import (
     CompraAsistidaOut,
+    CotizacionPaseClienteOut,
     ParticipanteAsistidoOut,
 )
 
@@ -55,6 +57,35 @@ class AdminAsistidoPresenter:
             comprador_persona_id=resultado.comprador_persona_id,
             comprador_nombre=resultado.comprador_nombre,
             cantidad=resultado.cantidad,
+            # El importe declarado se representa como TEXTO o `null`: es
+            # evidencia auditada, no un total.
+            monto_declarado=(
+                str(resultado.monto_declarado)
+                if resultado.monto_declarado is not None
+                else None
+            ),
+        )
+
+    @staticmethod
+    def present_cotizacion(
+        resultado: CotizacionPaseClienteResultado,
+    ) -> CotizacionPaseClienteOut:
+        """La cotización calculada por el servidor.
+
+        Los importes viajan como TEXTO: el presenter sólo los representa, no
+        los recalcula ni los contrasta.
+        """
+        return CotizacionPaseClienteOut(
+            pase_id=resultado.pase_id,
+            edicion_id=resultado.edicion_id,
+            pase_nombre=resultado.pase_nombre,
+            cantidad=resultado.cantidad,
+            precio_unitario=str(resultado.precio_unitario),
+            total=str(resultado.total),
+            moneda=resultado.moneda,
+            version=resultado.version,
+            estado=resultado.estado,
+            validez_hasta=resultado.validez_hasta,
         )
 
 

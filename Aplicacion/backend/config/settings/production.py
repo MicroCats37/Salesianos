@@ -5,6 +5,13 @@ from .base import *  # noqa
 
 DEBUG = False
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [env("CHANNEL_LAYER_REDIS_URL", default="redis://redis:6379/0")]},
+    }
+}
+
 # ALLOWED_HOSTS ya viene de base con fallback ["*"]; production.py overridea si se necesita control estricto.
 # Para producción, setear ALLOWED_HOSTS en env con los dominios reales.
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])

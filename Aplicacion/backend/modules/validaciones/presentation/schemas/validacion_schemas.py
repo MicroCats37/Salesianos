@@ -137,6 +137,32 @@ class TicketConfirmadoOut(BaseSchema):
     )
 
 
+class TicketEmitidoOut(BaseSchema):
+    """La credencial emitida (`RT-RT-04`).
+
+    Es la ÚNICA respuesta que publica el `codigo`: es un secreto y se
+    entrega una sola vez. No hay listados que lo devuelvan ni actas que lo
+    guarden.
+    """
+
+    ticket_id: UUID = Field(..., description="Identificador de la credencial.")
+    codigo: str = Field(
+        ...,
+        max_length=64,
+        description="La credencial que el operador escanea. Secreto de una sola entrega.",
+    )
+    tipo_derecho: str = Field(
+        ...,
+        description="El discriminante del módulo dueño: `PASE` o `ENTRADA_CORTESIA`.",
+    )
+    operacion: str = Field(
+        ...,
+        description="La operación que ejecuta el operador: ingreso o entrega.",
+    )
+    edicion_id: UUID = Field(..., description="Edición del alcance.")
+    emitido_en: datetime = Field(..., description="Momento de la emisión.")
+
+
 # ── Entradas ─────────────────────────────────────────────────────────────────
 
 
@@ -181,11 +207,26 @@ class ConfirmarTicketIn(BaseSchema):
     )
 
 
+class EmitirTicketIn(BaseSchema):
+    """La petición de la emisión de una credencial.
+
+    El navegador declara SÓLO el derecho: el tipo y la operación los deriva
+    el módulo dueño, y el código lo genera el servidor (`RN-U04`).
+    """
+
+    derecho_id: UUID = Field(
+        ...,
+        description="El derecho de entrada sobre el que se emite la credencial.",
+    )
+
+
 __all__ = [
     "ConfirmarTicketIn",
+    "EmitirTicketIn",
     "PreviewTicketIn",
     "TicketActorOut",
     "TicketConfirmadoOut",
+    "TicketEmitidoOut",
     "TicketEspecificoOut",
     "TicketGeneralOut",
     "TicketIdentidadOut",

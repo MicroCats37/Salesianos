@@ -79,3 +79,55 @@ export function formatearHorario(
   const hasta = formatearInstante(fin);
   return hasta ? `${desde} → ${hasta}` : desde;
 }
+
+/**
+ * The offset of the edition's timezone.
+ *
+ * Lima does NOT observe daylight saving time: the offset of the edition is
+ * always UTC-5. The operator types the LOCAL time of the match, so the
+ * instant that travels to the backend carries that offset and is
+ * unambiguous.
+ */
+const OFFSET_EDICION = "-05:00";
+
+/**
+ * The local time of an instant, in the format of `datetime-local`.
+ *
+ * It is the INVERSE of `instanteLocalAIso`: what the server published becomes
+ * what the operator sees in the field.
+ */
+export function isoALocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return "";
+
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: ZONA_EDICION,
+  }).formatToParts(fecha);
+
+  const valor = (tipo: string) =>
+    partes.find((parte) => parte.type === tipo)?.value ?? "";
+
+  return `${valor("year")}-${valor("month")}-${valor("day")}T${valor("hour")}:${valor("minute")}`;
+}
+
+/**
+ * The instant of a local time, as the backend expects it.
+ *
+ * The operator types the local time of the edition, so the string carries the
+ * offset of the edition: the backend receives an unambiguous instant and the
+ * schedule never shifts with the timezone of the browser.
+ */
+export function instanteLocalAIso(local: string): string | null {
+  if (!local) return null;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return null;
+
+  return `${local}:00${OFFSET_EDICION}`;
+}

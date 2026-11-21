@@ -186,6 +186,65 @@ class AgendaResult(BaseModel):
     )
 
 
+class EncuentrosPublicosResult(BaseModel):
+    """La superficie PÚBLICA de los encuentros de una edición.
+
+    Los TRES cubos son la presentación que consume el público: lo que está en
+    juego, lo que viene y lo que ya terminó. Cada encuentro es la MISMA
+    proyección canónica (`EncuentroResult`) que la agenda, el cuadro y el
+    detalle: la superficie pública no inventa una forma de encuentro.
+    """
+
+    edicion_id: str = Field(..., description="Edición de la que se publica.")
+    edicion_nombre: str = Field(default="", description="Nombre de la edición.")
+    total: int = Field(
+        default=0,
+        description="Encuentros publicables de la edición, en los tres cubos.",
+    )
+    en_vivo: list[EncuentroResult] = Field(
+        default_factory=list,
+        description="Encuentros en juego.",
+    )
+    proximos: list[EncuentroResult] = Field(
+        default_factory=list,
+        description="Encuentros del programa, los más próximos primero.",
+    )
+    finalizados: list[EncuentroResult] = Field(
+        default_factory=list,
+        description="Encuentros con resultado, los más recientes primero.",
+    )
+
+
+class MisPartidosResult(BaseModel):
+    """Los partidos de la CUENTA, en sus tres cubos.
+
+    Es la lectura de "MIS PARTIDOS": los encuentros en los que participan los
+    equipos VIGENTES de la persona. La identidad la resuelve el servidor
+    (`request.user.persona_fk_id`): el cliente NUNCA envía una persona, un
+    usuario ni un equipo.
+    """
+
+    edicion_id: str = Field(default="", description="Edición de los partidos.")
+    edicion_nombre: str = Field(default="", description="Nombre de la edición.")
+    total: int = Field(default=0, description="Partidos de la cuenta.")
+    equipos: list[CompetenciaEquipoResult] = Field(
+        default_factory=list,
+        description="Los equipos de la cuenta en el cuadro.",
+    )
+    en_vivo: list[EncuentroResult] = Field(
+        default_factory=list,
+        description="Los partidos que se están jugando.",
+    )
+    proximos: list[EncuentroResult] = Field(
+        default_factory=list,
+        description="Los partidos del programa, los más próximos primero.",
+    )
+    finalizados: list[EncuentroResult] = Field(
+        default_factory=list,
+        description="Los partidos con resultado, los más recientes primero.",
+    )
+
+
 class ResultadoRegistradoResult(BaseModel):
     """El resultado autoritativo de un encuentro ya registrado."""
 
@@ -347,6 +406,7 @@ __all__ = [
     "CorreccionPreviewResult",
     "CorreccionResult",
     "EncuentroResult",
+    "EncuentrosPublicosResult",
     "OperacionAuditadaResult",
     "ParticipanteResult",
     "ResultadoRegistradoResult",

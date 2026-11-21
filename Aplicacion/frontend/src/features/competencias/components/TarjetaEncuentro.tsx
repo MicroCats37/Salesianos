@@ -23,12 +23,14 @@ import { PanelDetalleEncuentro } from "./PanelDetalleEncuentro";
  */
 export function TarjetaEncuentro({
   encuentro,
+  destinos,
   vistaPreviaAvance,
   vistaPreviaCorreccion,
   conflicto,
   className,
 }: {
   encuentro: Encuentro;
+  destinos?: readonly Encuentro[];
   vistaPreviaAvance?: VistaPreviaAvance;
   vistaPreviaCorreccion?: VistaPreviaCorreccion;
   conflicto?: { mensaje: string };
@@ -125,6 +127,7 @@ export function TarjetaEncuentro({
 
       <PanelDetalleEncuentro
         encuentro={encuentro}
+        destinos={destinos}
         vistaPreviaAvance={vistaPreviaAvance}
         vistaPreviaCorreccion={vistaPreviaCorreccion}
         conflicto={conflicto}

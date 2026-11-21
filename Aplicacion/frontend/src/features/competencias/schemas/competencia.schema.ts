@@ -477,6 +477,14 @@ export const competenciaEquipoEnvelope = apiResponseSchema(
 /** The bracket of a competition (`GET /competencias/{id}/cuadro`). */
 export const cuadroEnvelope = apiResponseSchema(z.array(rondaSchema));
 
+/**
+ * ONE encounter (`PATCH /competencias/{id}/encuentros/{encuentro_id}`).
+ *
+ * The update of an encounter answers with the encounter ITSELF: the operator
+ * sees the state the server committed, not the one the browser predicted.
+ */
+export const encuentroEnvelope = apiResponseSchema(encuentroSchema);
+
 /** The agenda of a day (`GET /competencias/agenda`). */
 export const agendaEnvelope = apiResponseSchema(agendaSchema);
 

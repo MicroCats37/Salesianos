@@ -10,6 +10,7 @@ import { Navbar } from "@/features/portada/components/Navbar";
 import { PartySection } from "@/features/portada/components/PartySection";
 import { PortadaFooter } from "@/features/portada/components/PortadaFooter";
 import { PromotionsSection } from "@/features/portada/components/PromotionsSection";
+import { ResultadosPartidosSection } from "@/features/portada/components/ResultadosPartidosSection";
 import { ScheduleSection } from "@/features/portada/components/ScheduleSection";
 import { ScrollSnapScope } from "@/features/portada/components/ScrollSnapScope";
 import { SponsorsSection } from "@/features/portada/components/SponsorsSection";
@@ -47,6 +48,7 @@ export function PortadaView() {
         <PartyPassSection />
 
         <ChampionshipSection />
+        <ResultadosPartidosSection />
         <ScheduleSection />
         <FamilySection />
         <PartySection />

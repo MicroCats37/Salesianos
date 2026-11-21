@@ -20,7 +20,11 @@ una competencia) la toman de la competencia, que es su alcance (`RN-E01`).
 from asgiref.sync import sync_to_async
 from injector import inject
 
-from modules.competencias.domain.ports import IAlcanceEdicion, IEquipoElegibleService
+from modules.competencias.domain.ports import (
+    IAlcanceEdicion,
+    IEquipoElegibleService,
+    IEquiposDeParticipante,
+)
 from modules.competencias.domain.results.competencias_results import (
     AgendaResult,
     AvancePreviewResult,
@@ -31,6 +35,8 @@ from modules.competencias.domain.results.competencias_results import (
     CorreccionPreviewResult,
     CorreccionResult,
     EncuentroResult,
+    EncuentrosPublicosResult,
+    MisPartidosResult,
     ResultadoRegistradoResult,
     RondaResult,
 )
@@ -74,6 +80,7 @@ class CompetenciasOrchestrator:
         encuentro_selector: EncuentroSelector,
         alcance: IAlcanceEdicion,
         elegibilidad: IEquipoElegibleService,
+        equipos_de_persona: IEquiposDeParticipante,
     ):
         self.cuadro_flujo = cuadro_flujo
         self.encuentro_flujo = encuentro_flujo
@@ -84,6 +91,7 @@ class CompetenciasOrchestrator:
         self.encuentro_selector = encuentro_selector
         self.alcance = alcance
         self.elegibilidad = elegibilidad
+        self.equipos_de_persona = equipos_de_persona
 
     # ── lecturas ───────────────────────────────────────────────────────────
 
@@ -120,6 +128,18 @@ class CompetenciasOrchestrator:
             edicion.nombre,
         )
 
+    async def obtener_encuentros_publicos(self) -> EncuentrosPublicosResult:
+        """Los encuentros publicables de la edición PUBLICADA.
+
+        La edición se resuelve en el servidor: el navegador no la elige. La
+        lectura pública es de SOLO LECTURA y no escribe nada.
+        """
+        edicion = await sync_to_async(self._edicion_publicada)()
+        return await sync_to_async(self.encuentro_selector.publicos)(
+            edicion.id,
+            edicion.nombre,
+        )
+
     async def listar_equipos_elegibles(
         self,
         competencia_id,
@@ -140,6 +160,25 @@ class CompetenciasOrchestrator:
             str(competencia.categoria_id),
         )
 
+    async def obtener_mis_partidos(self, persona_id: str | None) -> MisPartidosResult:
+        """Los partidos de la CUENTA, con la identidad resuelta por el servidor.
+
+        La cadena es la del proyecto: `request.user.persona_fk_id` → las
+        participaciones VIGENTES de esa persona → sus equipos → los encuentros
+        en los que esos equipos ocupan un slot.
+
+        El cliente NO envía ninguna persona, usuario ni equipo: la identidad
+        la decide la sesión. Una cuenta sin `Persona` (o sin participaciones, o
+        sin equipos) recibe un resultado VACÍO: nunca un error y nunca los
+        partidos de otra cuenta.
+        """
+        if not persona_id:
+            return MisPartidosResult()
+
+        equipo_ids = await sync_to_async(
+            self.equipos_de_persona.equipos_de_persona
+        )(persona_id)
+        return await sync_to_async(self.encuentro_selector.mis_partidos)(equipo_ids)
     # ── escrituras ─────────────────────────────────────────────────────────
 
     async def crear_competencia(
@@ -313,6 +352,17 @@ class CompetenciasOrchestrator:
     def _edicion_actual(self):
         """La edición vigente, según el ORDEN CONGELADO de `FR-02` §2.2."""
         return self.alcance.resolver_actual()
+
+    def _edicion_publicada(self):
+        """La edición PUBLICADA: el ÚNICO alcance que se publica.
+
+        La superficie pública no publica una edición en borrador: el
+        espectador ve lo que el comité ya publicó.
+        """
+        return self.alcance.resolver_actual(
+            permitir_publicada_por_defecto=True,
+            exigir_publicada=True,
+        )
 
 
 __all__ = ["CompetenciasOrchestrator"]

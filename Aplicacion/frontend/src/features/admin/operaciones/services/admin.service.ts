@@ -234,6 +234,25 @@ export const RUTAS_ADMIN = {
     permiso: "Administrador",
   },
   /**
+   * The QUOTATION of a pass for the assisted purchase.
+   *
+   * It is a READ of the administration: the server resolves the current price
+   * of the pass, derives the total and publishes the token of that price. The
+   * browser NEVER multiplies a price by a quantity (`RN-C02`) and NEVER sends
+   * a total: the command sends only the token, and the server answers `409`
+   * with `PRECIO_CAMBIADO` when the price moved since the quotation.
+   */
+  cotizarPaseCliente: {
+    ledger: "A0-ACP-04",
+    metodo: "post",
+    ruta: "/administracion/pases/cotizacion",
+    presentador: "AdminAsistidoPresenter",
+    wrapper: "CotizacionPaseClienteOut",
+    registrado: true,
+    motivo: "Registrada por AdminAsistidoController en config/api.py.",
+    permiso: "Administrador",
+  },
+  /**
    * The assisted order of the store for a THIRD PARTY.
    *
    * Same rule as the passes: the order and its purchase belong to the

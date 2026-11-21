@@ -43,6 +43,35 @@ export const evidenciaPagoManualSchema = z.object({
   motivo: z.string().min(1).max(1000),
 });
 
+/**
+ * The evidence of the assisted purchase of a PASS.
+ *
+ * It is the general evidence PLUS two facts that belong to the path of the
+ * passes and to NOTHING else (the Marketplace keeps the general evidence
+ * untouched, `R6`):
+ *
+ * - `monto_declarado`: the amount the administrator DECLARES having received.
+ *   It is INFORMATIVE and AUDITED: it never becomes the price, the total,
+ *   the state of the payment or the state of the purchase (`R1`). Its absence
+ *   means "not declared"; `"0"` is a valid declaration.
+ * - `precio_version`: the token of the price that the quotation published. It
+ *   is the CONCURRENCY control: when the server resolves a different price,
+ *   it answers `409 PRECIO_CAMBIADO` and nothing is created.
+ *
+ * The CURRENCY is NEVER sent: the server derives it from the order (`R2`).
+ */
+export const evidenciaPagoCompraPaseSchema = evidenciaPagoManualSchema.extend({
+  monto_declarado: z
+    .string()
+    .regex(
+      /^\d+(\.\d{1,2})?$/,
+      "El importe declarado lleva hasta dos decimales (por ejemplo, 35 o 35.50).",
+    )
+    .nullable()
+    .optional(),
+  precio_version: z.string().min(1).max(64).nullable().optional(),
+});
+
 /** The command that adds a participant to a team. */
 export const agregarParticipanteEquipoSchema = z.object({
   tipo_documento: z.string().min(1).max(3),
@@ -66,7 +95,7 @@ export const comprarPaseClienteSchema = z.object({
   pase_id: z.string().min(1),
   cantidad: z.number().int().positive(),
   cliente: clienteCompraSchema,
-  evidencia: evidenciaPagoManualSchema,
+  evidencia: evidenciaPagoCompraPaseSchema,
 });
 
 /** The command that orders the store for a client. */
@@ -102,6 +131,43 @@ export const compraAsistidaSchema = z.object({
   comprador_persona_id: z.string().min(1),
   comprador_nombre: z.string(),
   cantidad: z.number().int().positive(),
+  /**
+   * The amount the administrator DECLARED having received.
+   *
+   * It is the ECHO of the audited evidence: `null` means "not declared". It
+   * is NOT the total of the purchase: the total is the one the server froze
+   * (`total`).
+   */
+  monto_declarado: z.string().nullable(),
+});
+
+/**
+ * The QUOTATION of a pass for the assisted purchase.
+ *
+ * It is the 1:1 mirror of `CotizacionPaseClienteOut`: the server resolves the
+ * current price of the pass, derives the TOTAL and publishes the token of
+ * that price (`version`).
+ *
+ * The AMOUNTS are STRINGS, exactly as the server sends them: the browser
+ * prints them and NEVER multiplies a price by a quantity (`RN-C02`).
+ */
+export const cotizacionPaseClienteSchema = z.object({
+  pase_id: z.string().min(1),
+  edicion_id: z.string().min(1),
+  pase_nombre: z.string(),
+  cantidad: z.number().int().positive(),
+  /** The unit price, as TEXT with two decimals. */
+  precio_unitario: z.string(),
+  /** The total of the quotation, as TEXT. The server derived it. */
+  total: z.string(),
+  /** The ISO-4217 currency of the price. */
+  moneda: z.string(),
+  /** The token of the price: the concurrency control of the quotation. */
+  version: z.string().min(1),
+  /** The state of the quotation (`ACTIVA`). */
+  estado: z.string(),
+  /** The moment the quotation stops being valid. */
+  validez_hasta: z.string(),
 });
 
 // ── Envelopes ───────────────────────────────────────────────────────────────
@@ -114,10 +180,20 @@ export const participanteAsistidoEnvelope = envelopeAdmin(
 /** The envelope of the assisted purchases. */
 export const compraAsistidaEnvelope = envelopeAdmin(compraAsistidaSchema);
 
+/** The envelope of the quotation of a pass. */
+export const cotizacionPaseClienteEnvelope = envelopeAdmin(
+  cotizacionPaseClienteSchema,
+);
+
 // ── Inferred types ──────────────────────────────────────────────────────────
 
 export type ClienteCompra = z.infer<typeof clienteCompraSchema>;
 export type EvidenciaPagoManual = z.infer<typeof evidenciaPagoManualSchema>;
+export type EvidenciaPagoCompraPase = z.infer<
+  typeof evidenciaPagoCompraPaseSchema
+>;
+export type CotizacionPaseCliente = z.infer<typeof cotizacionPaseClienteSchema>;
+export type CompraAsistida = z.infer<typeof compraAsistidaSchema>;
 export type AgregarParticipanteEquipo = z.infer<
   typeof agregarParticipanteEquipoSchema
 >;
@@ -262,6 +338,14 @@ export const agregarParticipanteFormSchema = identidadAdministrativaCamposSchema
  * The quantity is COERCED because the input is a number and the form reads
  * a string. The price NEVER travels: the server freezes it against the
  * catalogue (`RN-C02`).
+ *
+ * `monto_declarado` is the ONLY amount the administrator writes, and it is
+ * INFORMATIVE: it travels as audited evidence and it NEVER becomes the price
+ * nor the total. An EMPTY string means "not declared"; `"0"` is a valid
+ * declaration (the administrator declares that nothing was charged).
+ *
+ * The field has a DEFAULT of an empty string so that a form that does not
+ * draw it (the store, which keeps the general evidence) still validates.
  */
 export const compraParaClienteFormSchema = identidadAdministrativaCamposSchema
   .extend({
@@ -278,6 +362,15 @@ export const compraParaClienteFormSchema = identidadAdministrativaCamposSchema
     canal: z.string().min(1, "Elige el canal del pago."),
     referencia: z.string().min(1, "Escribe la referencia del pago."),
     motivo: z.string().min(1, "Escribe el motivo: queda en la auditoría."),
+    monto_declarado: z
+      .string()
+      .max(20, "Máximo 20 caracteres.")
+      .refine(
+        (valor) =>
+          valor.trim() === "" || /^\d+(\.\d{1,2})?$/.test(valor.trim()),
+        "El importe declarado lleva hasta dos decimales (por ejemplo, 35 o 35.50).",
+      )
+      .default(""),
   })
   .superRefine((datos, ctx) => {
     for (const problema of problemasDeIdentidadAdministrativa(datos)) {

@@ -9,7 +9,7 @@
 
 ## 1. Para qué sirve esta carpeta
 
-Esta carpeta contiene **15 documentos** que, en conjunto, describen cómo está construido, cómo se ejecuta y cómo se comporta hoy el sistema. No es un manual de uso ni un plan de trabajo: es el mapa que permite reconstruir, auditar o modificar el sistema sin adivinar.
+Esta carpeta contiene **16 documentos** que, en conjunto, describen cómo está construido, cómo se ejecuta y cómo se comporta hoy el sistema, además de una ficha explícitamente marcada para la futura adaptación realtime. No es un manual de uso ni un plan de trabajo: es el mapa que permite reconstruir, auditar o modificar el sistema sin adivinar.
 
 El punto de partida es este índice. A partir de aquí, cada documento responde a una pregunta concreta y remite a sus hermanos para el detalle.
 
@@ -27,6 +27,7 @@ El punto de partida es este índice. A partir de aquí, cada documento responde 
 | ¿Qué hace el usuario de punta a punta? | [05 — Flujos end-to-end](./05-flujos-end-to-end.md) | [05a](./05a-matriz-pagina-flujo-endpoint-datos.md) |
 | ¿Cómo se opera y qué está roto? | [06 — Operación y deuda técnica](./06-operacion-y-deuda-tecnica.md) | [02 — Backend y API](./02-backend-y-api.md) |
 | ¿Qué puedo cambiar en el frontend? | [07 — Guía para el agente de UI/UX](./07-guia-para-ui-ux.md) | [03 — Frontend](./03-frontend.md) |
+| ¿Cómo debería implementarse el realtime de competencias? | [08 — Realtime de competencias por WebSocket](./08-realtime-competencias-websocket.md) | [01 — Arquitectura y runtime](./01-arquitectura-y-runtime.md), [02 — Backend y API](./02-backend-y-api.md) |
 | ¿Está todo documentado? | [00 — Cobertura y trazabilidad](./00-cobertura-y-trazabilidad.md) | — |
 
 ---
@@ -55,6 +56,7 @@ El punto de partida es este índice. A partir de aquí, cada documento responde 
 | Los comandos de gestión y su secuencia | [06 — Operación y deuda técnica](./06-operacion-y-deuda-tecnica.md) | §4 Trabajos programados y comandos manuales |
 | Los hallazgos y la deuda técnica registrados | [06 — Operación y deuda técnica](./06-operacion-y-deuda-tecnica.md) | §6 Hallazgos (H-1 … H-9) · §7 Deuda técnica (D-1 … D-16) |
 | Qué está prohibido cambiar en el frontend | [07 — Guía para el agente de UI/UX](./07-guia-para-ui-ux.md) | §3 Qué puede cambiar la UI |
+| La referencia y la adaptación futura del realtime de competencias | [08 — Realtime de competencias por WebSocket](./08-realtime-competencias-websocket.md) | §1 Estado real · §3 Anatomía · §9 Despliegue · §10 Pruebas |
 | La auditoría de cobertura y el checklist | [00 — Cobertura y trazabilidad](./00-cobertura-y-trazabilidad.md) | §5 Checklist reejecutable |
 
 ---
@@ -77,6 +79,7 @@ El punto de partida es este índice. A partir de aquí, cada documento responde 
 | 05a | [Matriz página → flujo → endpoint → datos](./05a-matriz-pagina-flujo-endpoint-datos.md) | Trazabilidad completa, con diagramas de flujo y los endpoints sin consumidor. | `frontend/` + `backend/` |
 | 06 | [Operación y deuda técnica](./06-operacion-y-deuda-tecnica.md) | Topología operativa, base de datos, ausencia de planificador, hallazgos H-1 … H-9 y deuda D-1 … D-16. | Todo el sistema |
 | 07 | [Guía para el agente de UI/UX](./07-guia-para-ui-ux.md) | Qué puede y qué no puede cambiarse en el frontend, y cómo se entrega un cambio. | `frontend/` |
+| 08 | [Realtime de competencias por WebSocket](./08-realtime-competencias-websocket.md) | Referencia WebSocket verificada, estado actual de Salesianos y guía de adaptación futura, incluida la operación ASGI/Redis/proxy. | `backend/` + `frontend/` + despliegue |
 
 ---
 

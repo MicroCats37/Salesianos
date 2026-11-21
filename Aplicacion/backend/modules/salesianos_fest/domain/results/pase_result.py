@@ -184,11 +184,18 @@ class PaseBeneficiarioRevocadoResult(BaseModel):
 
 
 class CortesiaPaseResult(BaseModel):
-    """El acta de una cortesía."""
+    """El acta de una cortesía.
+
+    `derecho_id` es el identificador del DERECHO de entrada que la cortesía
+    creó. Nace OBLIGATORIO: el acta y su derecho se crean en la MISMA
+    transacción, así que un acta sin derecho es un hecho imposible y un
+    `derecho_id` ausente sería un identificador inventado.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     id: str
+    derecho_id: str
     edicion_id: str
     edicion_nombre: str
     pase_id: str
@@ -203,6 +210,37 @@ class CortesiaPaseResult(BaseModel):
     actor_nombres: str = ""
     concedido_en: datetime
     revocado_en: datetime | None = None
+
+
+class AdminCortesiaRevocadaResult(BaseModel):
+    """El resultado de revocar una cortesía.
+
+    `ya_revocado` distingue la revocación EFECTIVA de la REPETICIÓN: la
+    segunda no es un error, devuelve el mismo estado final (`FR-05` §2.3).
+
+    `motivo` es el motivo del OTORGAMIENTO; `motivo_revocacion` es el de la
+    revocación. No se mezclan: son dos hechos de auditoría distintos.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    edicion_id: str
+    edicion_nombre: str
+    pase_id: str
+    pase_nombre: str
+    persona_id: str
+    persona_nombres: str
+    persona_tipo_documento: str
+    persona_numero_documento: str
+    estado: str
+    motivo: str
+    motivo_revocacion: str = ""
+    actor_usuario_id: str | None = None
+    actor_nombres: str = ""
+    concedido_en: datetime
+    revocado_en: datetime
+    ya_revocado: bool = False
 
 
 class AdminPaseListItemResult(BaseModel):
@@ -242,11 +280,19 @@ class AdminPaseListaResult(BaseModel):
 
 
 class AdminCortesiaListItemResult(BaseModel):
-    """Una fila del listado administrativo de cortesías."""
+    """Una fila del listado administrativo de cortesías.
+
+    `derecho_id` es el identificador del DERECHO de entrada que la cortesía
+    creó: la credencial de puerta se emite contra el DERECHO, no contra el
+    acta. Es NULO sólo cuando el acta NO tiene derecho, que es un dato
+    histórico corrupto: el identificador ausente se publica como ausente y
+    NUNCA se inventa.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     id: str
+    derecho_id: str | None = None
     pase_nombre: str
     edicion_nombre: str
     persona_nombres: str
@@ -277,6 +323,7 @@ class AdminCortesiaListaResult(BaseModel):
 __all__ = [
     "AdminCortesiaListItemResult",
     "AdminCortesiaListaResult",
+    "AdminCortesiaRevocadaResult",
     "AdminPaseListItemResult",
     "AdminPaseListaResult",
     "CompraPaseResultado",

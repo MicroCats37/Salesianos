@@ -69,6 +69,17 @@ const EXCEPCIONES: { archivo: string; motivos: string[] }[] = [
     motivos: ["/competencias"],
   },
   {
+    // La superficie PÚBLICA de los encuentros: es una ruta del BACKEND, no
+    // una página de esta aplicación.
+    archivo:
+      "features/competencias/publico/services/encuentro-publico.service.ts",
+    motivos: ["/publico/competencias/encuentros"],
+  },
+  {
+    archivo: "features/cuenta/services/cuenta-partidos.service.ts",
+    motivos: ["/cuenta/mis-partidos"],
+  },
+  {
     archivo: "features/marketplace/services/marketplace.service.ts",
     motivos: ["/marketplace"],
   },

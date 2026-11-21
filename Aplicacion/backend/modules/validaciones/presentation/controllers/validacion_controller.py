@@ -4,7 +4,8 @@ Packet: `XCT-01` · Change: `salesianos-fest-rebuild`
 Freeze: `FREEZE-RT-1.0.0`
 
 Ledger: `RT-RT-01` (POST `/validaciones/preview`) ·
-        `RT-RT-02` (POST `/validaciones/confirmar`).
+        `RT-RT-02` (POST `/validaciones/confirmar`) ·
+        `RT-RT-04` (POST `/validaciones/tickets`).
 
 El controller es "SAGRADO": cero lógica
 (`contract/PLAN_REFACTORIZACION.md` §1.A). Sólo parsea, delega al
@@ -32,6 +33,7 @@ from core.permissions import RequireAcreditacionesEscribir
 from core.responses import ApiResponse, success_response
 from modules.validaciones.domain.schemas.validacion_schemas import (
     ConfirmarTicketData,
+    EmitirTicketData,
     PreviewTicketData,
 )
 from modules.validaciones.domain.services.orchestrators.validacion_orchestrator import (
@@ -39,12 +41,15 @@ from modules.validaciones.domain.services.orchestrators.validacion_orchestrator 
 )
 from modules.validaciones.presentation.presenters.ticket_presenter import (
     TicketConfirmPresenter,
+    TicketEmitidoPresenter,
     TicketPreviewPresenter,
 )
 from modules.validaciones.presentation.schemas.validacion_schemas import (
     ConfirmarTicketIn,
+    EmitirTicketIn,
     PreviewTicketIn,
     TicketConfirmadoOut,
+    TicketEmitidoOut,
     TicketPreviewOut,
 )
 
@@ -104,6 +109,33 @@ class ValidacionController:
         return success_response(
             TicketConfirmPresenter.present(result),
             message="El canje se registró correctamente.",
+        )
+
+    # ── RT-RT-04 · Emisión de la credencial ──────────────────────────────────
+
+    @route.post(
+        "/tickets",
+        response={201: ApiResponse[TicketEmitidoOut]},
+        auth=JWTAuth(),
+        permissions=[RequireAcreditacionesEscribir],
+        summary="Emite la credencial de un derecho de entrada.",
+    )
+    async def emitir_ticket(self, request, payload: EmitirTicketIn):
+        """Route: POST /api/validaciones/tickets
+
+        Emite la credencial escaneable de un derecho de entrada. El cliente
+        declara SÓLO el derecho: el tipo y la operación los deriva el módulo
+        dueño (`RN-U04`), y el CÓDIGO lo genera el servidor.
+
+        **EL CÓDIGO SE DEVUELVE UNA VEZ.** Es un secreto: no se publica en
+        ningún listado, no se registra en la auditoría y no se escribe en
+        ningún log. Esta respuesta es su única entrega.
+        """
+        data = EmitirTicketData(derecho_id=str(payload.derecho_id))
+        result = await self.orchestrator.emitir_ticket(data)
+        return success_response(
+            TicketEmitidoPresenter.present(result),
+            message="Credencial emitida correctamente.",
         )
 
 

@@ -66,8 +66,13 @@ reglas NO se duplican y el `await` NO cruza los límites de la transacción.
   compatibilidad de género los aplica `PoolFlujo`.
 """
 
+import hashlib
+from datetime import timedelta
+from decimal import Decimal
+
 from asgiref.sync import sync_to_async
 from django.db import transaction
+from django.utils import timezone
 from injector import inject
 
 from core.exceptions import ConflictError, NotFoundError, UnprocessableEntityError
@@ -77,6 +82,7 @@ from modules.administracion.domain.constants import (
 )
 from modules.administracion.domain.results.admin_asistido_results import (
     CompraAsistidaResultado,
+    CotizacionPaseClienteResultado,
     ParticipanteAsistidoResultado,
 )
 from modules.administracion.domain.schemas.admin_asistido_schemas import (
@@ -84,6 +90,7 @@ from modules.administracion.domain.schemas.admin_asistido_schemas import (
     ClienteAsistidoData,
     ComprarPaseParaClienteData,
     ComprarPedidoParaClienteData,
+    CotizarPaseParaClienteData,
     IdentidadAsistidaData,
 )
 from modules.administracion.domain.selectors.admin_operacion_selector import (
@@ -92,6 +99,12 @@ from modules.administracion.domain.selectors.admin_operacion_selector import (
 from modules.administracion.domain.services.core.admin_accion_sensible_service import (
     AdminAccionSensibleService,
 )
+from modules.commerce.domain.schemas.compra_schemas import (
+    LineaCompraSnapshot,
+    calcular_total,
+)
+from modules.eventos.domain.constants import ModuloLogico
+from modules.eventos.domain.exceptions import ModuloNoHabilitadoError
 from modules.marketplace.domain.schemas.pedido_schemas import (
     PedidoCreateData,
     PedidoItemCreateData,
@@ -103,8 +116,21 @@ from modules.pagos.domain.services.core.estado_operativo_pago_service import (
 from modules.pagos.domain.services.flujos.aprobar_pago_manual_flujo import (
     AprobarPagoManualFlujo,
 )
-from modules.salesianos_fest.domain.constants import EstadoParticipacion
+from modules.salesianos_fest.domain.constants import (
+    CONCEPTO_LINEA_PASE,
+    MAX_PASES_POR_COMPRA,
+    MIN_PASES_POR_COMPRA,
+    EstadoPase,
+    EstadoParticipacion,
+)
+from modules.salesianos_fest.domain.exceptions import (
+    CantidadInvalidaError,
+    PaseNoDisponibleError,
+    PaseNoEncontradoError,
+    PrecioCambiadoError,
+)
 from modules.salesianos_fest.domain.ports import (
+    IAlcanceEdicionService,
     ICorreccionGeneroPersonaService,
     IObtensionPersonaService,
     IResolucionPersonaService,
@@ -113,10 +139,21 @@ from modules.salesianos_fest.domain.schemas.pase_schemas import ComprarPaseData
 from modules.salesianos_fest.domain.schemas.pool_schemas import (
     ParticipanteAsignarData,
 )
+from modules.salesianos_fest.domain.selectors.pase_selector import PaseSelector
 from modules.salesianos_fest.domain.services.flujos.compra_pase_flujo import (
     CompraPaseFlujo,
 )
 from modules.salesianos_fest.domain.services.flujos.pool_flujo import PoolFlujo
+
+#: Las horas de validez de una cotización de pase.
+#:
+#: Mismo precedente que la cotización de paquetes
+#: (`VIGENCIA_COTIZACION_HORAS` en `CatalogoFlujo`): la cotización es
+#: EFÍMERA y no se persiste.
+VIGENCIA_COTIZACION_HORAS = 24
+
+#: El estado de una cotización vigente.
+ESTADO_COTIZACION_ACTIVA = "ACTIVA"
 
 
 class AdminAsistidoFlujo:
@@ -135,6 +172,8 @@ class AdminAsistidoFlujo:
         correccion_genero: ICorreccionGeneroPersonaService,
         aprobar_pago_manual_flujo: AprobarPagoManualFlujo,
         estado_operativo_pago: EstadoOperativoPagoService,
+        pase_selector: PaseSelector,
+        alcance_edicion: IAlcanceEdicionService,
     ):
         self.servicio_accion = servicio_accion
         self.equipo_selector = equipo_selector
@@ -146,6 +185,8 @@ class AdminAsistidoFlujo:
         self.correccion_genero = correccion_genero
         self.aprobar_pago_manual_flujo = aprobar_pago_manual_flujo
         self.estado_operativo_pago = estado_operativo_pago
+        self.pase_selector = pase_selector
+        self.alcance_edicion = alcance_edicion
 
     # ── Participantes ───────────────────────────────────────────────────────
 
@@ -195,6 +236,23 @@ class AdminAsistidoFlujo:
 
     # ── Compras asistidas ───────────────────────────────────────────────────
 
+    async def cotizar_pase_para_cliente(
+        self,
+        data: CotizarPaseParaClienteData,
+    ) -> CotizacionPaseClienteResultado:
+        """COTIZA un lote de pases: el precio y el total los deriva el servidor.
+
+        Es una LECTURA: no persiste nada y no toca el dinero. El precio
+        vigente lo resuelve el DUEÑO (`PaseSelector`) contra el catálogo de
+        la edición; el total lo deriva el servidor con la MISMA expresión que
+        usa `commerce` para congelar la compra (`RN-C02`).
+
+        El `version` que devuelve es el TOKEN DE CONCURRENCIA del precio: si
+        el catálogo se movió, el token cambia y el alta posterior se rechaza
+        con 409 `PRECIO_CAMBIADO`.
+        """
+        return await sync_to_async(self._cotizar_pase)(data.pase_id, data.cantidad)
+
     async def comprar_pase_para_cliente(
         self,
         actor,
@@ -206,8 +264,21 @@ class AdminAsistidoFlujo:
         comprador; el pago lo liquida el DUEÑO del pago
         (`AprobarPagoManualFlujo`) con la evidencia declarada. Este flujo no
         reimplementa ninguna transición de estado.
+
+        El `monto_declarado` viaja como EVIDENCIA AUDITADA: lo guarda el
+        dueño del pago y NO toca el total canónico, ni el estado del pago, ni
+        el de la compra.
         """
         motivo = self.servicio_accion.validar_motivo(data.evidencia.motivo)
+
+        # El PRECIO OBSOLETO se comprueba ANTES de tocar nada: si el
+        # catálogo se movió desde la cotización, el comando se rechaza y no
+        # se crea ni la compra, ni la orden, ni el pago, ni la identidad.
+        if data.evidencia.precio_version:
+            await sync_to_async(self._validar_precio_vigente)(
+                data.pase_id,
+                data.evidencia.precio_version,
+            )
 
         cliente = await sync_to_async(self._resolver_cliente)(data.cliente)
 
@@ -228,12 +299,14 @@ class AdminAsistidoFlujo:
             actor=None,
         )
 
-        await self.aprobar_pago_manual_flujo.aprobar(
+        aprobacion = await self.aprobar_pago_manual_flujo.aprobar(
             orden_pago_id=compra.orden_pago_id,
             actor_id=str(actor.id),
             canal=data.evidencia.canal,
             referencia=data.evidencia.referencia,
             motivo=motivo,
+            monto_declarado=data.evidencia.monto_declarado,
+            precio_version=data.evidencia.precio_version,
         )
 
         estado_pago = await sync_to_async(self._estado_del_pago)(
@@ -257,6 +330,14 @@ class AdminAsistidoFlujo:
                 "comprador_persona_id": compra.comprador_persona_id,
                 "canal": data.evidencia.canal,
                 "referencia": data.evidencia.referencia,
+                # El importe declarado y el token de precio son EVIDENCIA:
+                # se auditan, no calculan nada.
+                "monto_declarado": (
+                    str(aprobacion.monto_declarado)
+                    if getattr(aprobacion, "monto_declarado", None) is not None
+                    else None
+                ),
+                "precio_version": data.evidencia.precio_version or None,
             },
         )
 
@@ -273,6 +354,7 @@ class AdminAsistidoFlujo:
             comprador_persona_id=compra.comprador_persona_id,
             comprador_nombre=compra.comprador_nombres,
             cantidad=compra.cantidad,
+            monto_declarado=getattr(aprobacion, "monto_declarado", None),
         )
 
     async def comprar_pedido_para_cliente(
@@ -360,6 +442,121 @@ class AdminAsistidoFlujo:
         )
 
     # ── Internos sync ───────────────────────────────────────────────────────
+
+    def _cotizar_pase(self, pase_id, cantidad: int) -> CotizacionPaseClienteResultado:
+        """La cotización del pase, contra el catálogo vigente.
+
+        El precio lo resuelve el DUEÑO (`PaseSelector`) y el total lo deriva
+        el servidor con la MISMA expresión con la que `commerce` congela la
+        compra: la cotización y la compra dicen EXACTAMENTE lo mismo.
+        """
+        if cantidad < MIN_PASES_POR_COMPRA or cantidad > MAX_PASES_POR_COMPRA:
+            raise CantidadInvalidaError()
+
+        edicion = self._resolver_edicion()
+        pase = self.pase_selector.obtener_pase(edicion.id, pase_id)
+        if pase is None:
+            raise PaseNoEncontradoError()
+        if pase.estado != EstadoPase.VIGENTE:
+            raise PaseNoDisponibleError()
+
+        precio = self.pase_selector.obtener_precio_vigente(pase.id)
+        if precio is None:
+            # Sin precio vigente NO hay venta: no se inventa un importe de
+            # reserva.
+            raise ConflictError(code="PASE_PRECIO_NO_VIGENTE")
+
+        total = self._calcular_total(precio.monto, cantidad)
+
+        return CotizacionPaseClienteResultado(
+            pase_id=str(pase.id),
+            edicion_id=str(edicion.id),
+            pase_nombre=pase.nombre,
+            cantidad=cantidad,
+            precio_unitario=precio.monto,
+            total=total,
+            moneda=precio.moneda,
+            version=self._version_del_precio(pase.id, precio),
+            estado=ESTADO_COTIZACION_ACTIVA,
+            validez_hasta=timezone.now()
+            + timedelta(hours=VIGENCIA_COTIZACION_HORAS),
+        )
+
+    def _validar_precio_vigente(self, pase_id, precio_version: str) -> None:
+        """El token de precio declarado, o el 409 que lo invalida.
+
+        La comprobación es TOLERANTE a propósito: si el pase no se puede
+        resolver o no tiene precio vigente, el DUEÑO de la compra lo rechaza
+        con SU propio código (`PASE_NO_DISPONIBLE`). Este flujo no inventa un
+        código nuevo para el mismo hecho.
+
+        Sin token (`precio_version` vacío) NO hay comprobación: el precio
+        vigente es el que rige (`RN-C02`).
+        """
+        edicion = self._resolver_edicion()
+        pase = self.pase_selector.obtener_pase(edicion.id, pase_id)
+        if pase is None or pase.estado != EstadoPase.VIGENTE:
+            return
+
+        precio = self.pase_selector.obtener_precio_vigente(pase.id)
+        if precio is None:
+            return
+
+        if self._version_del_precio(pase.id, precio) != precio_version:
+            raise PrecioCambiadoError()
+
+    def _resolver_edicion(self):
+        """La edición del alcance, con el módulo `pases` habilitado.
+
+        Aplica el ORDEN CONGELADO de la resolución (`FR-02` §2.2) sin
+        `edicion_id` explícito: la edición actual y, si procede, la publicada
+        por defecto. Es la MISMA resolución que aplica el dueño del catálogo
+        (`PaseFlujo`, `CompraPaseFlujo`): la cotización y la compra tienen que
+        mirar la MISMA edición.
+        """
+        edicion = self.alcance_edicion.resolver_actual(
+            exigir_publicada=True,
+            permitir_publicada_por_defecto=True,
+        )
+        if not edicion.modulo_habilitado(ModuloLogico.PASES):
+            raise ModuloNoHabilitadoError()
+        return edicion
+
+    @staticmethod
+    def _version_del_precio(pase_id, precio) -> str:
+        """El TOKEN DE CONCURRENCIA del precio.
+
+        Identifica la fila de precio exacta que rigió: si el catálogo se movió
+        (monto, moneda o ventana de vigencia), el token cambia y el alta se
+        rechaza con 409 `PRECIO_CAMBIADO` en vez de cobrar una cantidad que
+        nadie vio.
+        """
+        semilla = (
+            f"{pase_id}|{precio.vigente_desde.isoformat()}|"
+            f"{precio.monto}|{precio.moneda}"
+        )
+        return hashlib.sha256(semilla.encode("utf-8")).hexdigest()[:16]
+
+    @staticmethod
+    def _calcular_total(precio_unitario, cantidad: int) -> Decimal:
+        """El total DERIVADO por el servidor.
+
+        Es la MISMA expresión de `commerce` que congela la compra
+        (`RN-C02`): la regla está escrita una sola vez y la cotización no
+        puede discrepar del total que se va a cobrar.
+        """
+        return calcular_total(
+            [
+                LineaCompraSnapshot(
+                    concepto_tipo=CONCEPTO_LINEA_PASE,
+                    concepto_id="0",
+                    concepto_nombre="",
+                    cantidad=cantidad,
+                    precio_unitario=precio_unitario,
+                    precio_aplicado=precio_unitario,
+                )
+            ]
+        )
 
     @transaction.atomic()
     def _agregar_participante_atomico(self, actor, data, equipo, motivo):

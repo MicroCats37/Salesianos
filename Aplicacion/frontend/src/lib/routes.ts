@@ -21,6 +21,7 @@ export const RUTAS = {
     recuperarCompra: "/recuperar-compra",
     videos: "/videos",
     videoDetalle: (id: string) => `/videos/${id}`,
+    partidos: "/partidos",
   },
   auth: {
     login: "/login",
@@ -32,6 +33,7 @@ export const RUTAS = {
     misInscripcionesDetalle: (id: string) => `/mis-inscripciones/${id}`,
     misCompras: "/mis-compras",
     misComprasDetalle: (id: string) => `/mis-compras/${id}`,
+    misPartidos: "/mis-partidos",
     inscripcion: "/inscripcion",
   },
   administracion: {
@@ -90,6 +92,7 @@ export const RUTAS_PUBLICAS: string[] = [
   RUTAS.publico.tienda,
   RUTAS.publico.recuperarCompra,
   RUTAS.publico.videos,
+  RUTAS.publico.partidos,
   RUTAS.auth.login,
   RUTAS.auth.registro,
 ];

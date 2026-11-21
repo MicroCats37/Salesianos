@@ -35,6 +35,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "channels",
     "ninja_extra",
     "ninja_jwt",
     "ninja_jwt.token_blacklist",
@@ -160,6 +161,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 # ── Contraseñas ──────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [

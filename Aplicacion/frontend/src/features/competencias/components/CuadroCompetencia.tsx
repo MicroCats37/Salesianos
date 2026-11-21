@@ -1,6 +1,7 @@
 import { GitBranch } from "lucide-react";
 import { AdminEmptyState } from "@/features/admin/components";
 import type {
+  Encuentro,
   Ronda,
   VistaPreviaAvance,
   VistaPreviaCorreccion,
@@ -26,10 +27,18 @@ import { TarjetaEncuentro } from "./TarjetaEncuentro";
  */
 export function CuadroCompetencia({
   rondas,
+  destinosPorEncuentro,
   vistaPreviaAvancePorEncuentro,
   vistaPreviaCorreccionPorEncuentro,
 }: {
   rondas: Ronda[];
+  /**
+   * The encounters that can receive the winner of each encounter.
+   *
+   * They travel as a PROP because the bracket is a presentational component:
+   * it never reads the cache by itself.
+   */
+  destinosPorEncuentro?: Record<string, Encuentro[]>;
   vistaPreviaAvancePorEncuentro?: Record<string, VistaPreviaAvance>;
   vistaPreviaCorreccionPorEncuentro?: Record<string, VistaPreviaCorreccion>;
 }) {
@@ -75,6 +84,7 @@ export function CuadroCompetencia({
                   <li key={encuentro.id}>
                     <TarjetaEncuentro
                       encuentro={encuentro}
+                      destinos={destinosPorEncuentro?.[encuentro.id]}
                       vistaPreviaAvance={
                         vistaPreviaAvancePorEncuentro?.[encuentro.id]
                       }

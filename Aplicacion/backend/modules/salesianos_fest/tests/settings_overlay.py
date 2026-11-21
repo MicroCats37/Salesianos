@@ -15,6 +15,15 @@ replica el registro que A0 debe hacer de forma permanente:
 ya están registrados de forma permanente por A0 (reconciliación de FND-01):
 este módulo depende de ellos, no al revés.
 
+**AISLAMIENTO DE UN MÓDULO HERMANO ROTO.** El registro de DI de
+`modules.competencias` se EXCLUYE de este overlay. En el worktree, ese
+módulo tiene un `NameError` en sus DTOs (`competencias_results.py` referencia
+un resultado que no existe) y `ninja_extra` importa TODOS los módulos de DI
+al arrancar Django: con él, NINGUNA prueba del proyecto arranca. Este módulo
+no depende de `competencias` en absoluto (ni en dominio, ni en rutas, ni en
+fixtures), así que excluirlo es AISLAMIENTO y no una venta: el defecto sigue
+sin tocarse y hay que arreglarlo en su propio lote.
+
 **Uso** (workdir `Aplicacion/backend`):
 
     $env:DJANGO_SETTINGS_MODULE = "modules.salesianos_fest.tests.settings_overlay"
@@ -49,7 +58,11 @@ if "modules.salesianos_fest" not in INSTALLED_APPS:  # noqa: F405
     INSTALLED_APPS = [*INSTALLED_APPS, "modules.salesianos_fest"]  # noqa: F405
 
 # ── Wiring de DI ───────────────────────────────────────────────────────────
-_injector_modules = list(NINJA_EXTRA.get("INJECTOR_MODULES", []))  # noqa: F405
+_injector_modules = [
+    modulo
+    for modulo in NINJA_EXTRA.get("INJECTOR_MODULES", [])  # noqa: F405
+    if not modulo.startswith("modules.competencias.")
+]
 if "modules.salesianos_fest.di.SalesianosFestModule" not in _injector_modules:
     _injector_modules.append("modules.salesianos_fest.di.SalesianosFestModule")
 NINJA_EXTRA = {

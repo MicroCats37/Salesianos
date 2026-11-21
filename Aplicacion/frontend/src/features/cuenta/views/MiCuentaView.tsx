@@ -1,4 +1,10 @@
-import { ArrowRight, ClipboardList, ShoppingBag, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ClipboardList,
+  ShoppingBag,
+  Sparkles,
+  Trophy,
+} from "lucide-react";
 import Link from "next/link";
 import { RouteEmptyState } from "@/components/shell/RouteEmptyState";
 import {
@@ -190,6 +196,36 @@ export function MiCuentaView({
                       <span className="sr-only"> compras</span>
                     </span>
                   ) : null}
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-primary transition-colors duration-(--motion-duration-fast) group-hover/item:bg-accent/10 group-hover/item:text-accent">
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </span>
+                </ItemActions>
+              </Link>
+            </Item>
+
+            <Item
+              variant="outline"
+              size="sm"
+              asChild
+              className="min-h-40 rounded-[var(--radius-lg)] border-border bg-background p-5 transition-colors duration-(--motion-duration-fast) hover:border-accent"
+            >
+              <Link href={RUTAS.cuenta.misPartidos}>
+                <ItemMedia
+                  variant="icon"
+                  className="size-11 rounded-[var(--radius-md)] bg-accent text-accent-foreground"
+                >
+                  <Trophy className="size-5" aria-hidden="true" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle className="text-base font-semibold">
+                    Mis partidos
+                  </ItemTitle>
+                  <ItemDescription className="max-w-sm">
+                    Los partidos de tus equipos: los que están en juego, los que
+                    vienen y los últimos resultados.
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-primary transition-colors duration-(--motion-duration-fast) group-hover/item:bg-accent/10 group-hover/item:text-accent">
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </span>

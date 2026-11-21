@@ -94,14 +94,6 @@ export const ADMIN_SECCIONES: AdminSeccion[] = [
     capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
   },
   {
-    id: "participantes",
-    title: "Participantes",
-    icon: Users,
-    href: "/administracion/participantes",
-    description: "Personas y participaciones",
-    capacidad: ADMIN_CAPACIDADES.ADMIN_VER,
-  },
-  {
     id: "acreditaciones",
     title: "Acreditaciones",
     icon: QrCode,

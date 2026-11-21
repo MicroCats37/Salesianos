@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,11 +15,9 @@ import type {
   VistaPreviaAvance,
   VistaPreviaCorreccion,
 } from "../types/competencia.types";
-import {
-  estadoEncuentro,
-  etiquetaAccion,
-} from "../utils/competencias.estados.utils";
+import { estadoEncuentro } from "../utils/competencias.estados.utils";
 import { formatearInstante } from "../utils/competencias.fecha.utils";
+import { AccionesEncuentro } from "./AccionesEncuentro";
 import { ChipBloqueo, ChipEstadoCompetencia } from "./ChipEstadoCompetencia";
 import { VistaPreviaAvancePanel } from "./VistaPreviaAvancePanel";
 import { VistaPreviaCorreccionPanel } from "./VistaPreviaCorreccionPanel";
@@ -38,13 +36,23 @@ import { VistaPreviaCorreccionPanel } from "./VistaPreviaCorreccionPanel";
  * ships an English "Close" label, so its own close button is disabled and the
  * panel carries a Spanish one.
  *
- * It NEVER writes. The previews it shows say so, and the confirm is a
+ * It is the OPERATOR SURFACE of an encounter: the actions it offers are the
+ * ones the server advertises in `acciones` (`AccionesEncuentro`), and every
+ * command carries the `expected_version` that the panel is drawing. The
+ * previews it shows say that they do not write, and the confirm is a
  * different action of the backend (`GOV-02-RB-05b`).
  */
 
 export interface PanelDetalleEncuentroProps {
   /** The encounter, in its canonical shape. */
   encuentro: Encuentro;
+  /**
+   * The encounters that can receive the winner of THIS encounter.
+   *
+   * They travel as a PROP: the panel is a presentational component and it
+   * never reads the cache by itself.
+   */
+  destinos?: readonly Encuentro[];
   /** The preview of the advance, when the backend published it. */
   vistaPreviaAvance?: VistaPreviaAvance;
   /** The preview of the correction, when the backend published it. */
@@ -83,6 +91,7 @@ function ordenParticipante(
 
 export function PanelDetalleEncuentro({
   encuentro,
+  destinos,
   vistaPreviaAvance,
   vistaPreviaCorreccion,
   conflicto,
@@ -91,6 +100,17 @@ export function PanelDetalleEncuentro({
 }: PanelDetalleEncuentroProps) {
   const tituloId = useId();
   const descripcionId = useId();
+
+  /**
+   * The conflict that the operator's own command produced.
+   *
+   * The panel already knows how to explain a conflict (`conflicto`); this is
+   * the channel that the OPERATOR SURFACE uses when the server rejects a
+   * write because the version changed (`RB-05` ADM-11).
+   */
+  const [conflictoInterno, setConflictoInterno] = useState<string | null>(null);
+  const conflictoVisible =
+    conflicto ?? (conflictoInterno ? { mensaje: conflictoInterno } : undefined);
 
   const equipo1 = nombreParticipante(encuentro, 0);
   const equipo2 = nombreParticipante(encuentro, 1);
@@ -119,7 +139,7 @@ export function PanelDetalleEncuentro({
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 pb-4">
-          {conflicto ? (
+          {conflictoVisible ? (
             <div
               role="alert"
               className="rounded-[var(--radius-md)] border border-destructive/45 bg-destructive/10 p-3"
@@ -128,8 +148,8 @@ export function PanelDetalleEncuentro({
                 Los datos cambiaron
               </p>
               <p className="text-caption text-muted-foreground">
-                {conflicto.mensaje} Actualiza y revisa antes de guardar: nada se
-                ha escrito.
+                {conflictoVisible.mensaje} Actualiza y revisa antes de guardar:
+                nada se ha escrito.
               </p>
             </div>
           ) : null}
@@ -220,27 +240,11 @@ export function PanelDetalleEncuentro({
             )}
           </div>
 
-          <div className="flex flex-col gap-1">
-            <p className="text-caption text-muted-foreground">
-              Acciones que admite el servidor en este estado
-            </p>
-            {encuentro.acciones.length > 0 ? (
-              <ul className="flex flex-wrap gap-2">
-                {encuentro.acciones.map((accion) => (
-                  <li
-                    key={accion}
-                    className="rounded-full border border-border bg-surface-recessed px-2.5 py-1 text-xs text-foreground"
-                  >
-                    {etiquetaAccion(accion)}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                En este estado el servidor no admite cambios.
-              </p>
-            )}
-          </div>
+          <AccionesEncuentro
+            encuentro={encuentro}
+            destinos={destinos}
+            onConflicto={setConflictoInterno}
+          />
 
           {vistaPreviaAvance ? (
             <VistaPreviaAvancePanel vistaPrevia={vistaPreviaAvance} />

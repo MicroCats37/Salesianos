@@ -5,6 +5,7 @@ Change: `admin-client-purchases-and-participants`
 | Ruta | Método | Wrapper |
 |---|---|---|
 | `/administracion/equipos/{equipo_id}/participantes` | POST | `ParticipanteAsistidoOut` |
+| `/administracion/pases/cotizacion` | POST | `CotizacionPaseClienteOut` |
 | `/administracion/pases/compras-cliente` | POST | `CompraAsistidaOut` |
 | `/administracion/marketplace/pedidos-cliente` | POST | `CompraAsistidaOut` |
 
@@ -32,6 +33,7 @@ El alta de participante, en cambio, exige además `admin.equipos.escribir`,
 porque escribe en el dominio de los equipos.
 """
 
+from decimal import Decimal
 from uuid import UUID
 
 from injector import inject
@@ -45,6 +47,7 @@ from modules.administracion.domain.schemas.admin_asistido_schemas import (
     ClienteAsistidoData,
     ComprarPaseParaClienteData,
     ComprarPedidoParaClienteData,
+    CotizarPaseParaClienteData,
     EvidenciaPagoAsistidoData,
     ItemPedidoAsistidoData,
 )
@@ -59,6 +62,8 @@ from modules.administracion.presentation.schemas.admin_asistido_schemas import (
     ComprarPaseClienteIn,
     ComprarPedidoClienteIn,
     CompraAsistidaOut,
+    CotizacionPaseClienteOut,
+    CotizarPaseClienteIn,
     ParticipanteAsistidoOut,
 )
 
@@ -124,6 +129,40 @@ class AdminAsistidoController:
     # ── Compras asistidas ───────────────────────────────────────────────────
 
     @route.post(
+        "/pases/cotizacion",
+        response={200: ApiResponse[CotizacionPaseClienteOut]},
+        auth=JWTAuth(),
+        permissions=[RequireAdminVer],
+        summary="Cotiza un lote de pases para un cliente.",
+    )
+    async def cotizar_pase_para_cliente(
+        self,
+        request,
+        payload: CotizarPaseClienteIn,
+    ):
+        """Route: POST /api/administracion/pases/cotizacion
+
+        COTIZA un lote de pases: el precio unitario, el total y la moneda los
+        deriva el SERVIDOR contra el catálogo vigente. Es una LECTURA: no
+        persiste nada y el navegador no calcula ningún importe (`RN-C02`).
+
+        El `version` que devuelve es el token de concurrencia del precio: si
+        el catálogo se movió desde la cotización, el alta se rechaza con 409
+        `PRECIO_CAMBIADO`.
+        """
+        resultado = await self.orchestrator.cotizar_pase_para_cliente(
+            CotizarPaseParaClienteData(
+                pase_id=payload.pase_id,
+                cantidad=payload.cantidad,
+            ),
+        )
+
+        return success_response(
+            AdminAsistidoPresenter.present_cotizacion(resultado),
+            message="Cotización calculada correctamente.",
+        )
+
+    @route.post(
         "/pases/compras-cliente",
         response={201: ApiResponse[CompraAsistidaOut]},
         auth=JWTAuth(),
@@ -145,6 +184,11 @@ class AdminAsistidoController:
         el administrador es el ACTOR de la operación, no el dueño de la
         compra. El precio lo congela el servidor contra el catálogo vigente
         y el pago lo liquida el módulo DUEÑO del pago.
+
+        El `monto_declarado` de la evidencia es INFORMATIVO y AUDITADO: se
+        guarda junto a la evidencia y NO altera el total canónico, ni el
+        estado del pago, ni el de la compra. La MONEDA es la de la orden: el
+        navegador nunca la envía.
         """
         resultado = await self.orchestrator.comprar_pase_para_cliente(
             request.auth,
@@ -152,7 +196,7 @@ class AdminAsistidoController:
                 pase_id=payload.pase_id,
                 cantidad=payload.cantidad,
                 cliente=_cliente(payload.cliente),
-                evidencia=_evidencia(payload.evidencia),
+                evidencia=_evidencia_pase(payload.evidencia),
             ),
         )
 
@@ -219,11 +263,39 @@ def _cliente(payload) -> ClienteAsistidoData:
 
 
 def _evidencia(payload) -> EvidenciaPagoAsistidoData:
-    """El DTO interno de la evidencia, desde su schema HTTP."""
+    """El DTO interno de la evidencia, desde su schema HTTP.
+
+    Es la evidencia del MARKETPLACE: canal, referencia y motivo. El importe
+    declarado y el token de precio son exclusivos del camino de pases (`R6`).
+    """
     return EvidenciaPagoAsistidoData(
         canal=payload.canal,
         referencia=payload.referencia,
         motivo=payload.motivo,
+    )
+
+
+def _evidencia_pase(payload) -> EvidenciaPagoAsistidoData:
+    """El DTO interno de la evidencia de una COMPRA DE PASES.
+
+    Además de la evidencia general, puede declarar el IMPORTE RECIBIDO
+    (`monto_declarado`) y el TOKEN DE PRECIO (`precio_version`).
+
+    El importe declarado se convierte a `Decimal` AQUÍ, en el borde HTTP: el
+    dominio lo recibe como número exacto, nunca como texto ni como `float`.
+    Su MONEDA no viaja: es la de la orden (`R2`).
+    """
+    monto_declarado = (
+        Decimal(payload.monto_declarado)
+        if payload.monto_declarado is not None
+        else None
+    )
+    return EvidenciaPagoAsistidoData(
+        canal=payload.canal,
+        referencia=payload.referencia,
+        motivo=payload.motivo,
+        monto_declarado=monto_declarado,
+        precio_version=payload.precio_version,
     )
 
 

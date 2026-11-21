@@ -4,3 +4,5 @@ export { MisComprasRuta } from "./MisComprasRuta";
 export { MisComprasView } from "./MisComprasView";
 export { MisInscripcionDetalleView } from "./MisInscripcionDetalleView";
 export { MisInscripcionesView } from "./MisInscripcionesView";
+export { MisPartidosRuta } from "./MisPartidosRuta";
+export { MisPartidosView } from "./MisPartidosView";

@@ -30,6 +30,7 @@ from modules.salesianos_fest.domain.ports import (
     ITitularidadService,
 )
 from modules.salesianos_fest.domain.selectors.catalogo_selector import CatalogoSelector
+from modules.salesianos_fest.domain.selectors.cortesia_selector import CortesiaSelector
 from modules.salesianos_fest.domain.selectors.inscripcion_selector import (
     InscripcionSelector,
 )
@@ -102,6 +103,7 @@ from modules.salesianos_fest.domain.services.orchestrators.pool_orchestrator imp
 from modules.salesianos_fest.infrastructure.services import (
     AlcanceEdicionAdapter,
     CorreccionGeneroPersonaAdapter,
+    EmisorCredencialService,
     ObtencionPersonaAdapter,
     ResolucionPersonaAdapter,
     TitularidadAdapter,
@@ -194,6 +196,7 @@ class SalesianosFestModule(Module):
         )
         # ── DOM-03 · PASES, BENEFICIARIOS Y CORTESÍA ──────────────────────
         binder.bind(PaseSelector, to=PaseSelector, scope=singleton)
+        binder.bind(CortesiaSelector, to=CortesiaSelector, scope=singleton)
         binder.bind(PaseCoreService, to=PaseCoreService, scope=singleton)
         binder.bind(
             BeneficiarioCoreService,
@@ -201,6 +204,11 @@ class SalesianosFestModule(Module):
             scope=singleton,
         )
         binder.bind(CortesiaCoreService, to=CortesiaCoreService, scope=singleton)
+        binder.bind(
+            EmisorCredencialService,
+            to=EmisorCredencialService,
+            scope=singleton,
+        )
         binder.bind(PaseAccesoService, to=PaseAccesoService, scope=singleton)
         binder.bind(
             IObtensionPersonaService,

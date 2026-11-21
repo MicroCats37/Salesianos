@@ -397,6 +397,14 @@ class AdminCortesiaListItemOut(BaseSchema):
     """Una fila del listado administrativo de cortesías."""
 
     id: UUID = Field(..., description="Acta de la cortesía.")
+    derecho_id: UUID | None = Field(
+        default=None,
+        description=(
+            "El DERECHO de entrada que creó la cortesía. La credencial de "
+            "puerta se emite contra él. Es nulo sólo si el acta no tiene "
+            "derecho: un identificador ausente nunca se inventa."
+        ),
+    )
     pase_nombre: str = Field(..., description="Nombre del pase otorgado.")
     edicion_nombre: str = Field(..., description="Nombre de la edición.")
     persona_nombres: str = Field(..., description="Nombres del beneficiario.")
@@ -463,6 +471,14 @@ class AdminCortesiaOut(BaseSchema):
     """Salida del otorgamiento de una cortesía."""
 
     id: UUID = Field(..., description="Acta de la cortesía.")
+    derecho_id: UUID = Field(
+        ...,
+        description=(
+            "El DERECHO de entrada que creó la cortesía. La credencial de "
+            "puerta se emite contra él, y nace con el acta en la misma "
+            "transacción."
+        ),
+    )
     edicion_id: UUID = Field(..., description="Edición del alcance.")
     edicion_nombre: str = Field(..., description="Nombre de la edición.")
     pase_id: UUID = Field(..., description="Pase otorgado.")
@@ -493,9 +509,69 @@ class AdminCortesiaOut(BaseSchema):
     )
 
 
+class RevocarCortesiaIn(BaseSchema):
+    """El payload de la revocación de una cortesía.
+
+    El MOTIVO es obligatorio: sin motivo no hay auditoría (`RN-P05`).
+    """
+
+    motivo: str = Field(
+        ...,
+        max_length=500,
+        description="Motivo de la revocación. Obligatorio.",
+    )
+
+
+class AdminCortesiaRevocadaOut(BaseSchema):
+    """Salida de la revocación de una cortesía.
+
+    `ya_revocado` distingue la revocación EFECTIVA de la REPETICIÓN: la
+    segunda no es un error, devuelve el mismo estado final (`FR-05` §2.3).
+    """
+
+    id: UUID = Field(..., description="Acta de la cortesía.")
+    edicion_id: UUID = Field(..., description="Edición del alcance.")
+    edicion_nombre: str = Field(..., description="Nombre de la edición.")
+    pase_id: UUID = Field(..., description="Pase otorgado.")
+    pase_nombre: str = Field(..., description="Nombre del pase.")
+    persona_id: UUID = Field(..., description="Persona que recibió la cortesía.")
+    persona_nombres: str = Field(..., description="Nombres de la persona.")
+    persona_tipo_documento: str = Field(
+        ...,
+        max_length=3,
+        description="Tipo de documento de la persona.",
+    )
+    persona_numero_documento: str = Field(
+        ...,
+        max_length=20,
+        description="Número de documento de la persona.",
+    )
+    estado: str = Field(..., description="Estado de la cortesía.")
+    motivo: str = Field(..., description="Motivo del otorgamiento.")
+    motivo_revocacion: str = Field(
+        default="",
+        description="Motivo de la revocación.",
+    )
+    actor_usuario_id: UUID | None = Field(
+        default=None,
+        description="Cuenta que otorgó la cortesía.",
+    )
+    actor_nombres: str = Field(default="", description="Nombres de quien otorgó.")
+    concedido_en: datetime = Field(..., description="Momento del otorgamiento.")
+    revocado_en: datetime = Field(..., description="Momento de la revocación.")
+    ya_revocado: bool = Field(
+        ...,
+        description=(
+            "Si la cortesía YA estaba revocada: la operación es la REPETICIÓN "
+            "idempotente, no un error."
+        ),
+    )
+
+
 __all__ = [
     "AdminCortesiaListItemOut",
     "AdminCortesiaOut",
+    "AdminCortesiaRevocadaOut",
     "AdminPaseListItemOut",
     "AsignarBeneficiarioIn",
     "CompraPaseCreadaOut",
@@ -512,4 +588,5 @@ __all__ = [
     "PaseIdentidadOut",
     "PaseOut",
     "PrecioPaseOut",
+    "RevocarCortesiaIn",
 ]

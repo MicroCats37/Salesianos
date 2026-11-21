@@ -41,7 +41,20 @@ class ConfirmarTicketData(BaseModel):
     edicion_id: str | None = Field(default=None)
 
 
+class EmitirTicketData(BaseModel):
+    """La petición de la emisión de una credencial.
+
+    `derecho_id` es el ÚNICO dato que viaja: el navegador declara QUIÉN tiene
+    el derecho y NUNCA QUÉ credencial corresponde (`RN-U04`). El tipo y la
+    operación los deriva el módulo dueño del derecho, y el CÓDIGO lo genera
+    el servidor.
+    """
+
+    derecho_id: str = Field(..., min_length=1, max_length=64)
+
+
 __all__ = [
     "ConfirmarTicketData",
+    "EmitirTicketData",
     "PreviewTicketData",
 ]

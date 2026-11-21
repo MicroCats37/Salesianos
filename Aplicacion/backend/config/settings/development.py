@@ -14,6 +14,10 @@ from .base import *  # noqa: E402,F403,F405
 
 DEBUG = True
 
+# A single local process can exercise the public socket without Redis. Docker
+# and production use channels_redis so events cross process boundaries.
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+
 
 # development usa hosts locales; base define fallback ["*"]
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']

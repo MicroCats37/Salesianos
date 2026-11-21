@@ -21,6 +21,14 @@ import { relanzarSiCancelacion } from "./cancelacion";
 type ClassicVariables<TPayload> = {
   id: number | string;
   data: TPayload;
+  /**
+   * The extra identifiers of the path.
+   *
+   * A route that carries TWO identifiers (`{id}/{encuentro_id}`) keeps the
+   * second one here: it travels in the URL and NEVER in the payload. The
+   * variable is IGNORED by the body: only `data` is sent.
+   */
+  params?: Record<string, string>;
 };
 
 /** Direct payload shape (like useApiCreate): variable IS the payload. */

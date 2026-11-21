@@ -39,6 +39,7 @@ Cuando la identidad YA existe, el servidor la REUTILIZA y **no reescribe**
 sus nombres: la identidad del padrón es la autoridad.
 """
 
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -103,6 +104,19 @@ class EvidenciaPagoAsistidoData(BaseModel):
     (`AprobarPagoManualIn`): un canal, una referencia y un motivo. La
     liquidación la aplica el DUEÑO (`AprobarPagoManualFlujo`): este módulo
     no reimplementa ninguna transición de estado del pago.
+
+    ## Lo que viaja SOLO en el camino de pases
+
+    `monto_declarado` es el importe que el administrador DECLARA haber
+    recibido. Es INFORMATIVO y AUDITADO: NO es el total canónico, no altera
+    el estado del pago ni el de la compra, y no aparece en ningún agregado de
+    ingreso. `None` significa "no declarado".
+
+    `precio_version` es el token de concurrencia del precio cotizado. Si
+    viaja y el catálogo se movió, el comando se rechaza con 409
+    `PRECIO_CAMBIADO` y no se crea nada.
+
+    El Marketplace los deja en `None`: su contrato HTTP no los expone (`R6`).
     """
 
     canal: str = Field(..., max_length=32, description="Canal del pago externo.")
@@ -112,6 +126,19 @@ class EvidenciaPagoAsistidoData(BaseModel):
         description="Referencia, recibo u operación que prueba el pago.",
     )
     motivo: str = Field(..., max_length=1000, description="Motivo auditado.")
+    monto_declarado: Decimal | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Importe declarado (informativo y auditado). Null significa 'no "
+            "declarado'."
+        ),
+    )
+    precio_version: str | None = Field(
+        default=None,
+        max_length=64,
+        description="Token de concurrencia del precio cotizado.",
+    )
 
 
 class AsignarParticipanteEquipoData(IdentidadAsistidaData):
@@ -146,6 +173,18 @@ class ComprarPaseParaClienteData(BaseModel):
         ...,
         description="Evidencia del pago externo que se registra.",
     )
+
+
+class CotizarPaseParaClienteData(BaseModel):
+    """La intención de COTIZAR un lote de pases para un cliente.
+
+    Es una LECTURA: no declara ningún importe y no persiste nada. El precio
+    unitario y el total los deriva el servidor contra el catálogo vigente
+    (`RN-C02`).
+    """
+
+    pase_id: UUID = Field(..., description="Pase del catálogo que se cotiza.")
+    cantidad: int = Field(..., ge=1, description="Número de pases que se cotizan.")
 
 
 class ItemPedidoAsistidoData(BaseModel):
@@ -183,6 +222,7 @@ __all__ = [
     "ClienteAsistidoData",
     "ComprarPaseParaClienteData",
     "ComprarPedidoParaClienteData",
+    "CotizarPaseParaClienteData",
     "EvidenciaPagoAsistidoData",
     "IdentidadAsistidaData",
     "ItemPedidoAsistidoData",

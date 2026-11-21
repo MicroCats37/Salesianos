@@ -19,14 +19,18 @@ from injector import inject
 from modules.salesianos_fest.domain.exceptions import ActorRequeridoError
 from modules.salesianos_fest.domain.results.pase_result import (
     AdminCortesiaListaResult,
+    AdminCortesiaRevocadaResult,
     CortesiaPaseResult,
 )
-from modules.salesianos_fest.domain.schemas.pase_schemas import OtorgarCortesiaData
+from modules.salesianos_fest.domain.schemas.pase_schemas import (
+    OtorgarCortesiaData,
+    RevocarCortesiaData,
+)
 from modules.salesianos_fest.domain.services.flujos.cortesia_flujo import CortesiaFlujo
 
 
 class CortesiaOrchestrator:
-    """Fachada del otorgamiento de cortesías."""
+    """Fachada del otorgamiento y la revocación de cortesías."""
 
     @inject
     def __init__(self, flujo: CortesiaFlujo):
@@ -64,6 +68,23 @@ class CortesiaOrchestrator:
             page,
             page_size,
         )
+
+    async def revocar_cortesia(
+        self,
+        actor,
+        data: RevocarCortesiaData,
+    ) -> AdminCortesiaRevocadaResult:
+        """Revoca una cortesía con motivo y con actor.
+
+        Sin cuenta no hay revocación: el ACTOR es la auditoría, y la auditoría
+        exige una cuenta (`RN-P05`).
+
+        Es IDEMPOTENTE (`FR-05` §2.3): la repetición devuelve el mismo estado
+        final con `ya_revocado=True`, no un error.
+        """
+        if actor is None or not getattr(actor, "is_authenticated", False):
+            raise ActorRequeridoError()
+        return await self.flujo.revocar_cortesia(data, actor)
 
 
 __all__ = ["CortesiaOrchestrator"]

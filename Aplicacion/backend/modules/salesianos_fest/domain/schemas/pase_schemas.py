@@ -194,9 +194,33 @@ class OtorgarCortesiaData(BaseModel):
     )
 
 
+class RevocarCortesiaData(BaseModel):
+    """La intención de revocar una cortesía.
+
+    El MOTIVO es obligatorio: sin motivo no hay auditoría (`RN-P05`).
+
+    La revocación es IDEMPOTENTE (`FR-05` §2.3): repetirla NO es un error,
+    devuelve el estado final con `ya_revocado=True`.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    cortesia_id: str = Field(
+        ...,
+        max_length=64,
+        description="Acta de la cortesía que se revoca.",
+    )
+    motivo: str = Field(
+        ...,
+        max_length=500,
+        description="Motivo de la revocación. Obligatorio.",
+    )
+
+
 __all__ = [
     "AsignarBeneficiarioData",
     "ComprarPaseData",
     "OtorgarCortesiaData",
     "RevocarBeneficiarioData",
+    "RevocarCortesiaData",
 ]

@@ -33,10 +33,12 @@ from injector import inject
 from modules.salesianos_fest.domain.constants import (
     MAX_LEN_MOTIVO_CORTESIA,
     MIN_LEN_MOTIVO_CORTESIA,
+    EstadoDerechoPase,
 )
 from modules.salesianos_fest.domain.exceptions import (
     ActorRequeridoError,
     CortesiaMotivoInvalidoError,
+    CortesiaNoEncontradaError,
     PaseDuplicadoError,
     PaseNoDisponibleError,
     PersonaNoEncontradaError,
@@ -48,9 +50,14 @@ from modules.salesianos_fest.domain.ports import (
 from modules.salesianos_fest.domain.results.pase_result import (
     AdminCortesiaListItemResult,
     AdminCortesiaListaResult,
+    AdminCortesiaRevocadaResult,
     CortesiaPaseResult,
 )
-from modules.salesianos_fest.domain.schemas.pase_schemas import OtorgarCortesiaData
+from modules.salesianos_fest.domain.schemas.pase_schemas import (
+    OtorgarCortesiaData,
+    RevocarCortesiaData,
+)
+from modules.salesianos_fest.domain.selectors.cortesia_selector import CortesiaSelector
 from modules.salesianos_fest.domain.selectors.pase_selector import PaseSelector
 from modules.salesianos_fest.domain.services.core.cortesia_core_service import (
     CortesiaCoreService,
@@ -58,7 +65,7 @@ from modules.salesianos_fest.domain.services.core.cortesia_core_service import (
 
 
 class CortesiaFlujo:
-    """El otorgamiento de una cortesía."""
+    """El otorgamiento y la revocación de una cortesía."""
 
     @inject
     def __init__(
@@ -67,11 +74,13 @@ class CortesiaFlujo:
         cortesia_core: CortesiaCoreService,
         resolucion_persona: IResolucionPersonaService,
         obtencion_persona: IObtensionPersonaService,
+        cortesia_selector: CortesiaSelector,
     ):
         self.pase_selector = pase_selector
         self.cortesia_core = cortesia_core
         self.resolucion_persona = resolucion_persona
         self.obtencion_persona = obtencion_persona
+        self.cortesia_selector = cortesia_selector
 
     async def otorgar_cortesia(
         self,
@@ -99,7 +108,7 @@ class CortesiaFlujo:
         actor_usuario_id, actor_persona_id = await sync_to_async(self._actor_ids)(actor)
 
         try:
-            cortesia, _derecho = await sync_to_async(self._crear_sync)(
+            cortesia, derecho = await sync_to_async(self._crear_sync)(
                 pase,
                 persona,
                 motivo,
@@ -114,13 +123,18 @@ class CortesiaFlujo:
                 raise PaseDuplicadoError() from error
             raise
 
-        return await sync_to_async(self._construir_resultado)(cortesia)
+        return await sync_to_async(self._construir_resultado)(cortesia, derecho)
 
     @staticmethod
-    def _construir_resultado(cortesia) -> CortesiaPaseResult:
-        """Proyecta las relaciones ORM antes de volver al contexto async."""
+    def _construir_resultado(cortesia, derecho) -> CortesiaPaseResult:
+        """Proyecta las relaciones ORM antes de volver al contexto async.
+
+        El `derecho_id` es el del DERECHO que se acaba de crear en la misma
+        transacción que el acta: la credencial de puerta se emite contra él.
+        """
         return CortesiaPaseResult(
             id=str(cortesia.id),
+            derecho_id=str(derecho.id),
             edicion_id=str(cortesia.edicion_id),
             edicion_nombre=cortesia.edicion.nombre,
             pase_id=str(cortesia.pase_id),
@@ -185,6 +199,7 @@ class CortesiaFlujo:
             items=[
                 AdminCortesiaListItemResult(
                     id=str(cortesia.id),
+                    derecho_id=self._derecho_id_de(cortesia),
                     pase_nombre=cortesia.pase.nombre,
                     edicion_nombre=cortesia.edicion.nombre,
                     persona_nombres=cortesia.persona.nombres,
@@ -206,6 +221,37 @@ class CortesiaFlujo:
             page_size=page_size,
             total_pages=(total + page_size - 1) // page_size if total else 0,
         )
+
+    @staticmethod
+    def _derecho_id_de(cortesia) -> str | None:
+        """El identificador del DERECHO de una cortesía, o `None`.
+
+        La credencial de puerta se emite contra el DERECHO, no contra el
+        acta: el listado tiene que publicar su identificador para que la
+        acción exista de verdad.
+
+        La elección es DETERMINISTA: primero el derecho ACTIVO; si la cortesía
+        fue revocada y ya no queda ninguno activo, el más reciente. Un acta
+        SIN derecho (corrupción histórica) publica `None`: el identificador
+        ausente NUNCA se inventa.
+
+        Los derechos vienen PREFETCHEADOS por el selector: aquí no se consulta
+        la base de datos, y el listado NO hace una consulta por fila.
+        """
+        derechos = list(cortesia.derechos.all())
+        if not derechos:
+            return None
+
+        activo = next(
+            (
+                derecho
+                for derecho in derechos
+                if derecho.estado == EstadoDerechoPase.ACTIVO
+            ),
+            None,
+        )
+        elegido = activo or derechos[0]
+        return str(elegido.id)
 
     @staticmethod
     def _validar_motivo(motivo: str) -> str:
@@ -282,6 +328,97 @@ class CortesiaFlujo:
         """Si el `IntegrityError` es la restricción de no duplicar el derecho."""
         texto = str(error).lower()
         return "unique" in texto and "pase_beneficiario" in texto
+
+    # ── La revocación ────────────────────────────────────────────────────────
+
+    async def revocar_cortesia(
+        self,
+        data: RevocarCortesiaData,
+        actor=None,
+    ) -> AdminCortesiaRevocadaResult:
+        """Revoca la cortesía: el acta y su derecho quedan `REVOCADOS`.
+
+        Es IDEMPOTENTE (`FR-05` §2.3): revocar dos veces NO es un error; la
+        segunda devuelve el MISMO estado final con `ya_revocado=True`.
+
+        **NO TOCA HECHOS FINANCIEROS** (`RN-P05`): la cortesía no los tiene y
+        la revocación tampoco los crea. `cantidad_consumida` NO baja y los
+        consumos ya realizados quedan (`RN-P08`).
+
+        Returns:
+            El acta revocada y si ya lo estaba.
+
+        Raises:
+            ActorRequeridoError: la revocación requiere una cuenta auditada.
+            CortesiaMotivoInvalidoError: el motivo falta o es demasiado
+                corto. Sin motivo no hay auditoría (`RN-P05`).
+            CortesiaNoEncontradaError: el acta no existe.
+        """
+        if actor is None or not getattr(actor, "is_authenticated", False):
+            raise ActorRequeridoError()
+
+        motivo = self._validar_motivo(data.motivo)
+        actor_usuario_id, actor_persona_id = await sync_to_async(self._actor_ids)(actor)
+
+        return await sync_to_async(self._revocar_sync)(
+            data.cortesia_id,
+            motivo,
+            actor_usuario_id,
+            actor_persona_id,
+        )
+
+    @transaction.atomic()
+    def _revocar_sync(
+        self,
+        cortesia_id,
+        motivo: str,
+        actor_usuario_id,
+        actor_persona_id,
+    ) -> AdminCortesiaRevocadaResult:
+        """La revocación del acta y de su derecho, en una sola transacción."""
+        cortesia = self.cortesia_selector.obtener_cortesia(cortesia_id)
+        if cortesia is None:
+            raise CortesiaNoEncontradaError()
+
+        cortesia, ya_revocado = self.cortesia_core.revocar(
+            cortesia=cortesia,
+            actor_usuario_id=actor_usuario_id,
+            actor_persona_id=actor_persona_id,
+            motivo=motivo,
+        )
+        return self._construir_resultado_revocado(cortesia, ya_revocado)
+
+    @staticmethod
+    def _construir_resultado_revocado(
+        cortesia,
+        ya_revocado: bool,
+    ) -> AdminCortesiaRevocadaResult:
+        """Proyecta el acta revocada al DTO de salida."""
+        return AdminCortesiaRevocadaResult(
+            id=str(cortesia.id),
+            edicion_id=str(cortesia.edicion_id),
+            edicion_nombre=cortesia.edicion.nombre,
+            pase_id=str(cortesia.pase_id),
+            pase_nombre=cortesia.pase.nombre,
+            persona_id=str(cortesia.persona_id),
+            persona_nombres=cortesia.persona.nombres,
+            persona_tipo_documento=cortesia.persona.tipo_documento,
+            persona_numero_documento=cortesia.persona.numero_documento,
+            estado=cortesia.estado,
+            motivo=cortesia.motivo,
+            motivo_revocacion=cortesia.motivo_revocacion or "",
+            actor_usuario_id=(
+                str(cortesia.actor_usuario_id)
+                if cortesia.actor_usuario_id
+                else None
+            ),
+            actor_nombres=(
+                cortesia.actor_persona.nombres if cortesia.actor_persona else ""
+            ),
+            concedido_en=cortesia.concedido_en,
+            revocado_en=cortesia.revocado_en,
+            ya_revocado=ya_revocado,
+        )
 
 
 __all__ = ["CortesiaFlujo"]

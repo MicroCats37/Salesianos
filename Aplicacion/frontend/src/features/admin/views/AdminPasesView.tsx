@@ -10,6 +10,7 @@ import {
   AdminPageHeader,
   AdminPanel,
 } from "@/features/admin/components";
+import { GestorCortesiasPase } from "@/features/admin/pases/components/GestorCortesiasPase";
 import { useCatalogoPases } from "@/features/pases/hooks/useCatalogoPases";
 
 /**
@@ -125,6 +126,8 @@ export function AdminPasesView() {
           />
         ) : null}
       </AdminPanel>
+
+      <GestorCortesiasPase />
 
       {paseParaCliente ? (
         <ModalCompraParaCliente

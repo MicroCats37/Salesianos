@@ -1,19 +1,37 @@
 "use client";
 
-import { apiQueryOptions, useApiCreate, useApiQuery } from "@/hooks";
+import type { QueryKey } from "@tanstack/react-query";
+import {
+  apiQueryOptions,
+  useApiCreate,
+  useApiQuery,
+  useApiUpdate,
+} from "@/hooks";
 import { datosDelEnvelope } from "@/shared/utils/api-envelope";
 import { gcTimeFor, STALE_TIME } from "@/shared/utils/query-options";
+import { claveEncuentrosPublicos } from "../publico/utils/encuentro-publico.claves.utils";
 import type {
+  AvanceConfirmar,
   CompetenciaCrear,
+  CorreccionAplicar,
+  CorreccionPrevisualizar,
+  EncuentroActualizar,
   EquipoEditar,
   EquipoIncorporar,
+  ResultadoRegistrar,
 } from "../schemas/competencia.schema";
 import {
+  avanceEnvelope,
+  avancePreviewEnvelope,
   competenciaDetalleEnvelope,
   competenciaEquipoEnvelope,
   competenciasListaEnvelope,
+  correccionEnvelope,
+  correccionPreviewEnvelope,
   cuadroEnvelope,
+  encuentroEnvelope,
   equiposElegiblesEnvelope,
+  resultadoRegistradoEnvelope,
 } from "../schemas/competencia.schema";
 import {
   RUTA_COMPETENCIAS,
@@ -199,6 +217,203 @@ export function useGenerarCuadro() {
     ...mutacion,
     mutateAsync: (competenciaId: string) =>
       mutacion.mutateAsync({ id: competenciaId, data: undefined }),
+  };
+}
+
+// ── El ciclo de vida del encuentro ─────────────────────────────────────────
+//
+// Un cambio de un encuentro NO es un cambio de la competencia: el panel del
+// encuentro es su único editor (`GOV-02-RB-05a`) y estas son sus mutaciones.
+//
+// Las dos VISTAS PREVIAS (`avance/preview` y `correccion/preview`) NO
+// ESCRIBEN NADA: simulan el efecto y lo publican. Por eso NO invalidan
+// ninguna clave: una simulación no puede ensuciar la caché.
+
+/**
+ * The reads that a change of an encounter dirties.
+ *
+ * The ADMINISTRATION of the competition AND the PUBLIC surface of the
+ * encounters show the same fact: if the operator starts a match, the public
+ * page must stop saying that it is programmed. Both keys are declared
+ * EXPLICITLY (`clavesCompetencias.all` covers the reads of the area and
+ * `claveEncuentrosPublicos` the public read).
+ */
+const CLAVES_DIRTAS_POR_UN_ENCUENTRO: readonly QueryKey[] = [
+  clavesCompetencias.all,
+  claveEncuentrosPublicos,
+];
+
+/**
+ * The update of ONE encounter (`PATCH …/encuentros/{encuentro_id}`).
+ *
+ * The route carries TWO identifiers and the payload carries NONE of them: the
+ * competition travels in `id` and the encounter in `params`, and the body is
+ * only the command (`GOV-02-RB-05a`).
+ *
+ * The payload ALWAYS carries `expected_version`: the browser never decides
+ * whether a write is current (`RB-05` ADM-11).
+ */
+export function useActualizarEncuentro() {
+  const mutacion = useApiUpdate({
+    getUrl: ({ id, params }) =>
+      rutasCompetencias.encuentro(String(id), params?.encuentro_id ?? ""),
+    method: "PATCH",
+    schema: datosDelEnvelope(encuentroEnvelope),
+    invalidateKeys: CLAVES_DIRTAS_POR_UN_ENCUENTRO,
+  });
+
+  return {
+    ...mutacion,
+    mutateAsync: (args: {
+      competenciaId: string;
+      encuentroId: string;
+      datos: EncuentroActualizar;
+    }) =>
+      mutacion.mutateAsync({
+        id: args.competenciaId,
+        data: args.datos,
+        params: { encuentro_id: args.encuentroId },
+      }),
+  };
+}
+
+/**
+ * The registration of the authoritative result (`POST …/resultado`).
+ *
+ * The winner travels in the payload and it is DECLARED by the operator: the
+ * score never decides it (`GOV-02-RB-05c`).
+ */
+export function useRegistrarResultado() {
+  const mutacion = useApiCreate({
+    getUrl: ({ id, params }) =>
+      rutasCompetencias.resultado(String(id), params?.encuentro_id ?? ""),
+    schema: datosDelEnvelope(resultadoRegistradoEnvelope),
+    invalidateKeys: CLAVES_DIRTAS_POR_UN_ENCUENTRO,
+  });
+
+  return {
+    ...mutacion,
+    mutateAsync: (args: {
+      competenciaId: string;
+      encuentroId: string;
+      datos: ResultadoRegistrar;
+    }) =>
+      mutacion.mutateAsync({
+        id: args.competenciaId,
+        data: args.datos,
+        params: { encuentro_id: args.encuentroId },
+      }),
+  };
+}
+
+/**
+ * The preview of the advance (`POST …/avance/preview`).
+ *
+ * It NEVER writes, so it dirties NOTHING: the cache is untouched because
+ * nothing changed (`QA-K04`).
+ */
+export function usePrevisualizarAvance() {
+  const mutacion = useApiCreate({
+    getUrl: ({ id, params }) =>
+      rutasCompetencias.avancePreview(String(id), params?.encuentro_id ?? ""),
+    schema: datosDelEnvelope(avancePreviewEnvelope),
+    invalidateKeys: [],
+    showSuccessToast: false,
+  });
+
+  return {
+    ...mutacion,
+    mutateAsync: (args: { competenciaId: string; encuentroId: string }) =>
+      mutacion.mutateAsync({
+        id: args.competenciaId,
+        data: undefined,
+        params: { encuentro_id: args.encuentroId },
+      }),
+  };
+}
+
+/** The confirmation of the advance (`POST …/avance`). */
+export function useConfirmarAvance() {
+  const mutacion = useApiCreate({
+    getUrl: ({ id, params }) =>
+      rutasCompetencias.avance(String(id), params?.encuentro_id ?? ""),
+    schema: datosDelEnvelope(avanceEnvelope),
+    invalidateKeys: CLAVES_DIRTAS_POR_UN_ENCUENTRO,
+  });
+
+  return {
+    ...mutacion,
+    mutateAsync: (args: {
+      competenciaId: string;
+      encuentroId: string;
+      datos: AvanceConfirmar;
+    }) =>
+      mutacion.mutateAsync({
+        id: args.competenciaId,
+        data: args.datos,
+        params: { encuentro_id: args.encuentroId },
+      }),
+  };
+}
+
+/**
+ * The preview of a correction (`POST …/correccion/preview`).
+ *
+ * It NEVER writes and it dirties NOTHING (`QA-K03`).
+ */
+export function usePrevisualizarCorreccion() {
+  const mutacion = useApiCreate({
+    getUrl: ({ id, params }) =>
+      rutasCompetencias.correccionPreview(
+        String(id),
+        params?.encuentro_id ?? "",
+      ),
+    schema: datosDelEnvelope(correccionPreviewEnvelope),
+    invalidateKeys: [],
+    showSuccessToast: false,
+  });
+
+  return {
+    ...mutacion,
+    mutateAsync: (args: {
+      competenciaId: string;
+      encuentroId: string;
+      datos: CorreccionPrevisualizar;
+    }) =>
+      mutacion.mutateAsync({
+        id: args.competenciaId,
+        data: args.datos,
+        params: { encuentro_id: args.encuentroId },
+      }),
+  };
+}
+
+/**
+ * The application of a correction (`POST …/correccion`).
+ *
+ * The reason is MANDATORY and the cascade needs BOTH `override` AND
+ * `acepta_impacto`: the browser never decides that the impact is accepted.
+ */
+export function useCorregirEncuentro() {
+  const mutacion = useApiCreate({
+    getUrl: ({ id, params }) =>
+      rutasCompetencias.correccion(String(id), params?.encuentro_id ?? ""),
+    schema: datosDelEnvelope(correccionEnvelope),
+    invalidateKeys: CLAVES_DIRTAS_POR_UN_ENCUENTRO,
+  });
+
+  return {
+    ...mutacion,
+    mutateAsync: (args: {
+      competenciaId: string;
+      encuentroId: string;
+      datos: CorreccionAplicar;
+    }) =>
+      mutacion.mutateAsync({
+        id: args.competenciaId,
+        data: args.datos,
+        params: { encuentro_id: args.encuentroId },
+      }),
   };
 }
 

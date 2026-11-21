@@ -66,6 +66,10 @@ OPERACIONES_PUBLICAS_CONGELADAS = frozenset(
         ("GET", "/api/catalogo/promociones"),
         # Cotización: pública y deliberadamente sin sesión.
         ("POST", "/api/cotizaciones"),
+        # Encuentros: lectura PÚBLICA de solo lectura del estado de los
+        # partidos (`partidos-marcadores-competencias`, Batch 1). Vive bajo
+        # un prefijo DISJUNTO de `/api/competencias/`, que exige capacidad.
+        ("GET", "/api/publico/competencias/encuentros"),
         # Edición vigente.
         ("GET", "/api/ediciones/actual"),
         # Tienda: catálogo y detalle son públicos.

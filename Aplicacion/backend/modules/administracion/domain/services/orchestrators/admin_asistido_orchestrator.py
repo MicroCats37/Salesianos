@@ -17,6 +17,7 @@ from modules.administracion.domain.schemas.admin_asistido_schemas import (
     AsignarParticipanteEquipoData,
     ComprarPaseParaClienteData,
     ComprarPedidoParaClienteData,
+    CotizarPaseParaClienteData,
 )
 from modules.administracion.domain.services.flujos.admin_asistido_flujo import (
     AdminAsistidoFlujo,
@@ -41,6 +42,10 @@ class AdminAsistidoOrchestrator:
     ):
         """Compra un lote de pases para un cliente y registra su pago."""
         return await self.flujo.comprar_pase_para_cliente(actor, data)
+
+    async def cotizar_pase_para_cliente(self, data: CotizarPaseParaClienteData):
+        """Cotiza un lote de pases: el precio y el total los deriva el servidor."""
+        return await self.flujo.cotizar_pase_para_cliente(data)
 
     async def comprar_pedido_para_cliente(
         self,

@@ -25,6 +25,12 @@ from core.exceptions import register_exception_handlers
 from modules.competencias.presentation.controllers.competencias_controller import (
     CompetenciasController,
 )
+from modules.competencias.presentation.controllers.competencias_publico_controller import (
+    CompetenciasPublicoController,
+)
+from modules.competencias.presentation.controllers.mis_partidos_controller import (
+    MisPartidosController,
+)
 
 api = NinjaExtraAPI(
     title="Competencias (test)",
@@ -33,7 +39,11 @@ api = NinjaExtraAPI(
     auth=JWTAuth(),
 )
 register_exception_handlers(api)
-api.register_controllers(CompetenciasController)
+api.register_controllers(
+    CompetenciasController,
+    CompetenciasPublicoController,
+    MisPartidosController,
+)
 
 urlpatterns = [
     path("api/", api.urls),

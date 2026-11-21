@@ -12,6 +12,8 @@ os.environ["USE_SQLITE"] = "true"
 from .base import *  # noqa: E402,F403,F405
 
 DEBUG = True
+
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 SECRET_KEY = "django-insecure-test-secret-key-1234567890"
 
 DATABASES = {

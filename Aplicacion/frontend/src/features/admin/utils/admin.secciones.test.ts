@@ -11,21 +11,30 @@ import {
 } from "./admin.secciones";
 
 describe("admin.secciones — el modelo de navegación", () => {
-  it("consolida los 22 page IDs del plan en 14 destinos de navegación", () => {
+  it("consolida las páginas en 13 destinos de navegación", () => {
     // El plan dice que las 22 entradas son DESTINOS CONCEPTUALES: "evitar
     // fragmentar navegación sin necesidad". Los detalles (ADM-06, ADM-08,
     // ADM-11, ADM-12, ADM-13, ADM-18, ADM-20) se alcanzan desde su destino
-    // padre, no con una entrada propia. 14 destinos + el resumen = 15.
-    expect(ADMIN_DESTINOS).toHaveLength(15);
-    expect(ADMIN_DESTINOS.filter((d) => d.id !== "resumen")).toHaveLength(14);
+    // padre, no con una entrada propia. 13 destinos + el resumen = 14.
+    expect(ADMIN_DESTINOS).toHaveLength(14);
+    expect(ADMIN_DESTINOS.filter((d) => d.id !== "resumen")).toHaveLength(13);
   });
 
-  it("agrupa los destinos en los tres grupos del plan", () => {
+  it("agrupa los destinos en los cuatro grupos del plan", () => {
     expect(ADMIN_GRUPOS.map((grupo) => grupo.id)).toEqual([
       "deportivo",
       "ventas",
+      "contenido",
       "personas",
     ]);
+  });
+
+  it("publica pases y control de ingreso en ventas", () => {
+    const ventas = ADMIN_GRUPOS.find((grupo) => grupo.id === "ventas");
+
+    expect(ventas?.destinos.map((destino) => destino.id)).toEqual(
+      expect.arrayContaining(["pases", "control-ingreso"]),
+    );
   });
 
   it("no repite un destino en dos grupos", () => {

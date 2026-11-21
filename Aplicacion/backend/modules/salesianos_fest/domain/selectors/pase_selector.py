@@ -20,7 +20,7 @@ Reglas que se respetan aquí:
 
 from datetime import date
 
-from django.db.models import Q, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 
 from modules.salesianos_fest.domain.constants import EstadoPase
 from modules.salesianos_fest.domain.models import (
@@ -184,13 +184,27 @@ class PaseSelector:
     # ── Cortesías ───────────────────────────────────────────────────────────
 
     def listar_cortesias(self, edicion_id=None, estado: str | None = None):
-        """Las actas de cortesía, opcionalmente acotadas."""
+        """Las actas de cortesía, opcionalmente acotadas.
+
+        Los DERECHOS de cada acta se traen con UN `prefetch_related`: el
+        listado publica el identificador del derecho (la credencial de puerta
+        se emite contra el DERECHO, no contra el acta) y una consulta por fila
+        sería un N+1 sobre una tabla que el operador recorre entera.
+
+        El orden del prefetch es DETERMINISTA (`-asignado_en`, `id`): cuando
+        un acta acumula más de un derecho, el flujo elige siempre el mismo.
+        """
         queryset = CortesiaPase.objects.select_related(
             "edicion",
             "pase",
             "persona",
             "actor_usuario",
             "actor_persona",
+        ).prefetch_related(
+            Prefetch(
+                "derechos",
+                queryset=PaseBeneficiario.objects.order_by("-asignado_en", "id"),
+            )
         )
         if edicion_id:
             queryset = queryset.filter(edicion_id=edicion_id)

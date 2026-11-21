@@ -21,6 +21,7 @@ Ledger: `RT-PS-01`…`RT-PS-08` (provisionales, `SH-05` §1.4) ·
 | `RT-PS-06` | GET `/administracion/pases` | `AdminPaseListaPresenter` | `PaginatedData[AdminPaseListItemOut]` |
 | `RT-PS-07` | GET `/administracion/pases/cortesias` | `AdminCortesiaListaPresenter` | `PaginatedData[AdminCortesiaListItemOut]` |
 | `RT-PS-08` | POST `/administracion/pases/cortesias` | `AdminCortesiaCrearPresenter` | `AdminCortesiaOut` |
+| `RT-PS-09` | POST `/administracion/pases/cortesias/{cortesia_id}/revocar` | `AdminCortesiaRevocarPresenter` | `AdminCortesiaRevocadaOut` |
 
 El controller es "SAGRADO": cero lógica
 (`contract/PLAN_REFACTORIZACION.md` §1.A). Sólo parsea, delega al
@@ -56,6 +57,7 @@ from modules.salesianos_fest.domain.schemas.pase_schemas import (
     ComprarPaseData,
     OtorgarCortesiaData,
     RevocarBeneficiarioData,
+    RevocarCortesiaData,
 )
 from modules.salesianos_fest.domain.services.orchestrators.beneficiario_orchestrator import (
     BeneficiarioOrchestrator,
@@ -69,6 +71,7 @@ from modules.salesianos_fest.domain.services.orchestrators.pase_orchestrator imp
 from modules.salesianos_fest.presentation.presenters.admin_pase_presenter import (
     AdminCortesiaCrearPresenter,
     AdminCortesiaListaPresenter,
+    AdminCortesiaRevocarPresenter,
     AdminPaseListaPresenter,
 )
 from modules.salesianos_fest.presentation.presenters.beneficiario_presenter import (
@@ -87,6 +90,7 @@ from modules.salesianos_fest.presentation.presenters.pase_presenter import (
 from modules.salesianos_fest.presentation.schemas.pase_schemas import (
     AdminCortesiaListItemOut,
     AdminCortesiaOut,
+    AdminCortesiaRevocadaOut,
     AdminPaseListItemOut,
     AsignarBeneficiarioIn,
     CompraPaseCreadaOut,
@@ -97,6 +101,7 @@ from modules.salesianos_fest.presentation.schemas.pase_schemas import (
     PaseCompraDetalleOut,
     PaseCatalogoOut,
     PaseDetalleOut,
+    RevocarCortesiaIn,
 )
 
 
@@ -465,6 +470,41 @@ class AdminPaseController:
         return success_response(
             AdminCortesiaCrearPresenter.present_cortesia(result),
             message="Cortesía registrada correctamente.",
+        )
+
+    @route.post(
+        "/cortesias/{cortesia_id}/revocar",
+        response={200: ApiResponse[AdminCortesiaRevocadaOut]},
+        auth=JWTAuth(),
+        permissions=[RequireAdmin],
+        summary="Revoca una cortesía con motivo.",
+    )
+    async def revocar_cortesia(
+        self,
+        request,
+        cortesia_id: UUID,
+        payload: RevocarCortesiaIn,
+    ):
+        """Route: POST /api/administracion/pases/cortesias/{cortesia_id}/revocar
+
+        Revoca el acta y su DERECHO. Es IDEMPOTENTE: repetirla devuelve 200
+        con `ya_revocado=true` y el mismo estado final (`FR-05` §2.3).
+
+        **NO TOCA HECHOS FINANCIEROS** (`RN-P05`): la cortesía no los tiene y
+        la revocación tampoco los crea. La revocación es PERMANENTE: los
+        consumos ya realizados quedan (`RN-P08`).
+        """
+        data = RevocarCortesiaData(
+            cortesia_id=str(cortesia_id),
+            motivo=payload.motivo,
+        )
+        result = await self.cortesia_orchestrator.revocar_cortesia(
+            request.auth,
+            data,
+        )
+        return success_response(
+            AdminCortesiaRevocarPresenter.present(result),
+            message="Cortesía revocada correctamente.",
         )
 
 

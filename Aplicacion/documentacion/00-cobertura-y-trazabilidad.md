@@ -128,6 +128,7 @@ Cobertura documental de esa superficie: **111 / 111 rutas con ficha** en [02b](.
 | 05a — Matriz página → flujo → endpoint → datos | 6 secciones | 20 páginas + 2 handlers, 112 definiciones | Criterio de consumidor unificado con 02b |
 | 06 — Operación y deuda técnica | 8 secciones | Operación + H-1…H-9 + D-1…D-16 | Recuento de comandos de gestión revalidado |
 | 07 — Guía para el agente de UI/UX | 9 secciones | Intervención sobre el frontend | Sin cambios de contenido; enlaces reparados |
+| 08 — Realtime de competencias por WebSocket | 13 secciones | Referencia técnica y adaptación futura, claramente separadas del estado actual | Añadido después de esta auditoría; basado en verificación dirigida del repositorio de referencia y de Salesianos |
 
 ---
 
@@ -204,7 +205,7 @@ Para repetir la auditoría tras un cambio de código. Cada punto indica **qué c
 
 | # | Comprobación | Cómo | Criterio de aceptación |
 |---|---|---|---|
-| 19 | Enlaces relativos | Resolver cada enlace Markdown de los 15 documentos contra el sistema de archivos | **0 enlaces rotos** |
+| 19 | Enlaces relativos | Resolver cada enlace Markdown de los 16 documentos contra el sistema de archivos | **0 enlaces rotos** |
 | 20 | Recuentos cruzados | Comparar cada cifra repetida en dos documentos | Una sola cifra y un solo criterio |
 | 21 | Cobertura de rutas | Contar las fichas `### N.M \`RUTA\`` de 02b y las filas del § 4 de 02a | Ambas = **111** |
 | 22 | Cobertura de páginas | Contar las fichas `### N.M \`RUTA\`` de 03a y 03b | 03a = 8 páginas + 2 handlers; 03b = 16 páginas |
@@ -260,3 +261,4 @@ Lo que **no** se verificó en esta auditoría y por qué. No son afirmaciones de
 - [05a — Matriz página → flujo → endpoint → datos](./05a-matriz-pagina-flujo-endpoint-datos.md) — trazabilidad completa.
 - [06 — Operación y deuda técnica](./06-operacion-y-deuda-tecnica.md) — operación, hallazgos y deuda.
 - [07 — Guía para el agente de UI/UX](./07-guia-para-ui-ux.md) — alcance de la intervención sobre el frontend.
+- [08 — Realtime de competencias por WebSocket](./08-realtime-competencias-websocket.md) — referencia verificada y guía de adaptación futura.

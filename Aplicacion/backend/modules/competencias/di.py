@@ -27,6 +27,7 @@ from injector import Binder, Module, singleton
 from modules.competencias.domain.ports import (
     IAlcanceEdicion,
     IEquipoElegibleService,
+    IEquiposDeParticipante,
 )
 from modules.competencias.domain.selectors.competencia_selector import (
     CompetenciaSelector,
@@ -71,6 +72,9 @@ from modules.competencias.infrastructure.services.alcance_edicion_eventos import
 from modules.competencias.infrastructure.services.equipo_elegible_adapter import (
     EquipoElegibleAdapter,
 )
+from modules.competencias.infrastructure.services.equipos_participante_adapter import (
+    EquiposDeParticipanteAdapter,
+)
 
 
 class CompetenciasModule(Module):
@@ -86,6 +90,11 @@ class CompetenciasModule(Module):
         binder.bind(
             IAlcanceEdicion,
             to=AlcanceEdicionEventos,
+            scope=singleton,
+        )
+        binder.bind(
+            IEquiposDeParticipante,
+            to=EquiposDeParticipanteAdapter,
             scope=singleton,
         )
 

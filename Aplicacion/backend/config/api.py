@@ -52,6 +52,12 @@ from modules.administracion.presentation.controllers.admin_persona_controller im
 from modules.competencias.presentation.controllers.competencias_controller import (
     CompetenciasController,
 )
+from modules.competencias.presentation.controllers.competencias_publico_controller import (
+    CompetenciasPublicoController,
+)
+from modules.competencias.presentation.controllers.mis_partidos_controller import (
+    MisPartidosController,
+)
 from modules.commerce.presentation.controllers.cuenta_compras_controller import (
     CuentaComprasController,
 )
@@ -191,6 +197,12 @@ registrar_controladores(NinjaJWTDefaultController)
 #                             RT-CM-02, RT-RT-03
 #   - `AdminPaseController` → DOM-03 (`salesianos_fest`) · RT-PS-06…RT-PS-08
 #   - `CompetenciasController` → DOM-07 (`competencias`) · 16 rutas
+#   - `CompetenciasPublicoController` → `partidos-marcadores-competencias` ·
+#                             GET /api/publico/competencias/encuentros
+#                             (lectura PÚBLICA, anónimo, de solo lectura)
+#   - `MisPartidosController` → `partidos-marcadores-competencias` ·
+#                             GET /api/cuenta/mis-partidos (lectura de la
+#                             CUENTA: sesión, sin capacidad administrativa)
 #   - `PatrocinadorController` → DOM-08 (`patrocinadores`) · RT-MD-02
 #   - `ValidacionController` → XCT-01 (`validaciones`) · RT-RT-01, RT-RT-02
 #   - `CotizacionController` → DOM-01 (`salesianos_fest`) · POST /cotizaciones
@@ -240,6 +252,8 @@ registrar_controladores(
     PaseController,
     AdminPaseController,
     CompetenciasController,
+    CompetenciasPublicoController,
+    MisPartidosController,
     PatrocinadorController,
     AdminPatrocinadoresController,
     ValidacionController,

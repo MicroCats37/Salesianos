@@ -8,6 +8,9 @@ from modules.salesianos_fest.infrastructure.services.alcance_y_titularidad impor
 from modules.salesianos_fest.infrastructure.services.correccion_genero_persona import (
     CorreccionGeneroPersonaAdapter,
 )
+from modules.salesianos_fest.infrastructure.services.emisor_credencial import (
+    EmisorCredencialService,
+)
 from modules.salesianos_fest.infrastructure.services.obtencion_persona import (
     ObtencionPersonaAdapter,
 )
@@ -15,6 +18,7 @@ from modules.salesianos_fest.infrastructure.services.obtencion_persona import (
 __all__ = [
     "AlcanceEdicionAdapter",
     "CorreccionGeneroPersonaAdapter",
+    "EmisorCredencialService",
     "ObtencionPersonaAdapter",
     "ResolucionPersonaAdapter",
     "TitularidadAdapter",

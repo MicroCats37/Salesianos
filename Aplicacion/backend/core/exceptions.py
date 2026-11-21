@@ -170,6 +170,9 @@ PUBLIC_ERROR_MESSAGES = {
     "PAGO_MANUAL_APROBACION_DESHABILITADA": (
         "La aprobación manual de pagos no está habilitada."
     ),
+    "PAGO_MANUAL_EVIDENCIA_INVALIDA": (
+        "La evidencia declarada para el pago manual no es válida."
+    ),
     "APROBACION_PAGO_MANUAL_NO_ENCONTRADA": (
         "No se encontró la aprobación de pago manual solicitada."
     ),

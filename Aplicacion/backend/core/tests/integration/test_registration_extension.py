@@ -39,6 +39,12 @@ from modules.administracion.presentation.controllers.admin_persona_controller im
 from modules.competencias.presentation.controllers.competencias_controller import (
     CompetenciasController,
 )
+from modules.competencias.presentation.controllers.competencias_publico_controller import (
+    CompetenciasPublicoController,
+)
+from modules.competencias.presentation.controllers.mis_partidos_controller import (
+    MisPartidosController,
+)
 from modules.eventos.presentation.controllers.edicion_controller import EdicionController
 from modules.marketplace.presentation.controllers.inventario_controller import (
     InventarioController,
@@ -90,6 +96,8 @@ CONTROLLERS_COMPLETADOS = (
     PaseController,
     AdminPaseController,
     CompetenciasController,
+    CompetenciasPublicoController,
+    MisPartidosController,
     PatrocinadorController,
     ValidacionController,
     AdminController,
@@ -118,6 +126,12 @@ PREFIJOS_PERMITIDOS = (
     "/api/pases",        # DOM-03 · salesianos_fest
     "/api/administracion/pases",  # DOM-03 · salesianos_fest
     "/api/competencias",  # DOM-07 · competencias
+    # Las lecturas de la CUENTA (historial comercial y "mis partidos"): son
+    # de un usuario normal con sesión, sin capacidad administrativa.
+    "/api/cuenta",  # DOM-07 · competencias · `partidos-marcadores-competencias`
+    # La lectura PÚBLICA de los encuentros: prefijo DISJUNTO de
+    # `/api/competencias`, que exige capacidad administrativa.
+    "/api/publico/competencias",  # `partidos-marcadores-competencias`
     "/api/patrocinadores",  # DOM-08 · patrocinadores
     "/api/validaciones",  # XCT-01 · validaciones
     "/api/administracion",  # XCT-02 · administracion (las seis superficies)
@@ -200,6 +214,12 @@ RUTAS_DE_DOMINIO_CONGELADAS = {
     "/api/competencias/{competencia_id}/encuentros/{encuentro_id}/avance/preview",  # DOM-07
     "/api/competencias/{competencia_id}/encuentros/{encuentro_id}/correccion",  # DOM-07
     "/api/competencias/{competencia_id}/encuentros/{encuentro_id}/correccion/preview",  # DOM-07
+    # `partidos-marcadores-competencias` · la superficie PÚBLICA de los
+    # encuentros: una ruta de SOLO LECTURA, anónimo y de prefijo disjunto.
+    "/api/publico/competencias/encuentros",  # `partidos-marcadores-competencias`
+    # `partidos-marcadores-competencias` · la lectura de la CUENTA: la
+    # identidad la resuelve la sesión y el cliente no envía ninguna persona.
+    "/api/cuenta/mis-partidos",  # `partidos-marcadores-competencias`
     # DOM-08 · el alta de patrocinadores (módulo `patrocinadores`).
     "/api/patrocinadores",                      # RT-MD-02 · DOM-08
     # XCT-01 · la consola de validación de credenciales (módulo

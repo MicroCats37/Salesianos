@@ -69,6 +69,33 @@ class IAlcanceEdicion(ABC):
         ...
 
 
+class IEquiposDeParticipante(ABC):
+    """Los EQUIPOS en los que una persona participa AHORA.
+
+    `modules.salesianos_fest` es el DUEÑO de la inscripción, del equipo y
+    del POOL de participantes (`RN-K01`). Este puerto CONSUME ese hecho y no
+    lo reinterpreta: devuelve los equipos de la persona y NADA más.
+
+    Es la única puerta por la que la lectura de "MIS PARTIDOS" sale de este
+    módulo: el cliente NUNCA envía una persona, un usuario ni un equipo, y
+    el servidor resuelve la identidad desde la sesión.
+    """
+
+    @abstractmethod
+    def equipos_de_persona(self, persona_id) -> list[str]:
+        """Los identificadores de los equipos en los que la persona participa.
+
+        Args:
+            persona_id: la persona de la sesión (`request.user.persona_fk_id`).
+
+        Returns:
+            Los identificadores de los equipos VIGENTES (participación activa),
+            sin duplicados. Una lista vacía es la respuesta honesta de una
+            cuenta sin equipo: no es un error.
+        """
+        ...
+
+
 class IEquipoElegibleService(ABC):
     """Resuelve la ELEGIBILIDAD deportiva de un equipo para competir.
 
@@ -121,4 +148,4 @@ class IEquipoElegibleService(ABC):
         ...
 
 
-__all__ = ["IAlcanceEdicion", "IEquipoElegibleService"]
+__all__ = ["IAlcanceEdicion", "IEquipoElegibleService", "IEquiposDeParticipante"]

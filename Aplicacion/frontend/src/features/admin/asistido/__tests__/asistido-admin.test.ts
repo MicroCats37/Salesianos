@@ -52,6 +52,7 @@ const COMPRA = {
     comprador_persona_id: "persona-cliente",
     comprador_nombre: "Rosa Díaz",
     cantidad: 2,
+    monto_declarado: null,
   },
   error: null,
   message: null,

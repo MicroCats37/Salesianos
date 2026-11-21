@@ -14,10 +14,13 @@ No hay un schema monolítico por endpoint: los bloques se ensamblan.
 |---|---|---|
 | `IdentidadCivilIn` | el documento y, si la persona no existe, sus nombres, apellidos y género (general) | los TRES comandos |
 | `ClienteCompraIn` | la identidad civil del cliente y su correo de contacto (general) | las dos compras asistidas |
-| `EvidenciaPagoManualIn` | el canal, la referencia y el motivo del pago (general) | las dos compras asistidas |
+| `EvidenciaPagoManualIn` | el canal, la referencia y el motivo del pago (general) | la compra de tienda |
+| `EvidenciaPagoCompraPaseIn` | la evidencia general MÁS el importe declarado y el token de precio (específico) | la compra de pases |
+| `CotizarPaseClienteIn` | el pase y la cantidad que se cotizan (específico) | la cotización de un pase |
 | `ItemPedidoClienteIn` | un artículo del pedido (específico) | la compra de tienda |
 | `AgregarParticipanteEquipoIn` | el rol y el motivo (específico) | el alta de participante |
 | `CompraAsistidaOut` | los identificadores y los hechos del resultado (identidad) | las dos compras asistidas |
+| `CotizacionPaseClienteOut` | el precio, el total, la moneda y el token de precio (específico) | la cotización de un pase |
 
 El frontend refleja estos schemas 1:1 en sus esquemas Zod: sin `z.any()` y
 sin campo genérico (`contract/api-wrapper-presenter-contract.md` §7).
@@ -32,6 +35,7 @@ Cuando la identidad YA existe, el servidor la REUTILIZA y no reescribe sus
 nombres: por eso los tres campos son OPCIONALES aquí.
 """
 
+from datetime import datetime
 from typing import Literal, Optional
 from uuid import UUID
 
@@ -124,6 +128,57 @@ class EvidenciaPagoManualIn(BaseSchema):
     )
 
 
+class EvidenciaPagoCompraPaseIn(BaseSchema):
+    """La EVIDENCIA del pago de una COMPRA DE PASES asistida.
+
+    Es un bloque EXCLUSIVO del camino de pases: el Marketplace y el checkout
+    público siguen declarando `EvidenciaPagoManualIn` (`R6`).
+
+    `monto_declarado` es el importe que el administrador DECLARA haber
+    recibido. Es INFORMATIVO y AUDITADO: NO altera el precio canónico, ni el
+    total, ni el estado del pago, ni el de la compra. Su ausencia (o `null`)
+    significa "no declarado"; `"0"` es un valor VÁLIDO (el administrador
+    declara que no cobró).
+
+    `precio_version` es el TOKEN DE CONCURRENCIA del precio que devolvió la
+    cotización. Si viaja y ya no coincide con el precio vigente, el servidor
+    rechaza el alta con 409 `PRECIO_CAMBIADO`. Si NO viaja, el servidor
+    congela el precio vigente sin más comprobación.
+
+    NO hay ningún campo de MONEDA: la moneda es siempre la de la orden (`R2`).
+    """
+
+    canal: str = Field(
+        ...,
+        max_length=32,
+        description="Canal del pago externo.",
+    )
+    referencia: str = Field(
+        ...,
+        max_length=100,
+        description="Referencia, recibo u operación que prueba el pago.",
+    )
+    motivo: str = Field(
+        ...,
+        max_length=1000,
+        description="Motivo auditado del registro del pago.",
+    )
+    monto_declarado: Optional[str] = Field(
+        default=None,
+        max_length=20,
+        pattern=r"^\d+(\.\d{1,2})?$",
+        description=(
+            "Importe declarado (informativo). Hasta dos decimales, sin signo. "
+            "Null o ausente significa 'no declarado'."
+        ),
+    )
+    precio_version: Optional[str] = Field(
+        default=None,
+        max_length=64,
+        description="Token de la cotización del pase. Detecta el precio obsoleto.",
+    )
+
+
 # ── Bloques específicos ─────────────────────────────────────────────────────
 
 
@@ -161,7 +216,11 @@ class ItemPedidoClienteIn(BaseSchema):
 
 
 class ComprarPaseClienteIn(BaseSchema):
-    """El comando de comprar un lote de pases PARA un cliente."""
+    """El comando de comprar un lote de pases PARA un cliente.
+
+    Su evidencia es la del CAMINO DE PASES (`EvidenciaPagoCompraPaseIn`): es
+    la única que puede declarar el importe recibido y el token de precio.
+    """
 
     pase_id: UUID = Field(..., description="Pase del catálogo que se compra.")
     cantidad: int = Field(
@@ -170,9 +229,25 @@ class ComprarPaseClienteIn(BaseSchema):
         description="Número de pases que se compran.",
     )
     cliente: ClienteCompraIn = Field(..., description="Identidad del cliente.")
-    evidencia: EvidenciaPagoManualIn = Field(
+    evidencia: EvidenciaPagoCompraPaseIn = Field(
         ...,
         description="Evidencia del pago externo que se registra.",
+    )
+
+
+class CotizarPaseClienteIn(BaseSchema):
+    """El comando de COTIZAR un lote de pases para un cliente.
+
+    Es una LECTURA: no persiste nada. El precio unitario y el total los
+    deriva el servidor contra el catálogo vigente; el cliente NO declara
+    ningún importe (`RN-C02`).
+    """
+
+    pase_id: UUID = Field(..., description="Pase del catálogo que se cotiza.")
+    cantidad: int = Field(
+        ...,
+        ge=1,
+        description="Número de pases que se cotizan.",
     )
 
 
@@ -212,6 +287,11 @@ class CompraAsistidaOut(BaseSchema):
 
     `comprador_persona_id` y `comprador_nombre` son el CLIENTE: el
     administrador es el actor de la operación y no el dueño de la compra.
+
+    `monto_declarado` es el ECO del importe declarado, auditado. Es `null`
+    cuando no se declaró nada (la compra de tienda, que no lo declara, y las
+    aprobaciones anteriores a esta columna). NO es el total: el total es
+    `total`.
     """
 
     compra_id: str = Field(..., description="Identificador de la compra de `commerce`.")
@@ -229,6 +309,46 @@ class CompraAsistidaOut(BaseSchema):
     comprador_persona_id: str = Field(..., description="Persona compradora.")
     comprador_nombre: str = Field(..., description="Nombre del comprador.")
     cantidad: int = Field(..., ge=1, description="Unidades compradas.")
+    monto_declarado: Optional[str] = Field(
+        default=None,
+        description=(
+            "Importe declarado y auditado. Null significa 'no declarado'. "
+            "No altera el total ni el estado del pago."
+        ),
+    )
+
+
+class CotizacionPaseClienteOut(BaseSchema):
+    """La COTIZACIÓN de un lote de pases, calculada por el servidor.
+
+    Los importes viajan como TEXTO: el navegador no calcula ni contrasta
+    ningún importe. `version` es el token de concurrencia del precio: si el
+    catálogo se movió, el alta se rechaza con 409 `PRECIO_CAMBIADO`.
+    """
+
+    pase_id: UUID = Field(..., description="Pase cotizado.")
+    edicion_id: UUID = Field(..., description="Edición del catálogo cotizado.")
+    pase_nombre: str = Field(..., description="Nombre del pase cotizado.")
+    cantidad: int = Field(..., ge=1, description="Unidades cotizadas.")
+    precio_unitario: str = Field(
+        ...,
+        description="Precio unitario vigente del pase, con dos decimales.",
+    )
+    total: str = Field(
+        ...,
+        description="Total derivado por el servidor: precio unitario por cantidad.",
+    )
+    moneda: str = Field(..., description="Moneda ISO-4217 del precio vigente.")
+    version: str = Field(
+        ...,
+        max_length=64,
+        description="Token de concurrencia del precio cotizado.",
+    )
+    estado: str = Field(..., description="Estado de la cotización.")
+    validez_hasta: datetime = Field(
+        ...,
+        description="Instante en que la cotización deja de ser válida.",
+    )
 
 
 __all__ = [
@@ -237,6 +357,9 @@ __all__ = [
     "CompraAsistidaOut",
     "ComprarPaseClienteIn",
     "ComprarPedidoClienteIn",
+    "CotizacionPaseClienteOut",
+    "CotizarPaseClienteIn",
+    "EvidenciaPagoCompraPaseIn",
     "EvidenciaPagoManualIn",
     "IdentidadCivilIn",
     "ItemPedidoClienteIn",

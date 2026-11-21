@@ -8,13 +8,17 @@ consulta la base de datos, NO llama a un selector y NO elige el mensaje de
 éxito (`contract/api-wrapper-presenter-contract.md` §3).
 """
 
+from uuid import UUID
+
 from modules.validaciones.domain.results.validacion_results import (
     TicketConfirmadoResult,
+    TicketEmitidoResult,
     TicketPreviewResult,
 )
 from modules.validaciones.presentation.schemas.validacion_schemas import (
     TicketActorOut,
     TicketConfirmadoOut,
+    TicketEmitidoOut,
     TicketPreviewOut,
     TicketTitularOut,
 )
@@ -65,7 +69,28 @@ class TicketConfirmPresenter:
         )
 
 
+class TicketEmitidoPresenter:
+    """Transforma el resultado de la emisión en su wrapper."""
+
+    @staticmethod
+    def present(result: TicketEmitidoResult) -> TicketEmitidoOut:
+        """La credencial emitida.
+
+        El `codigo` se publica AQUÍ y sólo aquí: es la entrega ÚNICA del
+        secreto. Ningún otro wrapper lo devuelve.
+        """
+        return TicketEmitidoOut(
+            ticket_id=UUID(result.ticket_id),
+            codigo=result.codigo,
+            tipo_derecho=result.tipo_derecho,
+            operacion=result.operacion,
+            edicion_id=UUID(result.edicion_id),
+            emitido_en=result.emitido_en,
+        )
+
+
 __all__ = [
     "TicketConfirmPresenter",
+    "TicketEmitidoPresenter",
     "TicketPreviewPresenter",
 ]

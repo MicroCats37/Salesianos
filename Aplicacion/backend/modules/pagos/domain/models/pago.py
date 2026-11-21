@@ -243,7 +243,14 @@ class TransaccionPago(BaseModel):
 
 
 class AprobacionPagoManual(BaseModel):
-    """Evidencia auditada de un pago confirmado fuera del proveedor."""
+    """Evidencia auditada de un pago confirmado fuera del proveedor.
+
+    `monto` y `moneda` son el SNAPSHOT CONGELADO de la orden: nadie los
+    ajusta. `monto_declarado` es OTRA cosa: el importe que el administrador
+    DECLARA haber recibido. Es INFORMATIVO y AUDITADO —no altera el total
+    canónico, ni el estado del pago, ni el de la compra— y su ausencia
+    significa "no declarado".
+    """
 
     orden_pago = models.ForeignKey(
         OrdenPago, on_delete=models.PROTECT, related_name="aprobaciones_manuales"
@@ -257,6 +264,18 @@ class AprobacionPagoManual(BaseModel):
     referencia = models.CharField(max_length=100)
     monto = models.DecimalField(max_digits=12, decimal_places=2)
     moneda = models.CharField(max_length=3)
+    monto_declarado = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Monto declarado",
+        help_text=(
+            "Importe DECLARADO por el administrador. Es INFORMATIVO y AUDITADO: "
+            "no altera el total canónico de la orden ni el estado del pago. "
+            "Vacío significa 'no declarado'."
+        ),
+    )
     motivo = models.TextField(max_length=1000)
     estado = models.CharField(
         max_length=20,

@@ -88,13 +88,16 @@ class AdminAsistidoController:
     ):
         """Route: POST /api/administracion/equipos/{equipo_id}/participantes
 
-        Agrega a la plantilla del equipo una persona que YA está en el padrón,
-        identificada por su tipo y número de documento exactos.
+        Agrega a la plantilla del equipo una persona, identificada por su tipo
+        y número de documento exactos.
 
-        El comando NO crea una persona y NO borra ninguna: sólo da de alta una
-        `Participacion`. Las reglas de la plantilla (capacidad del equipo,
-        duplicado, disciplina permitida, compatibilidad de género y saldo de
-        cupos) las aplica el módulo DUEÑO y este comando no las reimplementa.
+        Si esa persona YA está en el padrón, se REUTILIZA; si no, se REGISTRA
+        como identidad civil **sin cuenta** con los datos declarados. El
+        comando nunca borra una `Persona`, nunca edita una y nunca crea una
+        CUENTA: sólo da de alta una `Participacion`. Las reglas de la
+        plantilla (capacidad del equipo, duplicado, disciplina permitida,
+        compatibilidad de género y saldo de cupos) las aplica el módulo DUEÑO
+        y este comando no las reimplementa.
 
         El motivo es OBLIGATORIO (422 `MOTIVO_REQUERIDO`) y la acción queda
         en el ACTA transversal.
@@ -105,6 +108,9 @@ class AdminAsistidoController:
                 equipo_id=equipo_id,
                 tipo_documento=payload.tipo_documento,
                 numero_documento=payload.numero_documento,
+                nombres=payload.nombres or "",
+                apellidos=payload.apellidos or "",
+                genero=payload.genero or "",
                 rol=payload.rol,
                 motivo=payload.motivo,
             ),
@@ -205,9 +211,10 @@ def _cliente(payload) -> ClienteAsistidoData:
     return ClienteAsistidoData(
         tipo_documento=payload.tipo_documento,
         numero_documento=payload.numero_documento,
-        nombres=payload.nombres,
-        apellidos=payload.apellidos,
-        contacto_email=payload.contacto_email,
+        nombres=payload.nombres or "",
+        apellidos=payload.apellidos or "",
+        genero=payload.genero or "",
+        contacto_email=payload.contacto_email or "",
     )
 
 

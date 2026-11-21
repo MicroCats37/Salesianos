@@ -11,7 +11,8 @@ las liaisons del módulo (petición A0-01 de este paquete).
 Este módulo NO liga las clases de `eventos`, `usuarios`, `commerce` ni
 `pagos`: esos módulos son sus dueños y los ligation en sus propios `di.py`.
 Lo que este módulo sí liga son sus PUERTOS (`IAlcanceEdicionService`,
-`ITitularidadService`, `IResolucionPersonaService`), cuyo adaptador vive en
+`ITitularidadService`, `IResolucionPersonaService`, `IObtensionPersonaService`
+e `ICorreccionGeneroPersonaService`), cuyo adaptador vive en
 `infrastructure/services/`.
 
 El activador de derechos (`ActivadorInscripcion`) NO se liga aquí: lo
@@ -23,6 +24,7 @@ from injector import Binder, Module, singleton
 
 from modules.salesianos_fest.domain.ports import (
     IAlcanceEdicionService,
+    ICorreccionGeneroPersonaService,
     IObtensionPersonaService,
     IResolucionPersonaService,
     ITitularidadService,
@@ -99,6 +101,7 @@ from modules.salesianos_fest.domain.services.orchestrators.pool_orchestrator imp
 )
 from modules.salesianos_fest.infrastructure.services import (
     AlcanceEdicionAdapter,
+    CorreccionGeneroPersonaAdapter,
     ObtencionPersonaAdapter,
     ResolucionPersonaAdapter,
     TitularidadAdapter,
@@ -123,6 +126,11 @@ def _resolucion_persona_factory() -> IResolucionPersonaService:
 def _obtencion_persona_factory() -> IObtensionPersonaService:
     """Construye el adaptador de obtención de identidades de `usuarios`."""
     return ObtencionPersonaAdapter()
+
+
+def _correccion_genero_persona_factory() -> ICorreccionGeneroPersonaService:
+    """Construye el adaptador de corrección de género de `usuarios`."""
+    return CorreccionGeneroPersonaAdapter()
 
 
 class SalesianosFestModule(Module):
@@ -197,6 +205,11 @@ class SalesianosFestModule(Module):
         binder.bind(
             IObtensionPersonaService,
             to=_obtencion_persona_factory,
+            scope=singleton,
+        )
+        binder.bind(
+            ICorreccionGeneroPersonaService,
+            to=_correccion_genero_persona_factory,
             scope=singleton,
         )
         binder.bind(PaseFlujo, to=PaseFlujo, scope=singleton)

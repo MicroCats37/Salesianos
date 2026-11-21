@@ -12,16 +12,27 @@ No hay un schema monolítico por endpoint: los bloques se ensamblan.
 
 | Bloque | Qué aporta | Dónde se usa |
 |---|---|---|
-| `ClienteCompraIn` | la identidad civil del cliente (general) | las dos compras asistidas |
+| `IdentidadCivilIn` | el documento y, si la persona no existe, sus nombres, apellidos y género (general) | los TRES comandos |
+| `ClienteCompraIn` | la identidad civil del cliente y su correo de contacto (general) | las dos compras asistidas |
 | `EvidenciaPagoManualIn` | el canal, la referencia y el motivo del pago (general) | las dos compras asistidas |
 | `ItemPedidoClienteIn` | un artículo del pedido (específico) | la compra de tienda |
-| `AgregarParticipanteEquipoIn` | el documento, el rol y el motivo (específico) | el alta de participante |
+| `AgregarParticipanteEquipoIn` | el rol y el motivo (específico) | el alta de participante |
 | `CompraAsistidaOut` | los identificadores y los hechos del resultado (identidad) | las dos compras asistidas |
 
 El frontend refleja estos schemas 1:1 en sus esquemas Zod: sin `z.any()` y
 sin campo genérico (`contract/api-wrapper-presenter-contract.md` §7).
+
+## La IDENTIDAD es un BLOQUE, no un campo suelto
+
+Un comando administrativo puede declarar una persona que todavía NO está en
+el padrón. Por eso la identidad viaja como un bloque completo: el documento
+la DECLARA y los nombres, los apellidos y el género permiten REGISTRARLA.
+
+Cuando la identidad YA existe, el servidor la REUTILIZA y no reescribe sus
+nombres: por eso los tres campos son OPCIONALES aquí.
 """
 
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import Field
@@ -32,36 +43,57 @@ from core.types import BaseSchema
 # ── Bloques generales ───────────────────────────────────────────────────────
 
 
-class ClienteCompraIn(BaseSchema):
-    """La identidad CIVIL del cliente de una compra asistida.
+class IdentidadCivilIn(BaseSchema):
+    """La identidad CIVIL que declara el administrador.
 
-    El documento NO es una credencial (`RN-U04`): declara QUIÉN es el
-    cliente, nunca QUÉ puede hacer. El servidor resuelve esa identidad en el
-    padrón y la registra si no existía.
+    El documento NO es una credencial (`RN-U04`): declara QUIÉN es la
+    persona, nunca QUÉ puede hacer.
+
+    `nombres`, `apellidos` y `genero` son OPCIONALES porque sólo hacen falta
+    cuando la persona todavía NO está en el padrón: en ese caso el servidor la
+    REGISTRA como identidad civil **sin cuenta**. Cuando ya existe, el
+    servidor REUTILIZA la `Persona` del padrón y no reescribe sus nombres.
     """
 
     tipo_documento: str = Field(
         ...,
         max_length=3,
-        description="Tipo de documento del cliente.",
+        description="Tipo de documento de la persona.",
     )
     numero_documento: str = Field(
         ...,
         max_length=20,
-        description="Número de documento del cliente.",
+        description="Número de documento de la persona.",
     )
-    nombres: str = Field(
-        ...,
+    nombres: Optional[str] = Field(
+        default=None,
         max_length=255,
-        description="Nombres del cliente.",
+        description="Nombres. Sólo se usan si la persona se registra.",
     )
-    apellidos: str = Field(
-        default="",
+    apellidos: Optional[str] = Field(
+        default=None,
         max_length=255,
-        description="Apellidos del cliente.",
+        description="Apellidos. Sólo se usan si la persona se registra.",
     )
-    contacto_email: str = Field(
-        default="",
+    genero: Optional[Literal["M", "F"]] = Field(
+        default=None,
+        description=(
+            "Género de la persona. Lo exige la elegibilidad de una disciplina "
+            "que no es mixta."
+        ),
+    )
+
+
+class ClienteCompraIn(IdentidadCivilIn):
+    """La identidad CIVIL del cliente de una compra asistida.
+
+    El servidor resuelve esa identidad en el padrón y la registra si no
+    existía. El correo es un dato de contacto: NO habilita ningún derecho y
+    NO se guarda en la `Persona`.
+    """
+
+    contacto_email: Optional[str] = Field(
+        default=None,
         max_length=255,
         description="Correo de contacto. No habilita ningún derecho.",
     )
@@ -95,23 +127,15 @@ class EvidenciaPagoManualIn(BaseSchema):
 # ── Bloques específicos ─────────────────────────────────────────────────────
 
 
-class AgregarParticipanteEquipoIn(BaseSchema):
-    """El comando de agregar una persona EXISTENTE a un equipo.
+class AgregarParticipanteEquipoIn(IdentidadCivilIn):
+    """El comando de agregar una persona a un equipo.
 
-    La persona se identifica por DOCUMENTO EXACTO. Agregar un participante
-    NO crea una persona: la UI administrativa no expone un CRUD de `Persona`.
+    La persona se identifica por DOCUMENTO EXACTO. Si ya está en el padrón se
+    REUTILIZA; si no, se REGISTRA como identidad civil **sin cuenta** y recién
+    después se la agrega al equipo. La UI administrativa no expone un CRUD
+    de `Persona`: no la borra ni la reescribe nunca.
     """
 
-    tipo_documento: str = Field(
-        ...,
-        max_length=3,
-        description="Tipo de documento de la persona.",
-    )
-    numero_documento: str = Field(
-        ...,
-        max_length=20,
-        description="Número de documento de la persona.",
-    )
     rol: str = Field(
         default="JUGADOR",
         max_length=16,
@@ -214,6 +238,7 @@ __all__ = [
     "ComprarPaseClienteIn",
     "ComprarPedidoClienteIn",
     "EvidenciaPagoManualIn",
+    "IdentidadCivilIn",
     "ItemPedidoClienteIn",
     "ParticipanteAsistidoOut",
 ]

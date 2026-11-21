@@ -10,8 +10,18 @@ THEN   el comando usa las REGLAS del dueño (capacidad, duplicado,
        administrador, el pago queda liquidado por el flujo canónico del
        dueño y la acción queda en el ACTA con QUIÉN, QUÉ y POR QUÉ.
 
-AND    el alta de un participante NO crea una persona y la retirada NO borra
-       una `Persona`: el padrón es intocable desde aquí.
+AND    la IDENTIDAD se REUTILIZA si ya está en el padrón y se REGISTRA —sin
+       cuenta— si no existe. El alta nunca crea un `Usuario`, nunca borra
+       ninguna `Persona` y nunca reescribe sus NOMBRES ni sus APELLIDOS.
+
+AND    el alta es UNA unidad de trabajo: si el dueño la rechaza —por
+       género, por disciplina, por duplicado, por capacidad o por falta de
+       cupos pagados— la identidad recién creada y el género corregido se
+       DESHACEN con el resto de la operación.
+
+AND    el GÉNERO de una identidad existente sólo se corrige cuando el
+       administrador lo declara EXPLÍCITAMENTE (`M` o `F`) y es DISTINTO del
+       almacenado. Sin declaración, el género del padrón se conserva.
 """
 
 import json
@@ -26,7 +36,11 @@ from modules.administracion.tests.fixtures.asistido_fixtures import (  # noqa: F
     categoria_tienda,
     cliente_externo,
     edicion_con_tienda_y_pases,
+    equipo_disciplina_femenina,
+    equipo_femenino_sin_cupos,
+    equipo_sin_cupos,
     pase_venta,
+    persona_masculina,
     producto_tienda,
 )
 
@@ -95,15 +109,55 @@ def test_el_alta_por_documento_agrega_a_la_plantilla(
     assert acta.motivo == "Inscripción presencial en la mesa de control."
 
 
-def test_el_alta_no_crea_una_persona(equipo, admin_con_persona):
-    """GIVEN un documento que NO está en el padrón · WHEN el administrador
-    intenta agregar a esa persona · THEN 404 y NO se crea ninguna `Persona`.
+def test_el_alta_reutiliza_la_persona_existente_sin_reescribir_sus_nombres(
+    equipo, persona_participante, admin_con_persona
+):
+    """GIVEN una persona YA en el padrón · WHEN el administrador la agrega con
+    OTROS nombres · THEN se reutiliza ESA persona y sus NOMBRES y sus
+    APELLIDOS NO se reescriben: la identidad del padrón es la autoridad.
 
-    La UI administrativa no expone un CRUD de `Persona`: agregar un
-    participante no puede inventar una identidad."""
+    El género NO se declara: el que está en el padrón se conserva."""
     from modules.usuarios.domain.models import Persona
 
-    antes = Persona.objects.count()
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "33333333",
+            "nombres": "Nombre Inventado",
+            "apellidos": "Apellido Inventado",
+            "rol": "JUGADOR",
+            "motivo": "Inscripción presencial en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 201, respuesta.content
+    cuerpo = respuesta.json()["data"]
+    assert cuerpo["persona_id"] == str(persona_participante.id)
+
+    persona = Persona.objects.get(id=persona_participante.id)
+    assert persona.nombres == "María"
+    assert persona.apellidos == "Quispe"
+    # Sin género declarado se CONSERVA el del padrón.
+    assert persona.genero == "F"
+
+
+def test_el_alta_registra_la_identidad_inexistente_sin_crear_cuenta(
+    equipo, admin_con_persona
+):
+    """GIVEN un documento que NO está en el padrón · WHEN el administrador
+    declara sus datos y la agrega · THEN la identidad se REGISTRA como
+    `Persona` SIN CUENTA y la persona entra al equipo.
+
+    La UI administrativa no expone un CRUD de `Persona`: sí puede REGISTRAR
+    una identidad civil, pero jamás crea una cuenta."""
+    from modules.salesianos_fest.domain.models import Participacion
+    from modules.usuarios.domain.models import Persona, Usuario
+
+    cuentas_antes = Usuario.objects.count()
+    personas_antes = Persona.objects.count()
 
     respuesta = _post(
         Client(),
@@ -111,15 +165,380 @@ def test_el_alta_no_crea_una_persona(equipo, admin_con_persona):
         {
             "tipo_documento": "DNI",
             "numero_documento": "55555555",
+            "nombres": "Elena",
+            "apellidos": "Vega",
+            "genero": "F",
             "rol": "JUGADOR",
-            "motivo": "Intento de alta de un documento inexistente.",
+            "motivo": "Inscripción presencial en la mesa de control.",
         },
         _cabeceras(admin_con_persona),
     )
 
-    assert respuesta.status_code == 404
-    assert _codigo_de_error(respuesta) == "PERSONA_NO_ENCONTRADA"
-    assert Persona.objects.count() == antes
+    assert respuesta.status_code == 201, respuesta.content
+    cuerpo = respuesta.json()["data"]
+
+    persona = Persona.objects.get(numero_documento="55555555")
+    assert persona.nombres == "Elena"
+    assert persona.apellidos == "Vega"
+    assert persona.genero == "F"
+    assert cuerpo["persona_id"] == str(persona.id)
+
+    participacion = Participacion.objects.get(id=cuerpo["participacion_id"])
+    assert participacion.persona_id == persona.id
+
+    # NADIE nació con una cuenta: la identidad es civil.
+    assert Usuario.objects.count() == cuentas_antes
+    assert Persona.objects.count() == personas_antes + 1
+
+
+def test_el_alta_exige_los_nombres_cuando_la_identidad_no_existe(
+    equipo, admin_con_persona
+):
+    """GIVEN un documento que NO está en el padrón · WHEN el administrador no
+    declara los nombres · THEN 422 y NO se crea ninguna `Persona`: una
+    identidad sin nombre no es una identidad."""
+    from modules.usuarios.domain.models import Persona
+
+    personas_antes = Persona.objects.count()
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "55555555",
+            "nombres": "",
+            "apellidos": "",
+            "genero": "F",
+            "rol": "JUGADOR",
+            "motivo": "Intento de alta sin datos de identidad.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 422
+    assert _codigo_de_error(respuesta) == "VALIDATION_ERROR"
+    assert Persona.objects.count() == personas_antes
+
+
+def test_el_alta_normaliza_el_documento_antes_de_resolver(
+    equipo, persona_participante, admin_con_persona
+):
+    """GIVEN el mismo documento escrito con separadores · WHEN se envía · THEN
+    la resolución es EXACTA y NORMALIZADA: se reutiliza la misma `Persona` y
+    no se registra una segunda."""
+    from modules.usuarios.domain.models import Persona
+
+    personas_antes = Persona.objects.count()
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": " 3333-3333 ",
+            "nombres": "María",
+            "apellidos": "Quispe",
+            "genero": "F",
+            "rol": "JUGADOR",
+            "motivo": "Inscripción presencial en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 201, respuesta.content
+    cuerpo = respuesta.json()["data"]
+    assert cuerpo["persona_id"] == str(persona_participante.id)
+    assert Persona.objects.count() == personas_antes
+
+
+def test_el_alta_no_duplica_la_identidad_que_ya_gano_la_carrera(
+    equipo, admin_con_persona
+):
+    """GIVEN que otra petición registró la identidad PRIMERO · WHEN el
+    administrador la agrega otra vez · THEN se REUTILIZA la fila que ganó la
+    carrera: el padrón queda con UNA sola identidad y sus nombres NO se
+    reescriben."""
+    from modules.usuarios.domain.models import Persona
+
+    ganador = Persona.objects.create(
+        nombres="Ana",
+        apellidos="Original",
+        tipo_documento="DNI",
+        numero_documento="55555555",
+        genero="F",
+    )
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "55555555",
+            "nombres": "Otro",
+            "apellidos": "Nombre",
+            "rol": "JUGADOR",
+            "motivo": "Inscripción presencial en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 201, respuesta.content
+    cuerpo = respuesta.json()["data"]
+    assert cuerpo["persona_id"] == str(ganador.id)
+    assert Persona.objects.filter(numero_documento="55555555").count() == 1
+
+    ganador.refresh_from_db()
+    assert ganador.nombres == "Ana"
+    assert ganador.apellidos == "Original"
+
+
+def test_la_disciplina_exige_el_genero_de_la_identidad_registrada(
+    equipo_disciplina_femenina, admin_con_persona
+):
+    """GIVEN una disciplina FEMENINA · WHEN el administrador registra a una
+    persona de género MASCULINO · THEN el DUEÑO lo rechaza con su propio
+    código: este comando no reimplementa la regla de elegibilidad."""
+    from modules.salesianos_fest.domain.models import Participacion
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo_disciplina_femenina.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "55555555",
+            "nombres": "Elena",
+            "apellidos": "Vega",
+            "genero": "M",
+            "rol": "JUGADOR",
+            "motivo": "Inscripción presencial en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 422
+    assert _codigo_de_error(respuesta) == "PARTICIPANTE_NO_ELEGIBLE"
+    assert not Participacion.objects.exists()
+
+
+# ── La unidad de trabajo: un fallo NO deja basura ────────────────────────────
+
+
+def test_el_alta_sin_cupos_no_deja_una_persona_registrada(
+    equipo_sin_cupos, admin_con_persona
+):
+    """GIVEN una inscripción SIN cupos PAGADOS · WHEN el administrador registra
+    a una persona nueva · THEN el DUEÑO rechaza el alta y la identidad
+    recién creada se DESHACE con el resto de la unidad de trabajo.
+
+    Sin esta atomicidad, el padrón accumulates identidades que nadie pidió:
+    una `Persona` por cada intento fallido."""
+    from modules.administracion.domain.models import AccionAuditada
+    from modules.salesianos_fest.domain.models import Participacion
+    from modules.usuarios.domain.models import Persona, Usuario
+
+    personas_antes = Persona.objects.count()
+    cuentas_antes = Usuario.objects.count()
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo_sin_cupos.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "55555555",
+            "nombres": "Elena",
+            "apellidos": "Vega",
+            "genero": "F",
+            "rol": "JUGADOR",
+            "motivo": "Inscripción presencial en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 409, respuesta.content
+    assert _codigo_de_error(respuesta) == "SIN_CUPOS_DISPONIBLES"
+
+    # NADA queda a medias: ni la identidad, ni el cupo, ni el acta.
+    assert Persona.objects.count() == personas_antes
+    assert not Persona.objects.filter(numero_documento="55555555").exists()
+    assert Usuario.objects.count() == cuentas_antes
+    assert not Participacion.objects.exists()
+    assert not AccionAuditada.objects.filter(
+        accion="AGREGAR_PARTICIPANTE_EQUIPO"
+    ).exists()
+
+
+def test_el_alta_con_el_genero_incompatible_no_deja_una_persona_registrada(
+    equipo_disciplina_femenina, admin_con_persona
+):
+    """GIVEN una disciplina FEMENINA · WHEN el administrador registra a una
+    persona de género MASCULINO · THEN el DUEÑO la rechaza y la identidad
+    recién creada se DESHACE.
+
+    El género incompatible se comprueba DESPUÉS de registrar la identidad:
+    sin la unidad de trabajo, quedaría una `Persona` con el género
+    equivocado en el padrón."""
+    from modules.usuarios.domain.models import Persona
+
+    personas_antes = Persona.objects.count()
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo_disciplina_femenina.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "55555555",
+            "nombres": "Elena",
+            "apellidos": "Vega",
+            "genero": "M",
+            "rol": "JUGADOR",
+            "motivo": "Inscripción presencial en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 422
+    assert _codigo_de_error(respuesta) == "PARTICIPANTE_NO_ELEGIBLE"
+    assert Persona.objects.count() == personas_antes
+    assert not Persona.objects.filter(numero_documento="55555555").exists()
+
+
+# ── La corrección explícita del género ──────────────────────────────────────
+
+
+def test_el_alta_corrige_el_genero_cuando_el_administrador_lo_declara(
+    equipo_disciplina_femenina, persona_masculina, admin_con_persona
+):
+    """GIVEN una persona MASCULINA en el padrón · WHEN el administrador
+    declara EXPLÍCITAMENTE el género femenino · THEN el género se corrige, la
+    persona entra al equipo y el ACTA nombra el ANTIGUO y el NUEVO.
+
+    Es la ÚNICA corrección que el padrón admite sobre una identidad viva:
+    los nombres y los apellidos no se tocan."""
+    from modules.administracion.domain.models import AccionAuditada
+    from modules.salesianos_fest.domain.models import Participacion
+    from modules.usuarios.domain.models import Persona, Usuario
+
+    cuentas_antes = Usuario.objects.count()
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo_disciplina_femenina.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "12121212",
+            "nombres": "Nombre Inventado",
+            "apellidos": "Apellido Inventado",
+            "genero": "F",
+            "rol": "JUGADOR",
+            "motivo": "Corrección de género verificada en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 201, respuesta.content
+    cuerpo = respuesta.json()["data"]
+    assert cuerpo["persona_id"] == str(persona_masculina.id)
+
+    persona_masculina.refresh_from_db()
+    assert persona_masculina.genero == "F"
+    # Los NOMBRES y los APELLIDOS NUNCA se sobrescriben.
+    assert persona_masculina.nombres == "Pedro"
+    assert persona_masculina.apellidos == "Torres"
+
+    participacion = Participacion.objects.get(id=cuerpo["participacion_id"])
+    assert participacion.persona_id == persona_masculina.id
+
+    acta = AccionAuditada.objects.get(accion="AGREGAR_PARTICIPANTE_EQUIPO")
+    assert acta.datos["genero_anterior"] == "M"
+    assert acta.datos["genero_nuevo"] == "F"
+
+    # La corrección NO crea ninguna cuenta.
+    assert Usuario.objects.count() == cuentas_antes
+
+
+def test_la_correccion_del_genero_se_deshace_si_la_participacion_falla(
+    equipo_femenino_sin_cupos, persona_masculina, admin_con_persona
+):
+    """GIVEN una identidad MASCULINA · WHEN el administrador la corrige a
+    femenino en un equipo SIN cupos · THEN el dueño rechaza el alta y el
+    género VUELVE al que tenía: la corrección comparte la unidad de
+    trabajo."""
+    from modules.usuarios.domain.models import Persona
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo_femenino_sin_cupos.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "12121212",
+            "genero": "F",
+            "rol": "JUGADOR",
+            "motivo": "Corrección de género sobre un equipo sin cupos.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 409, respuesta.content
+    assert _codigo_de_error(respuesta) == "SIN_CUPOS_DISPONIBLES"
+
+    persona_masculina.refresh_from_db()
+    assert persona_masculina.genero == "M"
+    assert Persona.objects.filter(numero_documento="12121212").count() == 1
+
+
+def test_el_alta_sin_genero_conserva_el_genero_registrado(
+    equipo, persona_masculina, admin_con_persona
+):
+    """GIVEN una persona con género MASCULINO · WHEN el administrador NO
+    declara género · THEN el género del padrón se CONSERVA tal cual.
+
+    La ausencia de género NO es una orden de borrarlo: corregir es
+    EXPLÍCITO."""
+    from modules.usuarios.domain.models import Persona
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "12121212",
+            "rol": "JUGADOR",
+            "motivo": "Inscripción presencial en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 201, respuesta.content
+
+    persona_masculina.refresh_from_db()
+    assert persona_masculina.genero == "M"
+    assert Persona.objects.filter(numero_documento="12121212").count() == 1
+
+
+def test_el_genero_masculino_sigue_sin_admitirse_en_una_disciplina_femenina(
+    equipo_disciplina_femenina, persona_masculina, admin_con_persona
+):
+    """GIVEN una persona MASCULINA · WHEN el administrador NO corrige su
+    género · THEN el DUEÑO la rechaza: la regla de elegibilidad NO se
+    relaja."""
+    from modules.salesianos_fest.domain.models import Participacion
+
+    respuesta = _post(
+        Client(),
+        f"/api/administracion/equipos/{equipo_disciplina_femenina.id}/participantes",
+        {
+            "tipo_documento": "DNI",
+            "numero_documento": "12121212",
+            "rol": "JUGADOR",
+            "motivo": "Inscripción presencial en la mesa de control.",
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 422
+    assert _codigo_de_error(respuesta) == "PARTICIPANTE_NO_ELEGIBLE"
+    assert not Participacion.objects.exists()
 
 
 def test_el_alta_exige_el_motivo(equipo, persona_participante, admin_con_persona):
@@ -411,6 +830,123 @@ def test_el_cliente_inexistente_se_registra_en_el_padron(
     persona = Persona.objects.get(numero_documento="66666666")
     assert persona.nombres == "Elena"
     assert cuerpo["comprador_persona_id"] == str(persona.id)
+
+
+def test_el_cliente_inexistente_se_registra_con_su_genero_sin_cuenta(
+    pase_venta, admin_con_persona
+):
+    """GIVEN un cliente que NO está en el padrón · WHEN se compra para él con
+    su género · THEN la identidad se REGISTRA con ese género y NINGUNA cuenta
+    nace: el cliente es una identidad civil."""
+    from modules.usuarios.domain.models import Persona, Usuario
+
+    cuentas_antes = Usuario.objects.count()
+
+    respuesta = _post(
+        Client(),
+        "/api/administracion/pases/compras-cliente",
+        {
+            "pase_id": str(pase_venta.id),
+            "cantidad": 1,
+            "cliente": {
+                "tipo_documento": "DNI",
+                "numero_documento": "66666667",
+                "nombres": "Elena",
+                "apellidos": "Vega",
+                "genero": "F",
+                "contacto_email": "elena@example.com",
+            },
+            "evidencia": {
+                "canal": "EFECTIVO",
+                "referencia": "REC-0008",
+                "motivo": "Cobro en la boletería del FEST.",
+            },
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 201, respuesta.content
+
+    persona = Persona.objects.get(numero_documento="66666667")
+    assert persona.genero == "F"
+    assert Usuario.objects.count() == cuentas_antes
+
+
+def test_el_cliente_inexistente_exige_sus_nombres(
+    pase_venta, admin_con_persona
+):
+    """GIVEN un cliente que NO está en el padrón · WHEN no se declaran sus
+    nombres · THEN 422 y NO se registra ninguna identidad: una identidad sin
+    nombre no es una identidad."""
+    from modules.usuarios.domain.models import Persona
+
+    personas_antes = Persona.objects.count()
+
+    respuesta = _post(
+        Client(),
+        "/api/administracion/pases/compras-cliente",
+        {
+            "pase_id": str(pase_venta.id),
+            "cantidad": 1,
+            "cliente": {
+                "tipo_documento": "DNI",
+                "numero_documento": "66666668",
+                "nombres": "",
+                "apellidos": "",
+                "genero": "F",
+                "contacto_email": "elena@example.com",
+            },
+            "evidencia": {
+                "canal": "EFECTIVO",
+                "referencia": "REC-0010",
+                "motivo": "Cobro en la boletería del FEST.",
+            },
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 422
+    assert _codigo_de_error(respuesta) == "VALIDATION_ERROR"
+    assert Persona.objects.count() == personas_antes
+
+
+def test_el_cliente_ya_registrado_no_se_reescribe(
+    pase_venta, cliente_externo, admin_con_persona
+):
+    """GIVEN un cliente YA en el padrón · WHEN el administrador declara OTROS
+    nombres · THEN se reutiliza su identidad y sus nombres NO se
+    reescriben."""
+    from modules.usuarios.domain.models import Persona
+
+    respuesta = _post(
+        Client(),
+        "/api/administracion/pases/compras-cliente",
+        {
+            "pase_id": str(pase_venta.id),
+            "cantidad": 1,
+            "cliente": {
+                "tipo_documento": "DNI",
+                "numero_documento": "77777777",
+                "nombres": "Nombre Inventado",
+                "apellidos": "Apellido Inventado",
+                "genero": "M",
+                "contacto_email": "rosa@example.com",
+            },
+            "evidencia": {
+                "canal": "EFECTIVO",
+                "referencia": "REC-0009",
+                "motivo": "Cobro en la boletería del FEST.",
+            },
+        },
+        _cabeceras(admin_con_persona),
+    )
+
+    assert respuesta.status_code == 201, respuesta.content
+
+    cliente_externo.refresh_from_db()
+    assert cliente_externo.nombres == "Rosa"
+    assert cliente_externo.apellidos == "Díaz"
+    assert Persona.objects.filter(numero_documento="77777777").count() == 1
 
 
 # ── La frontera de permisos ─────────────────────────────────────────────────

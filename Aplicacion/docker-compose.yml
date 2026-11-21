@@ -117,9 +117,6 @@ services:
       # El servidor de archivos del despliegue lee el volumen de media en
       # modo SÓLO-LECTURA: el backend es su único escritor (FR-06 §2.1).
       - backend_media:/var/www/media:ro
-    networks:
-      - default
-      - streamhub_default
     restart: unless-stopped
 
 volumes:
@@ -127,7 +124,3 @@ volumes:
   backend_static:
   # Volumen persistente de media (FREEZE-MD-1.0.0 · FR-06 §2.1).
   backend_media:
-
-networks:
-  streamhub_default:
-    external: true

@@ -134,12 +134,122 @@ def pase_venta(db, edicion_con_tienda_y_pases):
     return pase
 
 
+@pytest.fixture
+def equipo_disciplina_femenina(db, inscripcion, categoria):
+    """Un equipo de una disciplina FEMENINA.
+
+    La modalidad exige un género DECLARADO: sin género conocido no se
+    concede el beneficio de la duda (`PoolFlujo._genero_compatible`).
+    """
+    from modules.salesianos_fest.domain.constants import ModalidadDisciplina
+    from modules.salesianos_fest.domain.models import (
+        Disciplina,
+        Equipo,
+        PaqueteDisciplina,
+    )
+
+    disciplina = Disciplina.objects.create(
+        edicion_id=inscripcion.edicion_id,
+        nombre="Vóley Femenino Asistido",
+        slug="voley-femenino-asistido",
+        modalidad=ModalidadDisciplina.FEMENINO,
+        minimo_por_equipo=5,
+        maximo_por_equipo=12,
+    )
+    PaqueteDisciplina.objects.create(
+        paquete_id=inscripcion.paquete_id,
+        disciplina=disciplina,
+    )
+    return Equipo.objects.create(
+        inscripcion=inscripcion,
+        disciplina=disciplina,
+        categoria=categoria,
+        nombre="Equipo Femenino Asistido",
+    )
+
+
+@pytest.fixture
+def equipo_sin_cupos(db, inscripcion_sin_pagos, disciplina, categoria):
+    """Un equipo de una inscripción SIN cupos PAGADOS.
+
+    Es el estado en el que el dueño rechaza el alta por saldo
+    (`SinCuposDisponiblesError`, 409). Sirve para comprobar que un alta
+    fallida NO deja basura: la identidad recién creada tiene que deshacerse
+    con el resto de la unidad de trabajo.
+    """
+    from modules.salesianos_fest.domain.models import Equipo
+
+    return Equipo.objects.create(
+        inscripcion=inscripcion_sin_pagos,
+        disciplina=disciplina,
+        categoria=categoria,
+        nombre="Equipo Sin Cupos Asistido",
+    )
+
+
+@pytest.fixture
+def equipo_femenino_sin_cupos(db, inscripcion_sin_pagos, categoria):
+    """Un equipo FEMENINO de una inscripción SIN cupos PAGADOS.
+
+    Junta las dos razones por las que un alta puede fallar: el género no es
+    compatible con la disciplina y, además, no hay cupo pagado.
+    """
+    from modules.salesianos_fest.domain.constants import ModalidadDisciplina
+    from modules.salesianos_fest.domain.models import (
+        Disciplina,
+        Equipo,
+        PaqueteDisciplina,
+    )
+
+    disciplina = Disciplina.objects.create(
+        edicion_id=inscripcion_sin_pagos.edicion_id,
+        nombre="Fútbol 7 Femenino Asistido",
+        slug="futbol-7-femenino-asistido",
+        modalidad=ModalidadDisciplina.FEMENINO,
+        minimo_por_equipo=5,
+        maximo_por_equipo=12,
+    )
+    PaqueteDisciplina.objects.create(
+        paquete_id=inscripcion_sin_pagos.paquete_id,
+        disciplina=disciplina,
+    )
+    return Equipo.objects.create(
+        inscripcion=inscripcion_sin_pagos,
+        disciplina=disciplina,
+        categoria=categoria,
+        nombre="Equipo Fútbol 7 Femenino Asistido",
+    )
+
+
+@pytest.fixture
+def persona_masculina(db):
+    """Una persona MASCULINA del padrón, con su género declarado.
+
+    Es la identidad que la corrección administrativa del género puede
+    cambiar: el administrador la declara `F` y el DUEÑO la admite en una
+    disciplina femenina.
+    """
+    from modules.usuarios.domain.models import Persona
+
+    return Persona.objects.create(
+        nombres="Pedro",
+        apellidos="Torres",
+        tipo_documento="DNI",
+        numero_documento="12121212",
+        genero="M",
+    )
+
+
 __all__ = [
     "admin_con_persona",
     "admin_sin_persona",
     "categoria_tienda",
     "cliente_externo",
     "edicion_con_tienda_y_pases",
+    "equipo_disciplina_femenina",
+    "equipo_femenino_sin_cupos",
+    "equipo_sin_cupos",
     "pase_venta",
+    "persona_masculina",
     "producto_tienda",
 ]

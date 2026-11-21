@@ -26,6 +26,17 @@ congela el dueño contra el catálogo vigente (`RN-C02`).
 
 **El MOTIVO es obligatorio.** Los tres comandos son sensibles: sin motivo no
 hay acta y sin acta no hay comando.
+
+## La IDENTIDAD es un BLOQUE, no un campo suelto
+
+`IdentidadAsistidaData` es el bloque general de la identidad civil y lo
+componen los tres comandos. Un comando administrativo puede, por tanto,
+declarar una persona que todavía NO está en el padrón: la identidad se
+REGISTRA como `Persona` **sin cuenta** y sólo después se la agrega al equipo
+o se le compra.
+
+Cuando la identidad YA existe, el servidor la REUTILIZA y **no reescribe**
+sus nombres: la identidad del padrón es la autoridad.
 """
 
 from uuid import UUID
@@ -33,12 +44,15 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 
-class ClienteAsistidoData(BaseModel):
-    """La identidad CIVIL del cliente de una compra asistida.
+class IdentidadAsistidaData(BaseModel):
+    """El BLOQUE GENERAL de la identidad civil de un comando asistido.
 
-    Es la misma identidad que declara un checkout invitado: tipo de
-    documento, número, nombres, apellidos y correo de contacto. El correo NO
-    habilita ningún derecho: es un dato de contacto.
+    El documento la DECLARA; los nombres, los apellidos y el género sólo se
+    usan cuando la persona todavía NO está en el padrón y hay que REGISTRARLA.
+
+    Cuando la identidad YA existe, estos datos son INOCUOS: el servidor
+    REUTILIZA la `Persona` del padrón y nunca reescribe sus nombres
+    (`FR-03` §1.1 — la identidad que ya existe no se reescribe).
     """
 
     tipo_documento: str = Field(..., max_length=3, description="Tipo de documento.")
@@ -47,8 +61,34 @@ class ClienteAsistidoData(BaseModel):
         max_length=20,
         description="Número de documento.",
     )
-    nombres: str = Field(..., max_length=255, description="Nombres del cliente.")
-    apellidos: str = Field(default="", max_length=255, description="Apellidos del cliente.")
+    nombres: str = Field(
+        default="",
+        max_length=255,
+        description="Nombres de la persona. Sólo se usan al registrarla.",
+    )
+    apellidos: str = Field(
+        default="",
+        max_length=255,
+        description="Apellidos de la persona. Sólo se usan al registrarla.",
+    )
+    genero: str = Field(
+        default="",
+        max_length=1,
+        description=(
+            "Género de la persona (M o F). Lo exige la elegibilidad de una "
+            "disciplina que no es mixta."
+        ),
+    )
+
+
+class ClienteAsistidoData(IdentidadAsistidaData):
+    """La identidad CIVIL del cliente de una compra asistida.
+
+    Es la misma identidad que declara un checkout invitado: tipo de
+    documento, número, nombres, apellidos, género y correo de contacto. El
+    correo NO habilita ningún derecho: es un dato de contacto.
+    """
+
     contacto_email: str = Field(
         default="",
         max_length=255,
@@ -74,13 +114,17 @@ class EvidenciaPagoAsistidoData(BaseModel):
     motivo: str = Field(..., max_length=1000, description="Motivo auditado.")
 
 
-class AsignarParticipanteEquipoData(BaseModel):
-    """La intención de agregar una persona EXISTENTE a la plantilla de un equipo.
+class AsignarParticipanteEquipoData(IdentidadAsistidaData):
+    """La intención de agregar una persona a la plantilla de un equipo.
 
     La persona se identifica por DOCUMENTO EXACTO (tipo + número): es la
     única forma que la interfaz de administración conoce de un tercero. No
     viaja ningún identificador interno: el documento no es una credencial
     (`RN-U04`).
+
+    Si esa persona YA está en el padrón, se REUTILIZA tal cual. Si NO está,
+    se REGISTRA como identidad civil —**sin cuenta**— con los nombres, los
+    apellidos y el género declarados, y recién después se agrega al equipo.
 
     Las REGLAS (capacidad, duplicado, disciplina, compatibilidad de género) NO
     viajan y NO se comprueban aquí: las aplica el dueño
@@ -88,12 +132,6 @@ class AsignarParticipanteEquipoData(BaseModel):
     """
 
     equipo_id: UUID = Field(..., description="Equipo de destino.")
-    tipo_documento: str = Field(..., max_length=3, description="Tipo de documento.")
-    numero_documento: str = Field(
-        ...,
-        max_length=20,
-        description="Número de documento de la persona.",
-    )
     rol: str = Field(default="JUGADOR", max_length=16, description="Rol en el equipo.")
     motivo: str = Field(..., max_length=1000, description="Motivo auditado.")
 
@@ -146,5 +184,6 @@ __all__ = [
     "ComprarPaseParaClienteData",
     "ComprarPedidoParaClienteData",
     "EvidenciaPagoAsistidoData",
+    "IdentidadAsistidaData",
     "ItemPedidoAsistidoData",
 ]

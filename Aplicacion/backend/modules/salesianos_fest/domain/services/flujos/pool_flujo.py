@@ -37,6 +37,13 @@ sólo lo hace la ACTIVACIÓN de derechos, y sólo en el alta.
 **MOVIMIENTO (`FL-05` paso 4).** `reemplaza_participacion_id` retira una
 participación y asigna su cupo a la persona nueva DENTRO de la misma
 transacción: el saldo disponible nunca baja de cero por un movimiento.
+
+**UNA entrada, DOS formas de llamarla.** Las reglas del alta viven UNA vez,
+en la unidad de trabajo SÍNCRONA (`agregar_participante_sync`). La fachada
+async (`agregar_participante`) la llama a través de `sync_to_async`, y un
+flujo que YA tiene una transacción abierta la llama directamente, sin
+esperar: así el comando administrativo que resuelve una identidad, agrega
+al equipo y escribe el acta es UNA sola unidad de trabajo atómica.
 """
 
 from asgiref.sync import sync_to_async
@@ -136,34 +143,64 @@ class PoolFlujo:
     ) -> PoolResult:
         """Agrega un participante al pool, o MUEVE su cupo a otro.
 
+        Es la fachada ASYNC del caso de uso: delega en la unidad de trabajo
+        SÍNCRONA (`agregar_participante_sync`), que es la que aplica las
+        reglas.
+
         Returns:
             El pool después de la operación.
         """
-        inscripcion = await sync_to_async(self._obtener_inscripcion)(
-            data.inscripcion_id
-        )
-        persona = await sync_to_async(self._obtener_persona)(data)
-        equipo = await sync_to_async(self._obtener_equipo)(
-            inscripcion,
-            data.equipo_id,
-        )
-        await sync_to_async(self._validar_elegibilidad)(inscripcion, equipo, persona)
-        await sync_to_async(self._validar_rol)(data.rol)
+        return await sync_to_async(self.agregar_participante_sync)(data)
+
+    def agregar_participante_sync(
+        self,
+        data: ParticipanteAsignarData,
+    ) -> PoolResult:
+        """La unidad de trabajo SÍNCRONA del alta de un participante.
+
+        Es la MISMA lógica que `agregar_participante` —las mismas reglas, las
+        mismas validaciones y la misma reserva de cupo— expuesta de forma
+        SÍNCRONA. No hay una segunda implementación: las reglas viven UNA
+        vez y los dos caminos entran por aquí.
+
+        ## Por qué existe
+
+        Un flujo que YA tiene una transacción abierta (un comando
+        administrativo que resuelve una identidad, agrega al equipo y
+        escribe el acta) tiene que llamar a las reglas del DUEÑO SIN
+        ESPERAR: esperar a través de `transaction.atomic()` abriría una
+        segunda conexión y partiría la unidad de trabajo en dos
+        transacciones. Con esta entrada SÍNCRONA, el comando llama al dueño
+        dentro de su MISMA transacción y un fallo deja el conjunto DESHECHO.
+
+        La transacción la abre el FLUJO que llama (`contract/
+        django-app-architecture-contract.md` §4.4). Aquí la escritura
+        (`_agregar_sync`) abre la suya propia: anidada, es un punto de
+        guardado y el conjunto sigue siendo atómico.
+
+        Returns:
+            El pool después de la operación.
+        """
+        inscripcion = self._obtener_inscripcion(data.inscripcion_id)
+        persona = self._obtener_persona(data)
+        equipo = self._obtener_equipo(inscripcion, data.equipo_id)
+        self._validar_elegibilidad(inscripcion, equipo, persona)
+        self._validar_rol(data.rol)
 
         causa = (
             CausaOperativaPool.CUPO_REASIGNADO
             if data.reemplaza_participacion_id
             else CausaOperativaPool.PARTICIPACION_AGREGADA
         )
-        await sync_to_async(self._agregar_sync)(
+        self._agregar_sync(
             inscripcion,
             persona,
             equipo,
             data.rol,
             data.reemplaza_participacion_id,
         )
-        inscripcion = await sync_to_async(self._obtener_inscripcion)(inscripcion.id)
-        return await sync_to_async(self._construir_pool)(inscripcion, causa)
+        inscripcion = self._obtener_inscripcion(inscripcion.id)
+        return self._construir_pool(inscripcion, causa)
 
     async def retirar_participante(
         self,

@@ -16,7 +16,7 @@ del padrón (`modules.usuarios`). El adaptador NO decide: sólo traduce.
   fila que ganó la carrera.
 """
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 
 from modules.salesianos_fest.domain.ports import IObtensionPersonaService
 
@@ -45,14 +45,22 @@ class ObtencionPersonaAdapter(IObtensionPersonaService):
         numero_documento: str,
         nombres: str,
         apellidos: str = "",
+        genero: str = "",
     ):
         """La `Persona` del documento, registrándola si no existía.
+
+        Si el documento YA existe, devuelve ESA `Persona` y NO reescribe sus
+        datos: los nombres, los apellidos y el género declarados sólo se usan
+        cuando la identidad se REGISTRA (`FR-03` §1.1 — la identidad que ya
+        existe no se reescribe).
 
         Args:
             tipo_documento: tipo de documento (DNI, CE, PAS…).
             numero_documento: número de documento.
             nombres: nombres declarados en el checkout.
             apellidos: apellidos declarados en el checkout.
+            genero: género declarado (opcional). Lo exige la ELEGIBILIDAD de
+                una disciplina que no es mixta.
 
         Returns:
             La `Persona` del padrón.
@@ -72,14 +80,19 @@ class ObtencionPersonaAdapter(IObtensionPersonaService):
             return existente
 
         try:
-            return self.persona_core.crear(
-                PersonaCreateData(
-                    tipo_documento=tipo_documento,
-                    numero_documento=numero_documento,
-                    nombres=nombres,
-                    apellidos=apellidos or "",
+            # La escritura va en su PROPIA transacción: si la `UniqueConstraint`
+            # la rechaza, el intento queda DESHECHO y la relectura de la fila
+            # ganadora puede ejecutarse sobre una conexión sana.
+            with transaction.atomic():
+                return self.persona_core.crear(
+                    PersonaCreateData(
+                        tipo_documento=tipo_documento,
+                        numero_documento=numero_documento,
+                        nombres=nombres,
+                        apellidos=apellidos or "",
+                        genero=genero or "",
+                    )
                 )
-            )
         except IntegrityError:
             # Carrera perdida: otra compra con el mismo documento registró la
             # identidad primero. La fila que ganó es la buena.

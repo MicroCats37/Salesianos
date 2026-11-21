@@ -21,6 +21,11 @@ El módulo cruza al DOMINIO en DOS puntos, y ambos cruzan por PUERTO:
    invitado es una identidad civil **sin cuenta**: este puerto registra la
    `Persona` que falte y **nunca** un `Usuario`.
 
+5. **La CORRECCIÓN del GÉNERO de una identidad** — la resuelve
+   `modules.usuarios`, que es su dueño. Es la única escritura MÍNIMA sobre
+   una `Persona` viva: toca SÓLO el campo `genero`, nunca los nombres ni los
+   apellidos, y nunca crea una cuenta.
+
 La compra, en cambio, NO cruza por puerto: `commerce` es la INFRAESTRUCTURA
 comercial compartida y su interfaz está CONGELADA (`FREEZE-CM-1.0.0`,
 `RN-C01`). El flujo consume `CompraFlujo` directamente, que es el puerto de
@@ -159,14 +164,21 @@ class IObtensionPersonaService(ABC):
         numero_documento: str,
         nombres: str,
         apellidos: str = "",
+        genero: str = "",
     ):
         """La `Persona` de ese documento, registrándola si no existía.
+
+        Si el documento YA existe, devuelve ESA `Persona` y NO reescribe sus
+        datos: los nombres, los apellidos y el género declarados sólo se usan
+        cuando la identidad se REGISTRA.
 
         Args:
             tipo_documento: tipo de documento (DNI, CE, PAS…).
             numero_documento: número de documento.
             nombres: nombres declarados en el checkout.
             apellidos: apellidos declarados en el checkout (opcionales).
+            genero: género declarado (opcional). Lo exige la ELEGIBILIDAD de
+                una disciplina que no es mixta (`PoolFlujo._genero_compatible`).
 
         Returns:
             La `Persona` del padrón.
@@ -179,8 +191,49 @@ class IObtensionPersonaService(ABC):
         ...
 
 
+class ICorreccionGeneroPersonaService(ABC):
+    """Corrige el GÉNERO de una identidad que YA existe en el padrón.
+
+    Es la ÚNICA escritura que este módulo hace sobre una `Persona` viva, y
+    es MÍNIMA: toca SÓLO el campo `genero`.
+
+    ## Por qué existe un puerto aparte
+
+    `IObtensionPersonaService` OBTIENE o REGISTRA una identidad: no corrige
+    nada. La corrección del género es otra INTENCIÓN, con otro contrato
+    (acepta o no hacer nada y devuelve qué cambió), y por eso tiene su
+    propio puerto. `usuarios` es el DUEÑO del padrón
+    (`FREEZE-ID-1.0.0`, `FR-03` §3): este puerto traduce la intención, no
+    la decide.
+
+    ## Lo que este puerto NO hace
+
+    - **NO** reescribe los NOMBRES ni los APELLIDOS.
+    - **NO** inventa el género: si no se declara, no se toca nada.
+    - **NO** infiere el género de la disciplina ni del equipo.
+    - **NO** crea una CUENTA: la identidad civil sigue sin ella.
+    """
+
+    @abstractmethod
+    def corregir_genero(self, persona, genero: str) -> tuple[str, str]:
+        """Corrige el género de la identidad, si se declara otro.
+
+        Args:
+            persona: la identidad ya existente que hay que corregir.
+            genero: el género canónico declarado (`M` o `F`).
+
+        Returns:
+            La tupla `(genero_anterior, genero_nuevo)`. Si no hubo
+            corrección —porque el género no se declaró, porque no es
+            canónico o porque ya era el almacenado— devuelve el género
+            almacenado en ambas posiciones.
+        """
+        ...
+
+
 __all__ = [
     "IAlcanceEdicionService",
+    "ICorreccionGeneroPersonaService",
     "IObtensionPersonaService",
     "IResolucionPersonaService",
     "ITitularidadService",

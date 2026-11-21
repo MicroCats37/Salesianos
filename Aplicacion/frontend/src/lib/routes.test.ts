@@ -82,6 +82,9 @@ describe("routes — el mapa de rutas", () => {
       "/administracion/competencias/7/cuadro",
     );
     expect(RUTAS.publico.paseGestionar("tok")).toBe("/pases/gestionar/tok");
+    expect(RUTAS.publico.videoDetalle("transmision")).toBe(
+      "/en-vivo/transmision",
+    );
   });
 
   it("publica el registro como /registro y no como /register", () => {
@@ -205,6 +208,7 @@ describe("routes — las rutas públicas", () => {
     "/pases",
     "/tienda",
     "/recuperar-compra",
+    "/en-vivo",
     "/login",
     "/registro",
   ])("es pública %s", (ruta) => {
@@ -232,6 +236,12 @@ describe("routes — la navegación pública", () => {
       "/informacion",
       "/pases",
       "/tienda",
+      "/en-vivo",
     ]);
+  });
+
+  it("publica la transmisión bajo /en-vivo", () => {
+    expect(RUTAS.publico.videos).toBe("/en-vivo");
+    expect(esRutaPublica("/en-vivo/transmision")).toBe(true);
   });
 });

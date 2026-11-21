@@ -1,10 +1,7 @@
-import { VideoDetalleRuta } from "@/features/videos/views";
+import { permanentRedirect } from "next/navigation";
 
 /**
- * VID-02 - Ver un video de la sala de proyección.
- *
- * El identificador del video es su identidad en la URL, así que la página lo
- * lee de los parámetros y lo entrega al contenedor.
+ * Legacy public route retained for existing shared links.
  */
 export default async function Page({
   params,
@@ -13,5 +10,5 @@ export default async function Page({
 }) {
   const { id } = await params;
 
-  return <VideoDetalleRuta id={id} />;
+  permanentRedirect(`/en-vivo/${encodeURIComponent(id)}`);
 }

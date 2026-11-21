@@ -1,10 +1,8 @@
-import { VideosListaRuta } from "@/features/videos/views";
+import { permanentRedirect } from "next/navigation";
 
 /**
- * VID-01 - La sala de proyección
- *
- * La página sólo enruta: el contenedor lee la galería y la vista la dibuja.
+ * Legacy public route retained for existing shared links.
  */
 export default function Page() {
-  return <VideosListaRuta />;
+  permanentRedirect("/en-vivo");
 }

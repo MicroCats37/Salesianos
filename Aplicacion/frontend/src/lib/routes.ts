@@ -19,8 +19,8 @@ export const RUTAS = {
     tiendaProducto: (slug: string) => `/tienda/${slug}`,
     tiendaPedido: (token: string) => `/tienda/pedidos/${token}`,
     recuperarCompra: "/recuperar-compra",
-    videos: "/videos",
-    videoDetalle: (id: string) => `/videos/${id}`,
+    videos: "/en-vivo",
+    videoDetalle: (id: string) => `/en-vivo/${id}`,
     partidos: "/partidos",
   },
   auth: {

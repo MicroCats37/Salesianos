@@ -34,7 +34,7 @@ export function PortadaView() {
     <>
       <ScrollSnapScope />
       <Navbar
-        navLinks={[{ href: "/videos", label: "Únete en vivo", live: true }]}
+        navLinks={[{ href: "/en-vivo", label: "Únete en vivo", live: true }]}
         showActions={false}
         brandSlot={<NavbarBrand showSubtitle={false} />}
       />

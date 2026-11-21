@@ -14,7 +14,6 @@ import { ResultadosPartidosSection } from "@/features/portada/components/Resulta
 import { ScheduleSection } from "@/features/portada/components/ScheduleSection";
 import { ScrollSnapScope } from "@/features/portada/components/ScrollSnapScope";
 import { SponsorsSection } from "@/features/portada/components/SponsorsSection";
-import { TiendaSection } from "@/features/portada/components/TiendaSection";
 import { VenueSection } from "@/features/portada/components/VenueSection";
 import { PartyPassSection } from "../components/PartyPassSection";
 
@@ -52,7 +51,6 @@ export function PortadaView() {
         <ScheduleSection />
         <FamilySection />
         <PartySection />
-        <TiendaSection />
         <VenueSection />
         <SponsorsSection />
         <FaqSection />

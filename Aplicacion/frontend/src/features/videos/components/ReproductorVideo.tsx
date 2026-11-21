@@ -15,10 +15,17 @@ export interface ReproductorVideoProps {
   url: string;
   /** The title of the video: the accessible name of the player. */
   titulo: string;
+  /** Start muted playback automatically when this is the live signal. */
+  autoPlay?: boolean;
   className?: string;
 }
 
-function ReproductorHls({ url, titulo, className }: ReproductorVideoProps) {
+function ReproductorHls({
+  url,
+  titulo,
+  autoPlay = false,
+  className,
+}: ReproductorVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -41,6 +48,8 @@ function ReproductorHls({ url, titulo, className }: ReproductorVideoProps) {
     <video
       ref={videoRef}
       controls
+      autoPlay={autoPlay}
+      muted={autoPlay}
       preload="metadata"
       playsInline
       aria-label={titulo}
@@ -72,19 +81,29 @@ function ReproductorHls({ url, titulo, className }: ReproductorVideoProps) {
 export function ReproductorVideo({
   url,
   titulo,
+  autoPlay = false,
   className,
 }: ReproductorVideoProps) {
   const tipo = clasificarVideo(url);
   const embebible = urlEmbebibleVideo(url);
 
   if (tipo === "hls") {
-    return <ReproductorHls url={url} titulo={titulo} className={className} />;
+    return (
+      <ReproductorHls
+        url={url}
+        titulo={titulo}
+        autoPlay={autoPlay}
+        className={className}
+      />
+    );
   }
 
   if (tipo === "archivo") {
     return (
       <video
         controls
+        autoPlay={autoPlay}
+        muted={autoPlay}
         preload="metadata"
         playsInline
         aria-label={titulo}

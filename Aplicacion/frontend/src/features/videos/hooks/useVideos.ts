@@ -7,11 +7,14 @@ import { videoEnvelope, videosEnvelope } from "../schemas/video.schema";
 import { rutaVideo, rutaVideos } from "../services/video.service";
 import { videoClaves } from "../utils/video.claves.utils";
 
+const INTERVALO_ACTUALIZACION_VIDEOS_MS = 10_000;
+
 /**
  * The public gallery of videos (`GET /videos`).
  *
- * It is a CATALOGUE: the videos change with the edition, not with the second,
- * so the read stays fresh for the whole window of the catalogue.
+ * Videos have no realtime channel yet, so the active page polls as a fallback.
+ * TanStack Query stops the interval when the query unmounts, and background
+ * tabs do not keep requesting a gallery nobody is watching.
  */
 export function useVideosLista() {
   return useApiQuery({
@@ -21,6 +24,8 @@ export function useVideosLista() {
     queryOptions: {
       staleTime: STALE_TIME.catalogo,
       gcTime: gcTimeFor(STALE_TIME.catalogo),
+      refetchInterval: INTERVALO_ACTUALIZACION_VIDEOS_MS,
+      refetchIntervalInBackground: false,
     },
   });
 }

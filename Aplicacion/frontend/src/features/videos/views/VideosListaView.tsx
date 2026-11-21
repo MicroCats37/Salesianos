@@ -111,6 +111,7 @@ export function VideosListaView({
                 <ReproductorVideo
                   url={SENAL_PRINCIPAL}
                   titulo="Transmisión en vivo de Salesianos Fest"
+                  autoPlay
                 />
               </div>
             </div>
